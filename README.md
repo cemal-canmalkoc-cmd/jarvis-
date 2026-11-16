@@ -159,6 +159,21 @@ Test: Schreib Jarvis von deinem Handy „Tagesbericht".
 Twilio-Konto anlegen, eine Schweizer Nummer kaufen (Regulatory Bundle nötig) und ConversationRelay aktivieren.
 Dann `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` und `TWILIO_VOICE_FROM` in die `.env` eintragen.
 
+## 📇 Welche Nummer wofür
+
+| Nummer | Wofür | Einstellung |
+|---|---|---|
+| **+49 176 …** (deine) | Dein WhatsApp: Befehle an Jarvis, Berichte und 🔥-Meldungen von Jarvis | `JARVIS_OWNER_WHATSAPP` |
+| **+49 151 28143836** | **Nur Telefon:** Kandidaten und Kliniken rufen an, Jarvis nimmt ab (Umleitung zu Twilio). Als Absender für Rückrufe nutzbar (Verified Caller ID). | `JARVIS_CALL_IN_NUMBER` |
+| **Jarvis' WhatsApp** | Damit schreibt Jarvis automatisch an Kandidaten. Muss eine Nummer sein, die in **keiner** WhatsApp-App läuft. | `JARVIS_WHATSAPP_NUMBER` |
+
+**Technische Grenzen:**
+- Eine Nummer kann nicht gleichzeitig in deiner WhatsApp-App und bei Jarvis (WhatsApp Business API) laufen.
+  Machst du deine 176 zur Jarvis-Nummer, verschwindet sie aus deiner WhatsApp-App. Dann steuerst du Jarvis
+  über die iPhone-App und Siri, und Meldungen kommen in die App (Bereich „Meldungen") und per E-Mail (`JARVIS_OWNER_EMAIL`).
+- Normale Telefonanrufe lassen sich nicht „auf WhatsApp umleiten". Jarvis nimmt Anrufe auf der 151 selbst an.
+  Sagt die Person im Gespräch „WhatsApp ist ok", schreibt Jarvis ihr danach auf WhatsApp weiter (Lebenslauf anfordern).
+
 ## ☎️ Anrufe annehmen: Jarvis als Telefonzentrale (+49 151 28143836)
 
 Kandidaten und Kliniken rufen **euch** an, und Jarvis nimmt ab. Das ist rechtlich die sauberste Lösung, denn wer
@@ -239,5 +254,5 @@ jarvis/
 ## Tests
 
 ```bash
-python -m pytest -q     # 49 Tests, simuliert Claude/WhatsApp/Telefon – keine echten Kosten
+python -m pytest -q     # 51 Tests, simuliert Claude/WhatsApp/Telefon – keine echten Kosten
 ```

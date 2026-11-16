@@ -65,3 +65,38 @@ def test_number_in_outreach(monkeypatch):
     assert "anrufen: +49 151 28143836" in msg
     page = TestClient(server.app).get("/bewerbung").text
     assert 'href="tel:+4915128143836"' in page
+
+
+def test_owner_notifications_land_in_app_and_fallback(tw, monkeypatch):  # noqa: F811
+    from jarvis import matching, messaging
+    # Fall 1: getrennte Nummern → WhatsApp an dich + App-Postfach
+    messaging.notify_owner("Test A")
+    assert tw.msgs[-1]["body"] == "Test A"
+    assert store.notifications(store.connect(), 1)[0]["text"] == "Test A"
+    # Fall 2: deine Nummer ist gleichzeitig Jarvis' Nummer → kein WhatsApp an dich selbst, E-Mail stattdessen
+    monkeypatch.setattr(config, "JARVIS_WHATSAPP_NUMBER", config.OWNER_WHATSAPP)
+    monkeypatch.setattr(config, "OWNER_EMAIL", "chef@hansa.example")
+    monkeypatch.setattr(config, "SMTP_HOST", "smtp.example")
+    mails = []
+    monkeypatch.setattr(matching, "send_email", lambda to, subj, body: mails.append(to))
+    n = len(tw.msgs)
+    messaging.notify_owner("Test B")
+    assert len(tw.msgs) == n and mails == ["chef@hansa.example"]
+    assert store.notifications(store.connect(), 1)[0]["text"] == "Test B"
+
+
+def test_inbound_call_continues_on_whatsapp(tw, monkeypatch):  # noqa: F811
+    from jarvis import messaging
+    sent = []
+    monkeypatch.setattr(messaging, "send_first_contact_template", lambda to, fn, role: sent.append(to) or True)
+    call_id = _inbound_call("+41 78 900 00 09")
+    monkeypatch.setattr(voice, "summarize_inbound", lambda t: {
+        "anrufer_typ": "kandidat", "name": "Ole WA", "firma": None, "ort": None, "email": None,
+        "bedarf": "FaGe", "interessiert": False, "whatsapp_ok": True, "rueckruf_zeit": None,
+        "summary": "x", "next_step": "y"})
+    monkeypatch.setattr(pipeline, "evaluate", lambda raw: ScoredCandidate(
+        assessment=Assessment(full_name="Ole WA", phone="+41789000009", category="pflege", nursing_field="FaGe"),
+        source=raw.source, score=50, tier="C", reasons=[], missing=[], consent_call=True))
+    voice.finalize_call(call_id, [{"jarvis": "Grüezi"}, {"gegenueber": "Hallo"}])
+    assert sent == ["+41789000009"]
+    assert store.find_candidate_by_phone(store.connect(), "+41789000009")["consent_whatsapp"] == 1

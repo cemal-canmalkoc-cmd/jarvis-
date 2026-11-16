@@ -135,3 +135,6 @@ AUTO_DELIVER = _flag("JARVIS_AUTO_DELIVER", "1")
 # Öffentliche Rufnummer von Hansa Personal für Kandidaten & Kliniken. Anrufe darauf werden zu
 # Jarvis umgeleitet (siehe README „Anrufe annehmen"). Steht in Nachrichten, Formular und Inseraten.
 CALL_IN_NUMBER = os.environ.get("JARVIS_CALL_IN_NUMBER", "")
+
+# Falls deine WhatsApp-Nummer gleichzeitig Jarvis' Nummer ist, kommen Meldungen per E-Mail + App.
+OWNER_EMAIL = os.environ.get("JARVIS_OWNER_EMAIL", "")

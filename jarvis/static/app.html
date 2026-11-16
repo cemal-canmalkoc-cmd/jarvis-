@@ -109,6 +109,8 @@ nav button.on{color:var(--accent)}
   </div>
   <h2>Schnellbefehle</h2>
   <div class="chips" id="quick"></div>
+  <h2>Meldungen</h2>
+  <div id="news"></div>
   <h2>Letzte Anrufe</h2>
   <div id="calls"></div>
 </section>
@@ -196,7 +198,14 @@ async function load() {
   $("#goal-txt").textContent = n >= z ? "Tagesziel erreicht 🎉" : `Noch ${z - n} bis zum Ziel. ${s.neu_heute} neue Profile heute.`;
   $("#st-a").textContent = s.A_gesamt_offen; $("#st-i").textContent = s.interessiert;
   $("#st-c").textContent = s.anrufe_heute; $("#st-f").textContent = s.firmen_interessiert;
-  renderCalls(); renderCands(); renderFirms();
+  renderCalls(); renderCands(); renderFirms(); renderNews();
+}
+
+function renderNews() {
+  const box = $("#news"); box.replaceChildren();
+  if (!DATA.meldungen.length) return box.append(h("div", {class: "empty"}, "Noch keine Meldungen."));
+  for (const m of DATA.meldungen.slice(0, 6)) box.append(h("div", {class: "card small", style: "white-space:pre-wrap"},
+    h("div", {class: "muted"}, (m.created || "").replace("T", " ")), m.text));
 }
 
 function renderCalls() {

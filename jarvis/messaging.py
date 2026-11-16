@@ -106,13 +106,28 @@ def send_text(to: str, text: str) -> None:
             _meta_post({"to": digits(to), "type": "text", "text": {"body": chunk}})
 
 
+def owner_reachable_by_whatsapp() -> bool:
+    """Jarvis kann dir nicht von deiner eigenen Nummer aus schreiben."""
+    own = digits(config.OWNER_WHATSAPP)
+    return bool(own) and own != jarvis_number()
+
+
 def notify_owner(text: str) -> None:
-    """Meldung an dich. Fehler hier dürfen den Ablauf nie stoppen."""
-    if not config.OWNER_WHATSAPP:
-        log.info("[an Owner] %s", text)
-        return
+    """Meldung an dich: immer ins App-Postfach, dazu WhatsApp (oder E-Mail, falls WhatsApp nicht geht).
+    Fehler hier dürfen den Ablauf nie stoppen."""
     try:
-        send_text(config.OWNER_WHATSAPP, text)
+        from . import store
+        store.add_notification(store.connect(), text)
+    except Exception as exc:  # noqa: BLE001
+        log.error("Meldung nicht gespeichert: %s", exc)
+    try:
+        if owner_reachable_by_whatsapp():
+            send_text(config.OWNER_WHATSAPP, text)
+        elif config.OWNER_EMAIL and config.SMTP_HOST:
+            from .matching import send_email
+            send_email(config.OWNER_EMAIL, "Jarvis: " + text.split("\n")[0][:80], text)
+        else:
+            log.info("[an Owner] %s", text)
     except Exception as exc:  # noqa: BLE001
         log.error("Owner-Benachrichtigung fehlgeschlagen: %s | %s", exc, text)
 

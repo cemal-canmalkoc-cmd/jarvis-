@@ -143,6 +143,7 @@ async def uebersicht(request: Request):
             "firmen": [dict(r) for r in conn.execute(
                 "SELECT * FROM companies ORDER BY status='kunde' DESC, status='interessiert' DESC, id DESC LIMIT 80")],
             "preise": pricing.overview(),
+            "meldungen": store.notifications(conn, 15),
             "anrufe": call_list, "anrufzeit": voice.within_call_hours()}
 
 

@@ -67,6 +67,11 @@ CREATE TABLE IF NOT EXISTS prices (
     garantie_monate INTEGER,
     notiz TEXT DEFAULT ''
 );
+CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created TEXT,
+    text TEXT
+);
 CREATE TABLE IF NOT EXISTS optout (
     phone TEXT PRIMARY KEY,
     added TEXT
@@ -406,3 +411,15 @@ def set_price(conn: sqlite3.Connection, bereich: str, modell: str, wert: float,
 
 def get_prices(conn: sqlite3.Connection) -> dict[str, sqlite3.Row]:
     return {r["bereich"]: r for r in conn.execute("SELECT * FROM prices")}
+
+
+def add_notification(conn: sqlite3.Connection, text: str) -> None:
+    with _lock:
+        conn.execute("INSERT INTO notifications (created, text) VALUES (?,?)",
+                     (datetime.now().isoformat(timespec="minutes"), text))
+        conn.commit()
+
+
+def notifications(conn: sqlite3.Connection, limit: int = 30) -> list[dict]:
+    return [dict(r) for r in conn.execute(
+        "SELECT created, text FROM notifications ORDER BY id DESC LIMIT ?", (limit,)).fetchall()]

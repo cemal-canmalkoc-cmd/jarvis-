@@ -488,6 +488,14 @@ def finalize_inbound(call, transcript: list[dict]) -> None:
             store.set_status(conn, row["key"], "interessiert", r["summary"])
             matching.auto_deliver()
         c = store.load(row)
+        if r.get("whatsapp_ok"):
+            # Gespräch auf WhatsApp weiterführen (Lebenslauf anfordern) – Vorlage nötig, da Erstkontakt
+            try:
+                if messaging.send_first_contact_template(phone, c.assessment.full_name.split()[0],
+                                                         role_phrase(c.assessment)):
+                    store.grant_whatsapp_consent(conn, row["key"])
+            except Exception as exc:  # noqa: BLE001
+                log.error("WhatsApp nach Anruf fehlgeschlagen: %s", exc)
         messaging.notify_owner(
             f"☎️🔥 Kandidat hat angerufen: {c.assessment.full_name} – {role_phrase(c.assessment)}, "
             f"Tier {c.tier} ({c.score})\n{r['summary']}\nNächster Schritt: {r['next_step']}{cb}\n"
