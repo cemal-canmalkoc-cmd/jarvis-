@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KI-Assistent für Ihren Betrieb · in 5 Tagen live</title>
+<meta name="description" content="Kein Anruf, keine Anfrage geht mehr verloren: KI-Assistent beantwortet Anfragen rund um die Uhr, bucht Termine und fasst automatisch nach. Festpreis, in 5 Werktagen live.">
+<style>
+/* ======= HIER ANPASSEN: Links unten im HTML suchen nach "ANPASSEN" ======= */
+:root{--bg:#fbfaf7;--fg:#161616;--muted:#5d5d5d;--card:#fff;--line:#e6e3dc;--acc:#0b6e4f;--accfg:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#121212;--fg:#efefef;--muted:#a0a0a0;--card:#1c1c1c;--line:#2c2c2c;--acc:#35c38f;--accfg:#06140f}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.w{max-width:1040px;margin:auto;padding:0 16px}
+header{padding:72px 0 48px}
+h1{font-size:clamp(30px,5vw,52px);line-height:1.1;margin:0 0 16px;letter-spacing:-.02em}
+h2{font-size:clamp(24px,3.5vw,34px);margin:0 0 20px;letter-spacing:-.01em}
+.lead{font-size:20px;color:var(--muted);max-width:680px}
+.btn{display:inline-block;background:var(--acc);color:var(--accfg);padding:14px 24px;border-radius:10px;text-decoration:none;font-weight:600}
+.btn.alt{background:transparent;color:var(--fg);border:1px solid var(--line)}
+.cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+section{padding:48px 0;border-top:1px solid var(--line)}
+.g{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.c{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px}
+.c h3{margin:0 0 8px}
+.price{font-size:38px;font-weight:700;margin:8px 0}
+.c ul{padding-left:20px;margin:12px 0 20px}
+.hi{border:2px solid var(--acc)}
+.tag{display:inline-block;font-size:13px;background:var(--acc);color:var(--accfg);padding:2px 10px;border-radius:99px}
+.steps{counter-reset:s;list-style:none;padding:0}
+.steps li{counter-increment:s;padding:12px 0 12px 48px;position:relative}
+.steps li:before{content:counter(s);position:absolute;left:0;top:10px;width:32px;height:32px;border-radius:50%;background:var(--acc);color:var(--accfg);display:grid;place-items:center;font-weight:700}
+details{border-bottom:1px solid var(--line);padding:14px 0}summary{cursor:pointer;font-weight:600}
+footer{padding:32px 0;color:var(--muted);font-size:14px;border-top:1px solid var(--line)}
+footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="w">
+<header>
+  <span class="tag">Nur 4 Plätze diese Woche</span>
+  <h1>Kein Anruf und keine Anfrage geht mehr verloren.</h1>
+  <p class="lead">Ein KI-Assistent beantwortet Anfragen Ihrer Kunden rund um die Uhr, bucht Termine direkt in Ihren Kalender und fasst automatisch nach. In 5 Werktagen eingerichtet. Festpreis.</p>
+  <div class="cta">
+    <!-- ANPASSEN: Buchungslink (Cal.com / Calendly) -->
+    <a class="btn" href="https://cal.com/DEIN-NAME/15min">15-Min-Demo buchen</a>
+    <a class="btn alt" href="#preise">Preise ansehen</a>
+  </div>
+</header>
+
+<section>
+  <h2>Kennen Sie das?</h2>
+  <div class="g">
+    <div class="c"><h3>Telefon klingelt ins Leere</h3>Während Behandlung, Baustelle oder Besichtigung kann niemand abnehmen. Der Kunde ruft beim Nächsten an.</div>
+    <div class="c"><h3>Anfragen bleiben liegen</h3>E-Mails und Formulare werden erst abends oder am nächsten Tag beantwortet. Dann ist der Auftrag oft schon weg.</div>
+    <div class="c"><h3>Personal fehlt</h3>Ihr Team verbringt Stunden mit Terminabsprachen und immer gleichen Fragen statt mit echter Arbeit.</div>
+  </div>
+</section>
+
+<section>
+  <h2>So läuft es ab</h2>
+  <ol class="steps">
+    <li><b>15-Min-Gespräch:</b> Wir schauen, wo bei Ihnen Anfragen verloren gehen.</li>
+    <li><b>Tag 1–2:</b> Ich richte den Assistenten mit Ihren Leistungen, Preisen, Öffnungszeiten und FAQs ein.</li>
+    <li><b>Tag 3–4:</b> Anbindung an Website, Kalender, E-Mail und optional WhatsApp. Gemeinsamer Test.</li>
+    <li><b>Tag 5:</b> Live, mit Einweisung für Ihr Team. Sie haben 30 Tage Support für Anpassungen.</li>
+  </ol>
+</section>
+
+<section id="preise">
+  <h2>Festpreise, keine Abo-Falle</h2>
+  <div class="g">
+    <div class="c">
+      <h3>Start</h3><div class="price">1.490 €</div>
+      <ul><li>KI-Chat auf Ihrer Website</li><li>Antworten auf Ihre FAQs</li><li>Anfragen landen sortiert im Postfach</li><li>14 Tage Support</li></ul>
+      <!-- ANPASSEN: Stripe Payment Link -->
+      <a class="btn alt" href="https://buy.stripe.com/DEIN-LINK-START">Jetzt buchen</a>
+    </div>
+    <div class="c hi">
+      <span class="tag">Am beliebtesten</span>
+      <h3>Komplett</h3><div class="price">2.490 €</div>
+      <ul><li>Alles aus Start</li><li>Online-Terminbuchung direkt im Kalender</li><li>Automatische Erinnerungen (weniger No-Shows)</li><li>Automatisches Nachfassen bei offenen Anfragen</li><li>30 Tage Support</li></ul>
+      <!-- ANPASSEN: Stripe Payment Link -->
+      <a class="btn" href="https://buy.stripe.com/DEIN-LINK-KOMPLETT">Jetzt buchen</a>
+    </div>
+    <div class="c">
+      <h3>Premium</h3><div class="price">3.900 €</div>
+      <ul><li>Alles aus Komplett</li><li>KI-Telefonassistent nimmt Anrufe an</li><li>WhatsApp-Anbindung</li><li>Bewerber-Vorauswahl für offene Stellen</li><li>60 Tage Support</li></ul>
+      <!-- ANPASSEN: Stripe Payment Link -->
+      <a class="btn alt" href="https://buy.stripe.com/DEIN-LINK-PREMIUM">Jetzt buchen</a>
+    </div>
+  </div>
+  <p class="lead" style="margin-top:20px"><b>Garantie:</b> Ist Ihr Assistent nicht innerhalb von 10 Werktagen nach Freigabe Ihrer Inhalte live, bekommen Sie Ihr Geld vollständig zurück.</p>
+</section>
+
+<section>
+  <h2>Häufige Fragen</h2>
+  <details><summary>Ist das DSGVO-konform?</summary><p>Ja. Wir nutzen Anbieter mit Auftragsverarbeitungsvertrag und Servern in der EU, wo möglich. Für Praxen werden keine Gesundheitsdaten im Chat abgefragt.</p></details>
+  <details><summary>Fallen danach laufende Kosten an?</summary><p>Nur die Gebühren der genutzten Tools (meist 20–80 € pro Monat), direkt beim Anbieter und auf Ihren Namen. Von mir gibt es kein Pflicht-Abo.</p></details>
+  <details><summary>Was muss ich selbst tun?</summary><p>Ein 45-minütiges Gespräch, in dem Sie mir Leistungen, Preise und typische Fragen nennen. Den Rest übernehme ich.</p></details>
+  <details><summary>Was, wenn die KI etwas Falsches sagt?</summary><p>Der Assistent antwortet nur auf Basis Ihrer freigegebenen Inhalte und übergibt alles Unklare an Ihr Team.</p></details>
+</section>
+
+<section style="text-align:center">
+  <h2>Diese Woche noch 4 Plätze frei</h2>
+  <div class="cta" style="justify-content:center"><a class="btn" href="https://cal.com/DEIN-NAME/15min">15-Min-Demo buchen</a></div>
+</section>
+
+<footer>
+  <!-- ANPASSEN: Impressum + Datenschutz sind in Deutschland Pflicht -->
+  © 2026 DEINE FIRMA · <a href="impressum.html">Impressum</a> · <a href="datenschutz.html">Datenschutz</a>
+</footer>
+</div>
+</body>
+</html>

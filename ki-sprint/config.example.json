@@ -1,0 +1,11 @@
+{
+  "dein_name": "Max Mustermann",
+  "firma": "Mustermann Automatisierung",
+  "telefon": "+49 170 0000000",
+  "buchungslink": "https://cal.com/DEIN-NAME/15min",
+  "landingpage": "https://DEINE-SEITE.de",
+  "angebot_preis": "2.490 €",
+  "staedte": ["München", "Augsburg"],
+  "branchen": ["zahnarzt", "physio", "handwerk", "makler"],
+  "max_leads_pro_suche": 150
+}
