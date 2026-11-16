@@ -69,3 +69,35 @@ Pflege:
 - Von Vorteil: MEBEKO-Anerkennung oder positiver Stand des Anerkennungsverfahrens.
 - Deutsch: mindestens B2, für Ärzte idealerweise C1.
 """.strip()
+
+# ---------------------------------------------------------------------------
+# Autopilot, Telefonie, WhatsApp
+# ---------------------------------------------------------------------------
+def _flag(name: str, default: str = "0") -> bool:
+    return os.environ.get(name, default).strip().lower() in ("1", "true", "ja", "yes")
+
+
+TIMEZONE = os.environ.get("JARVIS_TIMEZONE", "Europe/Zurich")
+DAILY_TARGET = int(os.environ.get("JARVIS_DAILY_TARGET", "20"))  # Ziel: vermittelbare Kandidaten/Tag
+MORNING_HOUR = int(os.environ.get("JARVIS_MORNING_HOUR", "7"))
+CALL_HOURS = (9, 18)               # Anrufe nur Mo-Fr in diesem Fenster (lokale Zeit)
+MAX_CALLS_PER_ROUND = int(os.environ.get("JARVIS_MAX_CALLS_PER_ROUND", "5"))
+AUTO_CALL_CANDIDATES = _flag("JARVIS_AUTO_CALL_CANDIDATES", "1")
+AUTO_CALL_COMPANIES = _flag("JARVIS_AUTO_CALL_COMPANIES", "1")
+
+PUBLIC_URL = os.environ.get("JARVIS_PUBLIC_URL", "http://localhost:8000").rstrip("/")
+OWNER_WHATSAPP = os.environ.get("JARVIS_OWNER_WHATSAPP", "")    # deine Nummer, z.B. +49176...
+ADMIN_TOKEN = os.environ.get("JARVIS_ADMIN_TOKEN", "")          # schützt das Dashboard
+
+TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
+TWILIO_WHATSAPP_FROM = os.environ.get("TWILIO_WHATSAPP_FROM", "")  # Jarvis' WhatsApp-Nummer, +41...
+TWILIO_VOICE_FROM = os.environ.get("TWILIO_VOICE_FROM", "")        # Jarvis' Telefonnummer
+TWILIO_TEMPLATE_FIRST_CONTACT = os.environ.get("TWILIO_TEMPLATE_FIRST_CONTACT", "")  # Content-SID
+VALIDATE_TWILIO = _flag("JARVIS_VALIDATE_TWILIO", "1")
+
+VOICE_LANGUAGE = os.environ.get("JARVIS_VOICE_LANGUAGE", "de-DE")
+VOICE_TTS_PROVIDER = os.environ.get("JARVIS_VOICE_TTS_PROVIDER", "")  # z.B. ElevenLabs
+VOICE_NAME = os.environ.get("JARVIS_VOICE_NAME", "")
+VOICE_EFFORT = os.environ.get("JARVIS_VOICE_EFFORT", "low")       # niedrige Latenz am Telefon
+VOICE_FAST_MODE = _flag("JARVIS_VOICE_FAST_MODE", "0")            # schnellere Antworten, doppelter Preis

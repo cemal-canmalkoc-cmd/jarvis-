@@ -17,7 +17,8 @@ def evaluate(raw: sources.RawProfile) -> ScoredCandidate:
     a = brain.extract(raw.text)
     pts, tier, reasons, missing = score(a)
     c = ScoredCandidate(assessment=a, source=raw.source, score=pts, tier=tier,
-                        reasons=reasons, missing=missing)
+                        reasons=reasons, missing=missing,
+                        consent_whatsapp=raw.consent_whatsapp, consent_call=raw.consent_call)
     if tier in ("A", "B"):
         c.whatsapp_message = whatsapp.build_message(a)
         c.whatsapp_link = whatsapp.build_link(a.phone, c.whatsapp_message)

@@ -47,3 +47,5 @@ class ScoredCandidate(BaseModel):
     missing: list[str]     # was noch fehlt / nachzufragen ist
     whatsapp_message: str = ""
     whatsapp_link: Optional[str] = None
+    consent_whatsapp: bool = False  # darf automatisch per WhatsApp angeschrieben werden
+    consent_call: bool = False      # darf (auch vom KI-Assistenten) angerufen werden

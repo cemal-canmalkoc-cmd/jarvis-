@@ -24,6 +24,10 @@ class RawProfile:
     source: str
     text: str
     file: Path | None = None
+    # Einwilligungen: Formular = ausdrücklich angehakt; Bewerbung per Mail/Ordner = Anruf zur
+    # Bewerbung ok; öffentliche Web-Funde = nur manueller Kontakt durch dich.
+    consent_whatsapp: bool = False
+    consent_call: bool = False
 
 
 def _pdf_text(data: bytes) -> str:
@@ -57,7 +61,7 @@ def from_inbox_folder() -> list[RawProfile]:
             continue
         text = file_to_text(f.name, f.read_bytes())
         if text and text.strip():
-            out.append(RawProfile(source=f"Datei: {f.name}", text=text, file=f))
+            out.append(RawProfile(source=f"Datei: {f.name}", text=text, file=f, consent_call=True))
     return out
 
 
@@ -101,6 +105,7 @@ def from_email() -> list[RawProfile]:
                     texts.append(f"--- Anhang {fname} ---\n{t}")
             elif part.get_content_type() == "text/plain" and payload:
                 texts.append(payload.decode(part.get_content_charset() or "utf-8", errors="replace"))
-        out.append(RawProfile(source=f"E-Mail: {sender} – {subject}", text="\n\n".join(texts)))
+        out.append(RawProfile(source=f"E-Mail: {sender} – {subject}", text="\n\n".join(texts),
+                              consent_call=True))
     box.logout()
     return out

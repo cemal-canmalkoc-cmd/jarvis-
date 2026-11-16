@@ -5,6 +5,9 @@
   python -m jarvis run --web --focus "Pflegefachfrau Psychiatrie Bern"
   python -m jarvis list             alle Kandidaten anzeigen
   python -m jarvis status <ID> kontaktiert|interessiert|kein_interesse|vermittelt
+  python -m jarvis serve            Server starten (Formular, WhatsApp, Telefon, Autopilot)
+  python -m jarvis befehl "ruf die Top 3 an"   Jarvis-Befehl lokal testen
+  python -m jarvis morgen           Morgenlauf sofort ausführen
 """
 from __future__ import annotations
 
@@ -30,6 +33,12 @@ def main() -> None:
     s.add_argument("key")
     s.add_argument("status", choices=store.STATUSES)
 
+    sv = sub.add_parser("serve", help="Server starten")
+    sv.add_argument("--port", type=int, default=int(__import__("os").environ.get("PORT", "8000")))
+    b = sub.add_parser("befehl", help="Befehl an Jarvis (wie per WhatsApp)")
+    b.add_argument("text", nargs="+")
+    sub.add_parser("morgen", help="Morgenlauf sofort ausführen")
+
     args = p.parse_args()
     if args.cmd == "run":
         stats = pipeline.run(use_folder=not args.no_folder, use_email=not args.no_email,
@@ -44,6 +53,15 @@ def main() -> None:
     elif args.cmd == "status":
         store.set_status(store.connect(), args.key, args.status)
         print("Status gespeichert.")
+    elif args.cmd == "serve":
+        import uvicorn
+        uvicorn.run("jarvis.server:app", host="0.0.0.0", port=args.port, proxy_headers=True)
+    elif args.cmd == "befehl":
+        from . import agent
+        print(agent.handle_owner(" ".join(args.text)))
+    elif args.cmd == "morgen":
+        from . import autopilot
+        print(autopilot.morning(force=True))
 
 
 if __name__ == "__main__":
