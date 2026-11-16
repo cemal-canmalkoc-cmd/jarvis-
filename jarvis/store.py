@@ -5,7 +5,7 @@ import hashlib
 import json
 import sqlite3
 import threading
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from .config import DB_PATH
 from .models import ScoredCandidate
@@ -65,6 +65,11 @@ CANDIDATE_EXTRA_COLUMNS = {
     "last_contact": "TEXT",
 }
 
+COMPANY_EXTRA_COLUMNS = {
+    "email": "TEXT",          # Ansprechperson HR (aus Telefonat oder manuell)
+    "contact_name": "TEXT",
+}
+
 STATUSES = ("neu", "kontaktiert", "interessiert", "kein_interesse", "vermittelt")
 COMPANY_STATUSES = ("neu", "angerufen", "interessiert", "kein_bedarf", "nicht_anrufen")
 
@@ -76,10 +81,11 @@ def connect() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=30)
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)
-    existing = {r["name"] for r in conn.execute("PRAGMA table_info(candidates)")}
-    for col, decl in CANDIDATE_EXTRA_COLUMNS.items():
-        if col not in existing:
-            conn.execute(f"ALTER TABLE candidates ADD COLUMN {col} {decl}")
+    for table, extra in (("candidates", CANDIDATE_EXTRA_COLUMNS), ("companies", COMPANY_EXTRA_COLUMNS)):
+        existing = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+        for col, decl in extra.items():
+            if col not in existing:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {decl}")
     conn.commit()
     return conn
 
@@ -117,7 +123,13 @@ def upsert(conn: sqlite3.Connection, c: ScoredCandidate) -> bool:
 
 
 def get_candidate(conn: sqlite3.Connection, key: str) -> sqlite3.Row | None:
-    return conn.execute("SELECT * FROM candidates WHERE key=?", (key,)).fetchone()
+    """Volle ID oder eindeutiger Anfang (z.B. die ersten 6 Zeichen)."""
+    key = (key or "").strip().lower()
+    row = conn.execute("SELECT * FROM candidates WHERE key=?", (key,)).fetchone()
+    if row or len(key) < 4:
+        return row
+    rows = conn.execute("SELECT * FROM candidates WHERE key LIKE ? LIMIT 2", (key + "%",)).fetchall()
+    return rows[0] if len(rows) == 1 else None
 
 
 def find_candidate_by_phone(conn: sqlite3.Connection, phone: str) -> sqlite3.Row | None:
@@ -146,6 +158,10 @@ def todays_shortlist(conn: sqlite3.Connection, limit: int) -> list[ScoredCandida
 def set_status(conn: sqlite3.Connection, key: str, status: str, note: str = "") -> None:
     if status not in STATUSES:
         raise ValueError(f"Status muss einer von {STATUSES} sein")
+    row = get_candidate(conn, key)
+    if row is None:
+        raise ValueError(f"Kandidat {key} nicht gefunden")
+    key = row["key"]
     with _lock:
         conn.execute(
             "UPDATE candidates SET status=?, last_contact=?, notes=notes || ? WHERE key=?",
@@ -302,3 +318,18 @@ def set_state(conn: sqlite3.Connection, key: str, value: str) -> None:
         conn.execute("INSERT INTO state (k, v) VALUES (?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v",
                      (key, value))
         conn.commit()
+
+
+def set_company_contact(conn: sqlite3.Connection, cid: int, email: str | None, name: str | None) -> None:
+    with _lock:
+        conn.execute("UPDATE companies SET email=COALESCE(?, email), contact_name=COALESCE(?, contact_name) "
+                     "WHERE id=?", (email, name, cid))
+        conn.commit()
+
+
+def followups_due(conn: sqlite3.Connection, days: int = 3) -> list[sqlite3.Row]:
+    """Kontaktiert, aber seit X Tagen keine Rückmeldung → nachfassen."""
+    cutoff = (datetime.now() - timedelta(days=days)).isoformat(timespec="minutes")
+    return conn.execute(
+        "SELECT * FROM candidates WHERE status='kontaktiert' AND last_contact IS NOT NULL "
+        "AND last_contact < ? ORDER BY score DESC LIMIT 20", (cutoff,)).fetchall()

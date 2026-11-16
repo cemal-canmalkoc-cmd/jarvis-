@@ -6,12 +6,33 @@ import re
 
 import anthropic
 
-from .config import EFFORT, MODEL, REQUIREMENTS_TEXT
+from .config import EFFORT, MODEL, REQUIREMENTS_TEXT, WEB_SEARCHES_PER_FOCUS
 from .models import Assessment
 
 _client: anthropic.Anthropic | None = None
 
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
+# Modelle mit serverseitigem Ersatzmodell bei Ablehnung (Haiku hat keins)
+FALLBACK_MODELS = ("claude-opus-5-5", "claude-opus-5", "claude-sonnet-5-5", "claude-fable-5-2", "claude-fable-5-1")
+
+
+def fallback_kwargs(model: str) -> dict:
+    return {"betas": [FALLBACK_BETA], "fallbacks": "default"} if model in FALLBACK_MODELS else {}
+
+
+def create(**kw):
+    """Ein Claude-Aufruf; nutzt automatisch das Ersatzmodell, wo verfügbar."""
+    extra = fallback_kwargs(kw["model"])
+    if extra:
+        return client().beta.messages.create(**kw, **extra)
+    return client().messages.create(**kw)
+
+
+def web_search_tool(model: str, max_uses: int) -> dict:
+    """Websuche mit dynamischer Filterung, wo das Modell sie kann; sonst die Basisversion."""
+    advanced = any(model.startswith(p) for p in ("claude-opus", "claude-sonnet", "claude-fable", "claude-mythos"))
+    return {"type": "web_search_20260209" if advanced else "web_search_20250305",
+            "name": "web_search", "max_uses": max_uses}
 
 
 def client() -> anthropic.Anthropic:
@@ -85,11 +106,9 @@ def _text_of(response) -> str:
 
 def extract(profile_text: str) -> Assessment:
     """Liest ein Kandidatenprofil aus und gibt strukturierte Fakten zurück."""
-    response = client().beta.messages.create(
+    response = create(
         model=MODEL,
         max_tokens=16000,
-        betas=[FALLBACK_BETA],
-        fallbacks="default",
         system=EXTRACT_SYSTEM,
         output_config={
             "effort": EFFORT,
@@ -129,21 +148,19 @@ Antworte am Ende ausschliesslich mit einem JSON-Codeblock:
 Leeres Array, wenn nichts Passendes gefunden wurde."""
 
 
-def find_public_leads(focus: str, max_searches: int = 8) -> list[dict]:
+def find_public_leads(focus: str, max_searches: int | None = None) -> list[dict]:
     """Sucht öffentliche Stellengesuche zu einem Fokus (z.B. 'Pflegefachfrau Psychiatrie Zürich')."""
     messages: list[dict] = [{
         "role": "user",
         "content": f"Suche aktuell öffentliche Stellengesuche für: {focus}. "
                    "Region: Schweiz (Deutschschweiz bevorzugt).",
     }]
-    tools = [{"type": "web_search_20260209", "name": "web_search", "max_uses": max_searches}]
+    tools = [web_search_tool(MODEL, max_searches or WEB_SEARCHES_PER_FOCUS)]
 
     for _ in range(5):  # pause_turn kann mehrmals vorkommen
-        response = client().beta.messages.create(
+        response = create(
             model=MODEL,
             max_tokens=32000,
-            betas=[FALLBACK_BETA],
-            fallbacks="default",
             system=SOURCING_SYSTEM,
             output_config={"effort": EFFORT},
             tools=tools,

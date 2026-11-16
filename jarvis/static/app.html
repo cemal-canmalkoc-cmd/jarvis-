@@ -269,11 +269,33 @@ async function openCand(id) {
     h("h2", {}, "Status"),
     h("div", {class: "chips"}, ["kontaktiert", "interessiert", "kein_interesse", "vermittelt"].map(s =>
       h("button", {class: "chip" + (d.status === s ? " on" : ""), onclick: () => act(`/api/kandidat/${id}/status`, {status: s})}, STATUS_DE[s]))),
+    d.passende_firmen.length ? h("h2", {}, "🤝 Passende Firmen") : null,
+    d.passende_firmen.map(f => h("div", {class: "card"},
+      h("div", {style: "display:flex;justify-content:space-between;gap:8px;align-items:center"},
+        h("div", {}, h("b", {}, f.name), h("div", {class: "muted small"}, [f.ort, f.bedarf].filter(Boolean).join(" · "))),
+        h("button", {class: "chip on", disabled: !["interessiert", "vermittelt"].includes(d.status),
+          onclick: () => presentTo(id, f)}, "Vorstellen")))),
+    d.passende_firmen.length && !["interessiert", "vermittelt"].includes(d.status)
+      ? h("div", {class: "muted small"}, "Vorstellen geht, sobald der Kandidat Interesse bestätigt hat.") : null,
+    h("h2", {}, "📝 Gesprächsleitfaden"),
+    h("div", {class: "card small"}, h("ol", {style: "margin:0;padding-left:20px"}, d.leitfaden.map(q => h("li", {style: "margin:4px 0"}, q)))),
     d.anrufe.length ? h("h2", {}, "Anrufe") : null,
     d.anrufe.map(k => { let s = {}; try { s = JSON.parse(k.summary || "{}"); } catch (e) {}
       return h("div", {class: "card small"}, h("b", {}, (k.started || "").replace("T", " ").slice(0, 16) + " · " + k.status),
         s.summary ? h("div", {}, s.summary) : null, s.next_step ? h("div", {class: "muted"}, "→ " + s.next_step) : null); }),
     d.notizen ? h("div", {class: "card small", style: "white-space:pre-wrap"}, d.notizen.trim()) : null);
+}
+
+async function presentTo(id, f) {
+  if (!confirm(`Kandidat anonym bei ${f.name} vorstellen?`)) return;
+  try {
+    const r = await api(`/api/kandidat/${id}/vorstellen`, {method: "POST", body: JSON.stringify({firma_id: f.id})});
+    if (r.meldung.includes("Text zum Kopieren")) {
+      const text = r.meldung.split("Text zum Kopieren:")[1].trim();
+      try { await navigator.clipboard.writeText(text); toast("Keine E-Mail hinterlegt – Text kopiert 📋"); }
+      catch (e) { sheet(h("h2", {}, "Text zum Senden"), h("div", {class: "card small", style: "white-space:pre-wrap"}, text)); }
+    } else { toast(r.meldung); closeSheet(); load(); }
+  } catch (e) { toast("Fehler: " + e.message); }
 }
 
 function openFirm(f) {

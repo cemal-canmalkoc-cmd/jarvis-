@@ -18,7 +18,7 @@ from pathlib import Path
 from fastapi import APIRouter, Body, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 
-from . import agent, config, messaging, store, voice
+from . import agent, config, matching, messaging, store, voice
 
 router = APIRouter()
 STATIC = Path(__file__).parent / "static"
@@ -138,13 +138,44 @@ async def uebersicht(request: Request):
             "anrufe": call_list, "anrufzeit": voice.within_call_hours()}
 
 
+def leitfaden(row) -> list[str]:
+    """Gesprächsleitfaden für deinen eigenen Anruf (kostenlos über dein Handy)."""
+    a = store.load(row).assessment
+    rec = "MEBEKO" if a.category == "arzt" else "SRK"
+    first = a.full_name.split()[0] if a.full_name else ""
+    q = [f"Grüezi {first}, hier ist {config.RECRUITER_NAME} von {config.AGENCY_NAME}. Passt es kurz?",
+         "Was ist Ihnen bei der nächsten Stelle am wichtigsten (Region, Pensum, Team, Lohn)?"]
+    if a.has_diploma_certificate is not True:
+        q.append("Haben Sie Ihr Diplom bzw. Ihre Berufsurkunde als Dokument vorliegen?")
+    if a.german_level in ("unbekannt", "A1", "A2", "B1"):
+        q.append("Welches Deutsch-Zertifikat haben Sie (mindestens B2 nötig)?")
+    if a.recognition_status in ("unbekannt", "fehlt", "laufend"):
+        q.append(f"Wie ist der Stand bei der {rec}-Anerkennung? Haben Sie schon einen Pre-Check?")
+    if not a.availability:
+        q.append("Ab wann könnten Sie starten?")
+    q += ["Welche Regionen in der Schweiz kommen in Frage?",
+          "Darf ich Ihr Profil anonym passenden Kliniken vorstellen?",
+          "Abschluss: nächsten Schritt + Termin festhalten, Lebenslauf per WhatsApp anfordern."]
+    return q
+
+
 @router.get("/api/kandidat/{key}")
 async def kandidat(request: Request, key: str):
     authed(request)
     out = agent.t_kandidat(key)
     if "fehler" in out:
         raise HTTPException(404, "Kandidat nicht gefunden")
+    conn = store.connect()
+    row = store.get_candidate(conn, key)
+    out["passende_firmen"] = matching.matches(conn, row)
+    out["leitfaden"] = leitfaden(row)
     return out
+
+
+@router.post("/api/kandidat/{key}/vorstellen")
+async def kandidat_vorstellen(request: Request, key: str, daten: dict = Body(...)):
+    authed(request)
+    return {"meldung": matching.present(key, int(daten.get("firma_id", 0)))}
 
 
 @router.post("/api/kandidat/{key}/anrufen")

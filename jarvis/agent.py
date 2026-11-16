@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 import anthropic
 import requests
 
-from . import brain, companies, config, messaging, pipeline, sources, store, voice
+from . import brain, companies, config, matching, messaging, pipeline, sources, store, voice
 
 log = logging.getLogger("jarvis.agent")
 
@@ -123,6 +123,29 @@ def t_whatsapp_an_kandidat(id: str, text: str) -> str:
     return f"Automatisch nicht erlaubt (keine WhatsApp-Einwilligung). Manuell senden: {c.whatsapp_link}"
 
 
+def t_passende_firmen(id: str) -> list[dict] | str:
+    conn = store.connect()
+    row = store.get_candidate(conn, id)
+    return matching.matches(conn, row) if row else "Kandidat nicht gefunden."
+
+
+def t_kandidat_vorstellen(id: str, firma_id: int) -> str:
+    conn = store.connect()
+    row = store.get_candidate(conn, id)
+    return matching.present(row["key"], firma_id) if row else "Kandidat nicht gefunden."
+
+
+def t_firma_kontakt(id: int, email: str, name: str = "") -> str:
+    store.set_company_contact(store.connect(), id, email, name or None)
+    return "ok"
+
+
+def t_nachfassen() -> list[dict]:
+    rows = store.followups_due(store.connect())
+    return [{"id": r["key"], "name": r["name"], "zuletzt": r["last_contact"], "telefon": r["phone"]}
+            for r in rows] or [{"info": "Niemand muss heute nachgefasst werden."}]
+
+
 def t_autopilot_jetzt() -> dict:
     from . import autopilot
     return autopilot.morning(force=True)
@@ -161,10 +184,19 @@ TOOLS = {
     "whatsapp_an_kandidat": (t_whatsapp_an_kandidat, "WhatsApp an Kandidaten (nur mit Einwilligung, "
                              "sonst kommt ein Link zum manuellen Senden zurück).",
                              {"id": {"type": "string"}, "text": {"type": "string"}}),
+    "passende_firmen": (t_passende_firmen, "Arbeitgeber, die zu einem Kandidaten passen.",
+                        {"id": {"type": "string"}}),
+    "kandidat_vorstellen": (t_kandidat_vorstellen, "Interessierten Kandidaten einer Firma anonym per E-Mail "
+                            "vorstellen (nur nach Zusage des Kandidaten).",
+                            {"id": {"type": "string"}, "firma_id": {"type": "integer"}}),
+    "firma_kontakt": (t_firma_kontakt, "E-Mail/Ansprechperson einer Firma speichern.",
+                      {"id": {"type": "integer"}, "email": {"type": "string"}, "name": {"type": "string"}}),
+    "nachfassen": (t_nachfassen, "Kandidaten, die seit 3+ Tagen nicht geantwortet haben.", {}),
     "autopilot_jetzt": (t_autopilot_jetzt, "Kompletten Tagesablauf sofort ausführen.", {}),
 }
 
-REQUIRED = {"kandidat": ["id"], "status_setzen": ["id", "status"], "kandidat_anrufen": ["id"],
+REQUIRED = {"passende_firmen": ["id"], "kandidat_vorstellen": ["id", "firma_id"],
+            "firma_kontakt": ["id", "email"], "kandidat": ["id"], "status_setzen": ["id", "status"], "kandidat_anrufen": ["id"],
             "firmen_suchen": ["fokus"], "firma_anrufen": ["id"], "firma_status": ["id", "status"],
             "whatsapp_an_kandidat": ["id", "text"]}
 
@@ -211,6 +243,10 @@ Du wirst per WhatsApp gesteuert. Regeln:
 - Erledige Aufträge selbstständig mit deinen Werkzeugen. Frag nur nach, wenn wirklich unklar ist, was gemeint ist.
 - Antworte kurz und WhatsApp-tauglich: keine Tabellen, kein Markdown ausser *fett*, maximal ca. 15 Zeilen.
 - Nenne Kandidaten immer mit Name, Bereich, Tier und ID.
+- Arbeite wie der beste Personalvermittler: Interessierte Kandidaten sofort passenden Firmen zuordnen
+  (passende_firmen) und nach deiner Bestätigung anonym vorstellen (kandidat_vorstellen). Wer nicht
+  antwortet, wird nachgefasst. Ein Kandidat ist erst vermittelt, wenn ein Vertrag unterschrieben ist.
+- Kandidaten-IDs dürfen abgekürzt werden (die ersten 6 Zeichen reichen).
 - Wenn das Tagesziel nicht erreicht ist, schlage konkrete Schritte vor (z.B. Web-Suche mit weiterem Fokus,
   Stelleninserat mit Formular-Link posten) – du kannst Inseratstexte selbst schreiben.
 - Rechtliche Leitplanken sind im Code fest eingebaut (Einwilligung, Sperrliste, Anrufzeiten).
@@ -233,9 +269,9 @@ def _handle_owner(text: str) -> str:
     messages.append({"role": "user", "content": f"[{datetime.now():%d.%m.%Y %H:%M}] {text}"})
     reply = ""
     for _ in range(12):
-        response = brain.client().beta.messages.create(
-            model=config.MODEL, max_tokens=16000, betas=[brain.FALLBACK_BETA], fallbacks="default",
-            system=OWNER_SYSTEM, output_config={"effort": "medium"}, tools=TOOL_DEFS,
+        response = brain.create(
+            model=config.MODEL, max_tokens=16000,
+            system=OWNER_SYSTEM, output_config={"effort": "low" if config.SPARMODUS else "medium"}, tools=TOOL_DEFS,
             messages=messages,
         )
         messages.append({"role": "assistant", "content": _dump(response.content)})
@@ -282,8 +318,11 @@ Regeln:
 TAG_RE = re.compile(r"\[(STATUS|OWNER):\s*([^\]]+)\]")
 
 
-def _download_media(url: str) -> bytes:
-    r = requests.get(url, auth=(config.TWILIO_ACCOUNT_SID, config.TWILIO_AUTH_TOKEN),
+def _download_media(ref: str) -> bytes:
+    """ref = 'meta:<media-id>' (Meta Cloud API) oder eine Twilio-Media-URL."""
+    if ref.startswith("meta:"):
+        return messaging.meta_download(ref[5:])[0]
+    r = requests.get(ref, auth=(config.TWILIO_ACCOUNT_SID, config.TWILIO_AUTH_TOKEN),
                      allow_redirects=True, timeout=60)
     r.raise_for_status()
     return r.content
@@ -335,8 +374,8 @@ def handle_candidate(sender: str, text: str, media: list[tuple[str, str]]) -> st
     messages = _conversation(conn, sender, max_age_h=24)
     messages.append({"role": "user", "content": f"{text or '(Anhang)'}{extra}"})
     try:
-        response = brain.client().beta.messages.create(
-            model=config.MODEL, max_tokens=4000, betas=[brain.FALLBACK_BETA], fallbacks="default",
+        response = brain.create(
+            model=config.MODEL, max_tokens=4000,
             system=CANDIDATE_SYSTEM + "\n\n" + profile, output_config={"effort": "low"},
             messages=messages,
         )

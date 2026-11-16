@@ -12,6 +12,8 @@ Start:  uvicorn jarvis.server:app --host 0.0.0.0 --port 8000
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import hmac
 import html
 import json
 import logging
@@ -92,9 +94,54 @@ def _process_whatsapp(sender: str, body: str, media: list[tuple[str, str]]) -> N
             messaging.notify_owner(f"⚠️ Fehler: {exc}")
 
 
+@app.get("/whatsapp")
+async def whatsapp_verify(request: Request):
+    """Meta: einmalige Bestätigung der Webhook-Adresse."""
+    q = request.query_params
+    if (q.get("hub.mode") == "subscribe" and config.META_VERIFY_TOKEN
+            and hmac.compare_digest(q.get("hub.verify_token", ""), config.META_VERIFY_TOKEN)):
+        return PlainTextResponse(q.get("hub.challenge", ""))
+    raise HTTPException(403, "Verifizierung fehlgeschlagen")
+
+
+def _meta_messages(payload: dict) -> list[tuple[str, str, list[tuple[str, str]]]]:
+    out = []
+    for entry in payload.get("entry", []):
+        for change in entry.get("changes", []):
+            for m in change.get("value", {}).get("messages", []) or []:
+                sender, typ = m.get("from", ""), m.get("type")
+                body, media = "", []
+                if typ == "text":
+                    body = m.get("text", {}).get("body", "")
+                elif typ == "button":
+                    body = m.get("button", {}).get("text", "")
+                elif typ == "interactive":
+                    i = m.get("interactive", {})
+                    body = (i.get("button_reply") or i.get("list_reply") or {}).get("title", "")
+                elif typ == "document":
+                    d = m.get("document", {})
+                    media.append((f"meta:{d.get('id', '')}", d.get("mime_type", "")))
+                    body = d.get("caption", "")
+                else:
+                    body = "(Nachricht, die Jarvis nicht lesen kann)"
+                out.append((sender, body, media))
+    return out
+
+
 @app.post("/whatsapp")
 async def whatsapp_webhook(request: Request, bg: BackgroundTasks):
-    form = await _verify_twilio(request)
+    if request.headers.get("content-type", "").startswith("application/json"):  # Meta Cloud API
+        raw = await request.body()
+        if config.VALIDATE_TWILIO:
+            expected = "sha256=" + hmac.new(config.META_APP_SECRET.encode(), raw, hashlib.sha256).hexdigest()
+            if not config.META_APP_SECRET or not hmac.compare_digest(
+                    request.headers.get("X-Hub-Signature-256", ""), expected):
+                raise HTTPException(403, "Ungültige Signatur")
+        for sender, body, media in _meta_messages(json.loads(raw or b"{}")):
+            bg.add_task(_process_whatsapp, sender, body, media)
+        return PlainTextResponse("ok")
+
+    form = await _verify_twilio(request)  # Twilio
     sender = form.get("From", "")
     body = form.get("Body", "") or ""
     n = int(form.get("NumMedia", "0") or 0)
@@ -322,8 +369,8 @@ LEBENSLAUF:
     bg.add_task(_evaluate_form, raw)
 
     chat = ""
-    if config.TWILIO_WHATSAPP_FROM:
-        num = "".join(ch for ch in config.TWILIO_WHATSAPP_FROM if ch.isdigit())
+    num = messaging.jarvis_number()
+    if num:
         msg = quote(f"Hallo, ich habe mich gerade beworben ({bereich}). Mein Name: {name}")
         chat = (f'<p>Schneller geht\'s per WhatsApp – schreiben Sie uns direkt:</p>'
                 f'<a class="btn" href="https://wa.me/{num}?text={msg}">WhatsApp-Chat starten</a>')

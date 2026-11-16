@@ -23,8 +23,12 @@ PROCESSED_DIR = DATA_DIR / "processed"  # verarbeitete Dateien landen hier
 REPORT_DIR = BASE_DIR / "reports"       # tägliche Shortlists (HTML + CSV)
 DB_PATH = DATA_DIR / "jarvis.sqlite3"
 
-MODEL = os.environ.get("JARVIS_MODEL", "claude-opus-5-5")
-EFFORT = os.environ.get("JARVIS_EFFORT", "medium")
+# Sparmodus (Standard): Claude Haiku 5.5 – rund 40x günstiger als Opus, für Lebensläufe,
+# Chats und Telefonate gut geeignet. Für maximale Qualität: JARVIS_SPARMODUS=0 (Claude Opus 5.5).
+SPARMODUS = os.environ.get("JARVIS_SPARMODUS", "1").strip().lower() not in ("0", "false", "nein")
+MODEL = os.environ.get("JARVIS_MODEL", "claude-haiku-5-5" if SPARMODUS else "claude-opus-5-5")
+EFFORT = os.environ.get("JARVIS_EFFORT", "low" if SPARMODUS else "medium")
+WEB_SEARCHES_PER_FOCUS = int(os.environ.get("JARVIS_WEB_SEARCHES", "3" if SPARMODUS else "8"))
 
 # Absender-Angaben für die WhatsApp-Nachrichten
 RECRUITER_NAME = os.environ.get("JARVIS_RECRUITER_NAME", "Cemal-Can Malkoc")
@@ -101,3 +105,25 @@ VOICE_TTS_PROVIDER = os.environ.get("JARVIS_VOICE_TTS_PROVIDER", "")  # z.B. Ele
 VOICE_NAME = os.environ.get("JARVIS_VOICE_NAME", "")
 VOICE_EFFORT = os.environ.get("JARVIS_VOICE_EFFORT", "low")       # niedrige Latenz am Telefon
 VOICE_FAST_MODE = _flag("JARVIS_VOICE_FAST_MODE", "0")            # schnellere Antworten, doppelter Preis
+
+# ---------------------------------------------------------------------------
+# WhatsApp-Anbieter: "meta" (Standard, direkt & am günstigsten) oder "twilio"
+# ---------------------------------------------------------------------------
+WHATSAPP_PROVIDER = os.environ.get("JARVIS_WHATSAPP_PROVIDER", "meta").strip().lower()
+META_TOKEN = os.environ.get("META_WHATSAPP_TOKEN", "")            # dauerhaftes System-User-Token
+META_PHONE_NUMBER_ID = os.environ.get("META_PHONE_NUMBER_ID", "")  # ID der WhatsApp-Nummer
+META_APP_SECRET = os.environ.get("META_APP_SECRET", "")            # prüft, dass Webhooks echt sind
+META_VERIFY_TOKEN = os.environ.get("META_VERIFY_TOKEN", "")        # frei wählbar, für die Webhook-Einrichtung
+META_GRAPH_VERSION = os.environ.get("META_GRAPH_VERSION", "v23.0")
+META_TEMPLATE_FIRST_CONTACT = os.environ.get("META_TEMPLATE_FIRST_CONTACT", "")  # Name der Vorlage
+META_TEMPLATE_LANG = os.environ.get("META_TEMPLATE_LANG", "de")
+JARVIS_WHATSAPP_NUMBER = os.environ.get("JARVIS_WHATSAPP_NUMBER", "")  # Jarvis' Nummer (für wa.me-Links)
+
+# ---------------------------------------------------------------------------
+# E-Mail (kostenlos über dein bestehendes Postfach): Kandidatenprofile an Kliniken senden
+# ---------------------------------------------------------------------------
+SMTP_HOST = os.environ.get("JARVIS_SMTP_HOST", "")
+SMTP_PORT = int(os.environ.get("JARVIS_SMTP_PORT", "587"))
+SMTP_USER = os.environ.get("JARVIS_SMTP_USER", "")
+SMTP_PASSWORD = os.environ.get("JARVIS_SMTP_PASSWORD", "")
+SMTP_FROM = os.environ.get("JARVIS_SMTP_FROM", "")

@@ -15,7 +15,7 @@ import logging
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
-from . import companies, config, messaging, pipeline, store, voice
+from . import companies, config, matching, messaging, pipeline, store, voice
 from .config import NURSING_FIELDS, PHYSICIAN_SPECIALTIES
 
 log = logging.getLogger("jarvis.autopilot")
@@ -67,8 +67,21 @@ def morning(force: bool = False) -> dict:
     for c in top:
         a = c.assessment
         role = a.physician_specialty if a.category == "arzt" else a.nursing_field
-        lines.append(f"{c.tier} {c.score} · {a.full_name} · {role} · ID {store.candidate_key(c)}")
-    lines.append(f"\nShortlist: {config.PUBLIC_URL}/shortlist?token={config.ADMIN_TOKEN}")
+        lines.append(f"{c.tier} {c.score} · {a.full_name} · {role} · ID {store.candidate_key(c)[:6]}")
+    sugg = matching.suggestions(conn)
+    if sugg:
+        lines.append("\n🤝 *Vermittlungsvorschläge*")
+        lines += sugg
+    due = store.followups_due(conn)
+    if due:
+        lines.append("\n🔁 *Nachfassen* (3+ Tage keine Antwort)")
+        lines += [f"{r['name']} · {r['phone'] or '–'} · ID {r['key'][:6]}" for r in due[:8]]
+    if not config.TWILIO_VOICE_FROM:
+        # Ohne Telefonie-Anbieter: Anrufliste für dich (kostenlos über dein Handy)
+        lines.append("\n📞 *Deine Anrufliste heute*")
+        for c in top[:6]:
+            lines.append(f"{c.assessment.full_name} · {c.assessment.phone} · ID {store.candidate_key(c)[:6]}")
+    lines.append(f"\nApp: {config.PUBLIC_URL}/app")
     if stats["vermittelbar_heute"] < config.DAILY_TARGET:
         lines.append("⚠️ Ziel noch nicht erreicht. Tipp: schreib mir 'Inserat für Facebook-Gruppen' – "
                      "Bewerber übers Formular sind sofort anrufbar.")
@@ -99,6 +112,11 @@ def first_contacts(limit: int = 10) -> int:
 def call_round() -> dict:
     if not voice.within_call_hours():
         return {"info": "ausserhalb der Anrufzeiten"}
+    if not config.TWILIO_VOICE_FROM:
+        try:
+            return {"whatsapp": first_contacts(), "info": "keine Telefonie eingerichtet"}
+        except Exception as exc:  # noqa: BLE001
+            return {"fehler": str(exc)}
     conn = store.connect()
     out: dict = {"kandidaten": [], "firmen": [], "whatsapp": 0}
     if config.AUTO_CALL_CANDIDATES:

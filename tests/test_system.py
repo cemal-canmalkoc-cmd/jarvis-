@@ -55,6 +55,7 @@ def tw(monkeypatch):
     monkeypatch.setattr(config, "TWILIO_WHATSAPP_FROM", "+41440000001")
     monkeypatch.setattr(config, "OWNER_WHATSAPP", "+491700000000")
     monkeypatch.setattr(config, "VALIDATE_TWILIO", False)
+    monkeypatch.setattr(config, "WHATSAPP_PROVIDER", "twilio")
     monkeypatch.setattr(voice, "within_call_hours", lambda now=None: True)
     return fake
 
@@ -128,8 +129,8 @@ def test_relay_session_conversation(tw, monkeypatch):
 
     replies = iter([["Schön! ", "Ab wann ", "wären Sie verfügbar?"],
                     ["Danke, wir melden uns. ", "Auf Wiederhören! [AUFLEGEN]"]])
-    fake = SimpleNamespace(beta=SimpleNamespace(messages=SimpleNamespace(
-        stream=lambda **kw: FakeStream(next(replies)))))
+    msgs = SimpleNamespace(stream=lambda **kw: FakeStream(next(replies)))
+    fake = SimpleNamespace(messages=msgs, beta=SimpleNamespace(messages=msgs))
     monkeypatch.setattr(voice, "aclient", lambda: fake)
     monkeypatch.setattr(voice, "END_DELAY_S", 0)
     monkeypatch.setattr(voice, "summarize", lambda t, tr: {
@@ -241,7 +242,8 @@ def test_owner_agent_tool_loop(tw, monkeypatch):
         captured.append(json.loads(json.dumps(kw["messages"], default=str)))
         return next(responses)
 
-    fake = SimpleNamespace(beta=SimpleNamespace(messages=SimpleNamespace(create=create)))
+    msgs = SimpleNamespace(create=create)
+    fake = SimpleNamespace(messages=msgs, beta=SimpleNamespace(messages=msgs))
     monkeypatch.setattr(agent.brain, "client", lambda: fake)
     assert agent.handle_owner("Wie läuft's?") == "Heute 3 von 20."
     tool_result = captured[1][-1]["content"][0]

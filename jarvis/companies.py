@@ -5,7 +5,7 @@ import json
 import re
 
 from . import brain, store
-from .config import EFFORT, MODEL, REQUIREMENTS_TEXT
+from .config import EFFORT, MODEL, REQUIREMENTS_TEXT, WEB_SEARCHES_PER_FOCUS
 
 SYSTEM = f"""Du bist Jarvis, Business-Development für eine Personalvermittlung im Schweizer Gesundheitswesen.
 
@@ -28,16 +28,16 @@ Antworte am Ende ausschliesslich mit einem JSON-Codeblock:
 ```"""
 
 
-def find(focus: str, region: str = "Deutschschweiz", max_searches: int = 10) -> dict:
+def find(focus: str, region: str = "Deutschschweiz", max_searches: int | None = None) -> dict:
     messages: list[dict] = [{
         "role": "user",
         "content": f"Finde Arbeitgeber mit offenen Stellen für: {focus}. Region: {region}.",
     }]
-    tools = [{"type": "web_search_20260209", "name": "web_search", "max_uses": max_searches}]
+    tools = [brain.web_search_tool(MODEL, max_searches or WEB_SEARCHES_PER_FOCUS + 2)]
     response = None
     for _ in range(5):
-        response = brain.client().beta.messages.create(
-            model=MODEL, max_tokens=32000, betas=[brain.FALLBACK_BETA], fallbacks="default",
+        response = brain.create(
+            model=MODEL, max_tokens=32000,
             system=SYSTEM, output_config={"effort": EFFORT}, tools=tools, messages=messages,
         )
         if response.stop_reason != "pause_turn":

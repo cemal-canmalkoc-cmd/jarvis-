@@ -284,13 +284,14 @@ class RelaySession:
         spoken = ""
         try:
             kwargs = dict(
-                model=config.MODEL, max_tokens=2000, betas=[brain.FALLBACK_BETA],
-                fallbacks="default", system=self.system,
+                model=config.MODEL, max_tokens=2000, system=self.system,
                 output_config={"effort": config.VOICE_EFFORT}, messages=self.messages,
+                **brain.fallback_kwargs(config.MODEL),
             )
             if config.VOICE_FAST_MODE:
                 kwargs["speed"] = "fast"
-            async with aclient().beta.messages.stream(**kwargs) as stream:
+            api = aclient().beta.messages if "betas" in kwargs else aclient().messages
+            async with api.stream(**kwargs) as stream:
                 async for token in stream.text_stream:
                     out = filt.feed(token)
                     if out:
@@ -348,8 +349,8 @@ OUTCOME_SCHEMA = {
 
 def summarize(target_type: str, transcript: list[dict]) -> dict:
     lines = "\n".join(f"{k.upper()}: {v}" for turn in transcript for k, v in turn.items())
-    resp = brain.client().beta.messages.create(
-        model=config.MODEL, max_tokens=4000, betas=[brain.FALLBACK_BETA], fallbacks="default",
+    resp = brain.create(
+        model=config.MODEL, max_tokens=4000,
         system=("Fasse ein Telefonat einer Personalvermittlung zusammen. Nur belegte Fakten. "
                 "summary: 2-3 Sätze Deutsch. next_step: konkrete nächste Aktion für den Recruiter. "
                 "Outcome 'nicht_anrufen', wenn die Person keine weiteren Anrufe möchte."),
@@ -406,6 +407,8 @@ def finalize_call(call_id: int, transcript: list[dict]) -> None:
         if result.get("contact_email"):
             note += f" | Kontakt: {result.get('contact_name') or ''} {result['contact_email']}"
         store.set_company_status(conn, cid, status, note)
+        if result.get("contact_email") or result.get("contact_name"):
+            store.set_company_contact(conn, cid, result.get("contact_email"), result.get("contact_name"))
         if outcome == "nicht_anrufen":
             store.add_optout(conn, call["phone"])
         icon = "🏥🔥" if status == "interessiert" else "🏥"
