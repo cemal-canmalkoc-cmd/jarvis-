@@ -15,6 +15,7 @@ if _env.exists():
     for _line in _env.read_text(encoding="utf-8").splitlines():
         if "=" in _line and not _line.lstrip().startswith("#"):
             _k, _v = _line.split("=", 1)
+            _v = _v.split(" #", 1)[0]  # Kommentar am Zeilenende ignorieren
             if _v.strip():
                 os.environ.setdefault(_k.strip(), _v.strip())
 DATA_DIR = BASE_DIR / "data"
