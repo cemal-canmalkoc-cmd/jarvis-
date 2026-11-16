@@ -386,8 +386,22 @@ def _download_media(ref: str) -> bytes:
     return r.content
 
 
+TAKEOVER_HOURS = 24
+
+
+def owner_took_over(conn, phone: str) -> bool:
+    """Du hast diesem Kontakt in den letzten 24h selbst geschrieben → Jarvis antwortet nicht dazwischen."""
+    ts = store.get_state(conn, f"takeover:{store.digits(phone)[-9:]}")
+    return bool(ts) and datetime.fromisoformat(ts) > datetime.now() - timedelta(hours=TAKEOVER_HOURS)
+
+
 def handle_candidate(sender: str, text: str, media: list[tuple[str, str]]) -> str | None:
     conn = store.connect()
+    if owner_took_over(conn, sender):
+        row = store.find_candidate_by_phone(conn, sender)
+        who = row["name"] if row else f"+{store.digits(sender)}"
+        store.add_notification(conn, f"💬 {who} (du chattest selbst): {text[:300]}")
+        return None
     if STOP_WORDS.match(text or ""):
         store.add_optout(conn, sender)
         row = store.find_candidate_by_phone(conn, sender)

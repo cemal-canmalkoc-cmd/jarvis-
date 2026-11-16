@@ -163,16 +163,22 @@ Dann `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` und `TWILIO_VOICE_FROM` in die `.
 
 | Nummer | Wofür | Einstellung |
 |---|---|---|
-| **+49 176 …** (deine) | Dein WhatsApp: Befehle an Jarvis, Berichte und 🔥-Meldungen von Jarvis | `JARVIS_OWNER_WHATSAPP` |
-| **+49 151 28143836** | **Nur Telefon:** Kandidaten und Kliniken rufen an, Jarvis nimmt ab (Umleitung zu Twilio). Als Absender für Rückrufe nutzbar (Verified Caller ID). | `JARVIS_CALL_IN_NUMBER` |
-| **Jarvis' WhatsApp** | Damit schreibt Jarvis automatisch an Kandidaten. Muss eine Nummer sein, die in **keiner** WhatsApp-App läuft. | `JARVIS_WHATSAPP_NUMBER` |
+| **0176 …** | **Jarvis' WhatsApp:** Er schreibt Kandidaten an, beantwortet Nachrichten und nimmt Lebensläufe an | `JARVIS_WHATSAPP_NUMBER` |
+| **+49 151 28143836** | **Nur Telefon:** Wer anruft, landet bei Jarvis (Umleitung zu Twilio). Als Absender für Rückrufe nutzbar. | `JARVIS_CALL_IN_NUMBER` |
+| **Du** | Steuerung über die **iPhone-App und Siri**. Meldungen kommen in die App („Meldungen") und per E-Mail. | `JARVIS_OWNER_EMAIL` |
 
-**Technische Grenzen:**
-- Eine Nummer kann nicht gleichzeitig in deiner WhatsApp-App und bei Jarvis (WhatsApp Business API) laufen.
-  Machst du deine 176 zur Jarvis-Nummer, verschwindet sie aus deiner WhatsApp-App. Dann steuerst du Jarvis
-  über die iPhone-App und Siri, und Meldungen kommen in die App (Bereich „Meldungen") und per E-Mail (`JARVIS_OWNER_EMAIL`).
-- Normale Telefonanrufe lassen sich nicht „auf WhatsApp umleiten". Jarvis nimmt Anrufe auf der 151 selbst an.
-  Sagt die Person im Gespräch „WhatsApp ist ok", schreibt Jarvis ihr danach auf WhatsApp weiter (Lebenslauf anfordern).
+**Die 0176 bei Meta anmelden:**
+- **Läuft sie in der WhatsApp-Business-App?** Dann im Meta-Setup die Option „bestehende WhatsApp-Business-App-Nummer
+  verbinden" (Coexistence) wählen, sofern Meta sie für eure Nummer anbietet. So bleibt die App auf deinem iPhone nutzbar.
+  Schreibst du dort selbst einem Kandidaten, hält sich Jarvis bei diesem Kontakt 24 Stunden zurück. So gibt es keine doppelten Antworten.
+- **Läuft sie im normalen WhatsApp, oder gibt es kein Coexistence?** Dann muss die Nummer zuerst aus der App entfernt werden
+  (vorher Chat-Backup machen). Danach gehört sie nur noch Jarvis.
+
+**Optional:** Willst du Jarvis zusätzlich per WhatsApp Befehle geben, brauchst du dafür eine zweite WhatsApp-Nummer.
+Zum Beispiel kannst du die 151 in deiner WhatsApp-App registrieren und als `JARVIS_OWNER_WHATSAPP` eintragen. Die Rufumleitung funktioniert trotzdem weiter.
+
+Normale Anrufe lassen sich nicht „auf WhatsApp umleiten". Jarvis nimmt Anrufe auf der 151 selbst an. Sagt die
+Person „WhatsApp ist ok", schreibt er ihr danach von der 0176 auf WhatsApp weiter.
 
 ## ☎️ Anrufe annehmen: Jarvis als Telefonzentrale (+49 151 28143836)
 
@@ -254,5 +260,5 @@ jarvis/
 ## Tests
 
 ```bash
-python -m pytest -q     # 51 Tests, simuliert Claude/WhatsApp/Telefon – keine echten Kosten
+python -m pytest -q     # 52 Tests, simuliert Claude/WhatsApp/Telefon – keine echten Kosten
 ```

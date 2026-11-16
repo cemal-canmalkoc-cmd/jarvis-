@@ -138,3 +138,20 @@ def test_app_shows_matches_and_script(tw, monkeypatch):  # noqa: F811
     assert any(f["name"] == "Psychiatrie West" for f in d["passende_firmen"])
     assert any("Deutsch-Zertifikat" in q for q in d["leitfaden"])
     assert "Cemal-Can Malkoc" in d["leitfaden"][0]
+
+
+def test_owner_writes_himself_jarvis_pauses(monkeypatch):
+    """Coexistence: Du schreibst in der WhatsApp-Business-App selbst → Jarvis antwortet diesem Kontakt 24h nicht."""
+    sent = _meta_cfg(monkeypatch)
+    monkeypatch.setattr(config, "VALIDATE_TWILIO", False)
+    called = []
+    monkeypatch.setattr(agent.brain, "create", lambda **kw: called.append(kw))
+    c = TestClient(server.app)
+    echo = {"entry": [{"changes": [{"field": "smb_message_echoes", "value": {"message_echoes": [
+        {"from": "4917600000000", "to": "41795550099", "type": "text", "text": {"body": "Hallo, hier Cemal-Can"}}]}}]}]}
+    c.post("/whatsapp", json=echo)
+    incoming = {"entry": [{"changes": [{"value": {"messages": [
+        {"from": "41795550099", "type": "text", "text": {"body": "Danke, wann passt es?"}}]}}]}]}
+    c.post("/whatsapp", json=incoming)
+    assert not called and not sent  # Jarvis bleibt still
+    assert "du chattest selbst" in store.notifications(store.connect(), 1)[0]["text"]

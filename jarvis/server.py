@@ -104,6 +104,17 @@ async def whatsapp_verify(request: Request):
     raise HTTPException(403, "Verifizierung fehlgeschlagen")
 
 
+def _meta_echoes(payload: dict) -> list[str]:
+    """Nachrichten, die du selbst in der WhatsApp-Business-App geschrieben hast (Coexistence-Echo)."""
+    out = []
+    for entry in payload.get("entry", []):
+        for change in entry.get("changes", []):
+            for m in change.get("value", {}).get("message_echoes", []) or []:
+                if m.get("to"):
+                    out.append(m["to"])
+    return out
+
+
 def _meta_messages(payload: dict) -> list[tuple[str, str, list[tuple[str, str]]]]:
     out = []
     for entry in payload.get("entry", []):
@@ -137,7 +148,11 @@ async def whatsapp_webhook(request: Request, bg: BackgroundTasks):
             if not config.META_APP_SECRET or not hmac.compare_digest(
                     request.headers.get("X-Hub-Signature-256", ""), expected):
                 raise HTTPException(403, "Ungültige Signatur")
-        for sender, body, media in _meta_messages(json.loads(raw or b"{}")):
+        payload = json.loads(raw or b"{}")
+        for contact in _meta_echoes(payload):
+            store.set_state(store.connect(), f"takeover:{store.digits(contact)[-9:]}",
+                            datetime.now().isoformat(timespec="minutes"))
+        for sender, body, media in _meta_messages(payload):
             bg.add_task(_process_whatsapp, sender, body, media)
         return PlainTextResponse("ok")
 
