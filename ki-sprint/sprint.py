@@ -57,6 +57,11 @@ SCHMERZ = {
     "kosmetik": "Terminbuchung per Telefon/WhatsApp und No-Shows",
 }
 
+# Angebot ist per config.json ueberschreibbar (z. B. fuer die Werbeagentur, siehe ../agentur/README.md)
+ANGEBOT_SATZ = ("Ich richte in 5 Werktagen einen KI-Assistenten ein, der Anfragen rund um die Uhr beantwortet, "
+                "Termine direkt einbucht und automatisch nachfasst, zum Festpreis und ohne laufende Agenturkosten.")
+ANGEBOT_TELEFON = "Ich baue für {branche}-Betriebe KI-Assistenten, die Anfragen automatisch annehmen und Termine einbuchen."
+
 STATUS = ["neu", "kontaktiert", "nachgefasst", "antwort", "termin", "angebot", "gewonnen", "verloren"]
 
 
@@ -207,13 +212,11 @@ def vorlage(r, sig, c):
     b = beobachtung(r, sig)
     msg = (f"Guten Tag,\n\nich habe mir {r['name']} angesehen und bemerkt, {b}. "
            f"Viele {r['branche'].capitalize()}-Betriebe verlieren genau dadurch Aufträge und Termine: {SCHMERZ[r['branche']]}.\n\n"
-           f"Ich richte in 5 Werktagen einen KI-Assistenten ein, der Anfragen rund um die Uhr beantwortet, "
-           f"Termine direkt einbucht und automatisch nachfasst, zum Festpreis und ohne laufende Agenturkosten.\n\n"
+           f"{c.get('angebot_satz', ANGEBOT_SATZ)}\n\n"
            f"Darf ich Ihnen in 15 Minuten zeigen, wie das bei Ihnen aussehen würde? {c['buchungslink']}\n\n"
            f"Viele Grüße\n{c['dein_name']}\n{c['firma']} · {c['telefon']}")
     skript = (f"„Guten Tag, {c['dein_name']} hier. Kurze Frage: Wer kümmert sich bei Ihnen um Terminanfragen? "
-              f"... Ich habe gesehen, {b}. Ich baue für {r['branche'].capitalize()}-Betriebe KI-Assistenten, die Anfragen "
-              f"automatisch annehmen und Termine einbuchen. Hätten Sie diese Woche 15 Minuten, dass ich es Ihnen zeige?“\n"
+              f"... Ich habe gesehen, {b}. {c.get('angebot_telefon', ANGEBOT_TELEFON).format(branche=r['branche'].capitalize())} Hätten Sie diese Woche 15 Minuten, dass ich es Ihnen zeige?“\n"
               f"Einwand 'kein Interesse' -> „Verstehe. Wie viele Anfragen gehen bei Ihnen pro Woche verloren, "
               f"weil keiner ans Telefon kann?“")
     return msg, skript
@@ -222,7 +225,7 @@ def vorlage(r, sig, c):
 def claude_nachricht(r, sig, c, client):
     prompt = f"""Schreibe eine kurze B2B-Erstnachricht (LinkedIn oder Kontaktformular, max. 110 Wörter, Sie-Form, Deutsch).
 
-Absender: {c['dein_name']}, {c['firma']}. Angebot: KI-Assistent, der Anfragen 24/7 beantwortet, Termine einbucht und nachfasst. In 5 Werktagen live, Festpreis.
+Absender: {c['dein_name']}, {c['firma']}. Angebot: {c.get('angebot_satz', ANGEBOT_SATZ)}
 Empfänger: {r['name']} ({r['branche']}, {r['stadt']}). Website-Titel: {sig.get('titel', '')}
 Konkrete Beobachtung: {beobachtung(r, sig)}. Typischer Schmerz der Branche: {SCHMERZ[r['branche']]}.
 Call-to-Action: 15-Minuten-Gespräch, Link {c['buchungslink']}

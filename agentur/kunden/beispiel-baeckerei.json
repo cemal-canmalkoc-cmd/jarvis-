@@ -1,0 +1,16 @@
+{
+  "firma": "Bäckerei Sonnenkorn (Beispiel)",
+  "branche": "Bäckerei & Café",
+  "ort": "Augsburg-Göggingen",
+  "website": "",
+  "paket": "komplett",
+  "zielgruppe": "Familien und Berufstätige im Stadtteil, 25–60 Jahre",
+  "leistungen": ["Handwerksbrot aus Natursauerteig", "Frühstück im Café", "Torten auf Bestellung", "Brotzeit-Platten für Firmen"],
+  "besonderheiten": "Alles ohne Fertigmischungen, Bio-Mehl aus der Region, seit 1987 im Familienbesitz",
+  "angebot_aktion": "Frühstück für 2 Personen 19,90 € (Mo–Fr)",
+  "ziel": "Mehr Torten-Bestellungen und Firmen-Catering",
+  "tonalitaet": "warm, bodenständig, mit Humor",
+  "werbebudget_monat": 400,
+  "kontakt_cta": "Jetzt Torte bestellen: 0821 000000 oder im Laden",
+  "verboten": "keine Rabattschlacht, keine Vergleiche mit Ketten"
+}

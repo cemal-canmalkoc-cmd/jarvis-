@@ -1,0 +1,13 @@
+{
+  "agentur_name": "DEIN AGENTURNAME",
+  "inhaber": "Max Mustermann",
+  "email": "hallo@deine-agentur.de",
+  "telefon": "+49 170 0000000",
+  "buchungslink": "https://cal.com/DEIN-NAME/15min",
+  "fragebogen_link": "https://tally.so/r/DEIN-FORMULAR",
+  "stripe": {
+    "start": "https://buy.stripe.com/DEIN-LINK-START",
+    "wachstum": "https://buy.stripe.com/DEIN-LINK-WACHSTUM",
+    "komplett": "https://buy.stripe.com/DEIN-LINK-KOMPLETT"
+  }
+}
