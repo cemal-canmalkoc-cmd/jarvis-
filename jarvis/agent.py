@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import threading
 from datetime import datetime, timedelta
 
 import anthropic
@@ -216,9 +217,18 @@ Du wirst per WhatsApp gesteuert. Regeln:
   Versuche nie, sie zu umgehen, und erkläre sie kurz, wenn ein Auftrag daran scheitert."""
 
 
+_owner_lock = threading.Lock()
+
+
 def handle_owner(text: str) -> str:
+    """Ein Befehl von dir (WhatsApp, iPhone-App oder Siri). Alle teilen sich einen Verlauf."""
+    with _owner_lock:
+        return _handle_owner(text)
+
+
+def _handle_owner(text: str) -> str:
     conn = store.connect()
-    phone = config.OWNER_WHATSAPP
+    phone = config.OWNER_WHATSAPP or "app"
     messages = _conversation(conn, phone, max_age_h=3)
     messages.append({"role": "user", "content": f"[{datetime.now():%d.%m.%Y %H:%M}] {text}"})
     reply = ""

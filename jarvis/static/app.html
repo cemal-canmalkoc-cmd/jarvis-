@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Jarvis">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="/app/icon-180.png">
+<link rel="manifest" href="/app/manifest.webmanifest">
+<title>Jarvis</title>
+<style>
+:root{
+  --bg:#f2f2f7;--card:#fff;--text:#111114;--muted:#6c6c72;--line:#e3e3e8;
+  --accent:#0b6e4f;--accent-soft:#0b6e4f1a;--on-accent:#fff;
+  --a:#0b8a52;--b:#c27c0e;--hot:#e5484d;--bubble-me:#0b6e4f;--bubble-j:#e9e9ee;
+  --tabbar:rgba(249,249,251,.92);
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#000;--card:#1c1c1e;--text:#f2f2f7;--muted:#98989f;--line:#2c2c2e;
+  --accent:#30d18f;--accent-soft:#30d18f22;--on-accent:#04140d;
+  --a:#30d18f;--b:#f0b44a;--hot:#ff6369;--bubble-me:#1f8f66;--bubble-j:#2c2c2e;
+  --tabbar:rgba(22,22,24,.92);
+}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font:17px/1.4 -apple-system,system-ui,sans-serif}
+body{padding:env(safe-area-inset-top) 0 calc(64px + env(safe-area-inset-bottom))}
+header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 4px}
+header h1{font-size:32px;margin:0;font-weight:700;letter-spacing:-.5px}
+.iconbtn{border:0;background:var(--accent-soft);color:var(--accent);width:38px;height:38px;border-radius:19px;font-size:19px}
+section{display:none;padding:0 16px 16px}section.on{display:block}
+.card{background:var(--card);border-radius:14px;padding:14px 16px;margin:12px 0}
+.muted{color:var(--muted)}.small{font-size:14px}
+/* Heute */
+.goal{display:flex;gap:18px;align-items:center}
+.ring{--p:0;width:96px;height:96px;border-radius:50%;flex:none;display:grid;place-items:center;
+  background:conic-gradient(var(--accent) calc(var(--p)*1%),var(--line) 0)}
+.ring div{width:76px;height:76px;border-radius:50%;background:var(--card);display:grid;place-items:center;
+  font-weight:700;font-size:22px;text-align:center;line-height:1.05}
+.ring small{display:block;font-size:12px;font-weight:500;color:var(--muted)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--card);border-radius:14px;padding:12px 14px}
+.stat b{display:block;font-size:26px}.stat span{font-size:14px;color:var(--muted)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:4px 0 2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:0;border-radius:18px;padding:8px 14px;background:var(--card);color:var(--text);font-size:15px}
+.chip.on{background:var(--accent);color:var(--on-accent)}
+h2{font-size:20px;margin:22px 0 4px}
+/* Listen */
+.item{display:flex;gap:12px;align-items:center;background:var(--card);border-radius:14px;padding:12px 14px;margin:8px 0;width:100%;border:0;text-align:left;color:var(--text);font:inherit}
+.badge{flex:none;width:42px;height:42px;border-radius:21px;display:grid;place-items:center;font-weight:700;color:#fff}
+.tA{background:var(--a)}.tB{background:var(--b)}.tX{background:var(--muted)}
+.item .t{flex:1;min-width:0}.item .n{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .s{font-size:14px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill{font-size:12px;padding:2px 8px;border-radius:10px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.pill.hot{background:#e5484d22;color:var(--hot)}
+.empty{text-align:center;color:var(--muted);padding:30px 10px}
+/* Sheet */
+.sheet-bg{position:fixed;inset:0;background:#0006;display:none;z-index:20}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-height:88vh;overflow:auto;background:var(--bg);border-radius:16px 16px 0 0;
+  padding:8px 16px calc(20px + env(safe-area-inset-bottom));transform:translateY(100%);transition:transform .25s;z-index:21}
+.sheet.on{transform:none}.grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:4px auto 10px}
+.row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border:0}.row span:first-child{color:var(--muted)}.row span:last-child{text-align:right}
+.btn{display:block;width:100%;border:0;border-radius:12px;padding:14px;font-size:17px;font-weight:600;margin:8px 0;
+  text-align:center;text-decoration:none;background:var(--accent);color:var(--on-accent)}
+.btn.sec{background:var(--card);color:var(--accent)}.btn:disabled{opacity:.45}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+/* Chat */
+#chat{display:flex;flex-direction:column;gap:8px;padding-bottom:130px}
+.msg{max-width:84%;padding:9px 13px;border-radius:18px;white-space:pre-wrap;word-wrap:break-word}
+.me{align-self:flex-end;background:var(--bubble-me);color:#fff;border-bottom-right-radius:5px}
+.j{align-self:flex-start;background:var(--bubble-j);border-bottom-left-radius:5px}
+.typing{opacity:.6;font-style:italic}
+.composer{position:fixed;left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom));background:var(--tabbar);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:8px 12px;display:none;z-index:9}
+.composer.on{display:block}
+.composer form{display:flex;gap:8px;align-items:flex-end}
+.composer textarea{flex:1;resize:none;border:1px solid var(--line);border-radius:20px;padding:9px 14px;font:inherit;
+  background:var(--card);color:var(--text);max-height:120px}
+.round{flex:none;width:40px;height:40px;border-radius:20px;border:0;background:var(--accent);color:var(--on-accent);font-size:18px}
+.round.ghost{background:var(--card);color:var(--accent)}.round.rec{background:var(--hot);color:#fff}
+/* Tabbar */
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--tabbar);backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:10}
+nav button{flex:1;border:0;background:none;color:var(--muted);padding:6px 0 4px;font-size:11px}
+nav button i{display:block;font-style:normal;font-size:22px;line-height:28px}
+nav button.on{color:var(--accent)}
+.toast{position:fixed;left:16px;right:16px;top:calc(10px + env(safe-area-inset-top));background:var(--text);color:var(--bg);
+  padding:12px 14px;border-radius:12px;z-index:30;display:none;font-size:15px}
+</style>
+</head>
+<body>
+<header><h1 id="title">Heute</h1><button class="iconbtn" id="reload" aria-label="Aktualisieren">↻</button></header>
+
+<section id="s-heute" class="on">
+  <div class="card goal">
+    <div class="ring" id="ring"><div><span id="goal-n">–</span><small id="goal-z">von 20</small></div></div>
+    <div><b>Vermittelbar heute</b><div class="muted small" id="goal-txt">Lade …</div></div>
+  </div>
+  <div class="grid">
+    <div class="stat"><b id="st-a">–</b><span>A-Kandidaten offen</span></div>
+    <div class="stat"><b id="st-i">–</b><span>Interessiert</span></div>
+    <div class="stat"><b id="st-c">–</b><span>Anrufe heute</span></div>
+    <div class="stat"><b id="st-f">–</b><span>Firmen interessiert</span></div>
+  </div>
+  <h2>Schnellbefehle</h2>
+  <div class="chips" id="quick"></div>
+  <h2>Letzte Anrufe</h2>
+  <div id="calls"></div>
+</section>
+
+<section id="s-kandidaten">
+  <div class="chips" id="filter">
+    <button class="chip on" data-f="alle">Alle</button>
+    <button class="chip" data-f="interessiert">🔥 Interessiert</button>
+    <button class="chip" data-f="A">Tier A</button>
+    <button class="chip" data-f="pflege">Pflege</button>
+    <button class="chip" data-f="arzt">Ärzte</button>
+  </div>
+  <div id="cands"></div>
+</section>
+
+<section id="s-firmen"><div id="firms"></div></section>
+
+<section id="s-jarvis"><div id="chat"></div></section>
+
+<div class="composer" id="composer">
+  <div class="chips" id="sugg" style="padding-bottom:6px"></div>
+  <form id="send">
+    <button type="button" class="round ghost" id="speak" aria-label="Vorlesen an/aus">🔇</button>
+    <textarea id="input" rows="1" placeholder="Befehl an Jarvis …"></textarea>
+    <button type="button" class="round ghost" id="mic" aria-label="Sprechen">🎤</button>
+    <button class="round" aria-label="Senden">↑</button>
+  </form>
+</div>
+
+<div class="sheet-bg" id="sheet-bg"></div>
+<div class="sheet" id="sheet"><div class="grab"></div><div id="sheet-body"></div></div>
+<div class="toast" id="toast"></div>
+
+<nav>
+  <button class="on" data-tab="heute"><i>◉</i>Heute</button>
+  <button data-tab="kandidaten"><i>👥</i>Kandidaten</button>
+  <button data-tab="firmen"><i>🏥</i>Firmen</button>
+  <button data-tab="jarvis"><i>💬</i>Jarvis</button>
+</nav>
+
+<script>
+const $ = s => document.querySelector(s);
+function h(tag, attrs = {}, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const k of kids.flat()) if (k != null) el.append(k.nodeType ? k : String(k));
+  return el;
+}
+async function api(path, opts = {}) {
+  const r = await fetch(path, {credentials: "same-origin", headers: {"Content-Type": "application/json"}, ...opts});
+  if (r.status === 401) { location.href = "/app/login"; throw new Error("login"); }
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+  return r.json();
+}
+function toast(t) { const el = $("#toast"); el.textContent = t; el.style.display = "block";
+  clearTimeout(toast.t); toast.t = setTimeout(() => el.style.display = "none", 3500); }
+
+const STATUS_DE = {neu: "Neu", kontaktiert: "Kontaktiert", interessiert: "Interessiert", kein_interesse: "Kein Interesse",
+  vermittelt: "Vermittelt", angerufen: "Angerufen", kein_bedarf: "Kein Bedarf", nicht_anrufen: "Nicht anrufen"};
+const REC_DE = {anerkannt: "anerkannt ⭐", positiver_precheck: "positiver Pre-Check ⭐", laufend: "läuft",
+  nicht_noetig: "CH-Diplom", fehlt: "fehlt", unbekannt: "unbekannt"};
+let DATA = null, filter = "alle";
+
+// ---------- Tabs
+const TITLES = {heute: "Heute", kandidaten: "Kandidaten", firmen: "Firmen", jarvis: "Jarvis"};
+function tab(name) {
+  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.tab === name));
+  document.querySelectorAll("section").forEach(s => s.classList.toggle("on", s.id === "s-" + name));
+  $("#composer").classList.toggle("on", name === "jarvis");
+  $("#title").textContent = TITLES[name];
+  if (name === "jarvis") { loadChat(); setTimeout(() => scrollTo(0, document.body.scrollHeight), 50); }
+  try { localStorage.setItem("tab", name); } catch (e) {}
+}
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => tab(b.dataset.tab));
+
+// ---------- Daten
+async function load() {
+  try { DATA = await api("/api/uebersicht"); } catch (e) { if (e.message !== "login") toast("Fehler: " + e.message); return; }
+  const s = DATA.stats, n = s.vermittelbar_heute, z = s.ziel;
+  $("#ring").style.setProperty("--p", Math.min(100, Math.round(n / z * 100)));
+  $("#goal-n").textContent = n; $("#goal-z").textContent = "von " + z;
+  $("#goal-txt").textContent = n >= z ? "Tagesziel erreicht 🎉" : `Noch ${z - n} bis zum Ziel. ${s.neu_heute} neue Profile heute.`;
+  $("#st-a").textContent = s.A_gesamt_offen; $("#st-i").textContent = s.interessiert;
+  $("#st-c").textContent = s.anrufe_heute; $("#st-f").textContent = s.firmen_interessiert;
+  renderCalls(); renderCands(); renderFirms();
+}
+
+function renderCalls() {
+  const box = $("#calls"); box.replaceChildren();
+  if (!DATA.anrufe.length) return box.append(h("div", {class: "empty"}, "Noch keine Anrufe."));
+  for (const c of DATA.anrufe) box.append(h("div", {class: "card"},
+    h("div", {style: "display:flex;justify-content:space-between;gap:8px"},
+      h("b", {}, (c.typ === "firma" ? "🏥 " : "👤 ") + c.name),
+      h("span", {class: "pill" + (["interessiert", "rueckruf"].includes(c.status) ? " hot" : "")}, c.status)),
+    h("div", {class: "muted small"}, (c.zeit || "").replace("T", " ").slice(0, 16)),
+    c.zusammenfassung ? h("div", {class: "small", style: "margin-top:6px"}, c.zusammenfassung) : null));
+}
+
+function renderCands() {
+  const box = $("#cands"); box.replaceChildren();
+  const list = DATA.kandidaten.filter(c => filter === "alle" || c.status === filter || c.tier === filter || c.kategorie === filter);
+  if (!list.length) return box.append(h("div", {class: "empty"}, "Keine Kandidaten in dieser Ansicht."));
+  for (const c of list) box.append(h("button", {class: "item", onclick: () => openCand(c.id)},
+    h("div", {class: "badge t" + c.tier}, c.tier),
+    h("div", {class: "t"}, h("div", {class: "n"}, c.name),
+      h("div", {class: "s"}, [c.bereich, "DE " + c.deutsch, REC_DE[c.anerkennung] || c.anerkennung].filter(Boolean).join(" · "))),
+    h("span", {class: "pill" + (c.status === "interessiert" ? " hot" : "")}, STATUS_DE[c.status] || c.status)));
+}
+document.querySelectorAll("#filter .chip").forEach(b => b.onclick = () => {
+  filter = b.dataset.f; document.querySelectorAll("#filter .chip").forEach(x => x.classList.toggle("on", x === b)); renderCands();
+});
+
+function renderFirms() {
+  const box = $("#firms"); box.replaceChildren();
+  if (!DATA.firmen.length) return box.append(h("div", {class: "empty"}, "Noch keine Arbeitgeber. Schreib Jarvis: „Such Kliniken in Zürich“."));
+  for (const f of DATA.firmen) box.append(h("button", {class: "item", onclick: () => openFirm(f)},
+    h("div", {class: "badge", style: "background:var(--accent)"}, "🏥"),
+    h("div", {class: "t"}, h("div", {class: "n"}, f.name), h("div", {class: "s"}, [f.city, f.needs].filter(Boolean).join(" · "))),
+    h("span", {class: "pill" + (f.status === "interessiert" ? " hot" : "")}, STATUS_DE[f.status] || f.status)));
+}
+
+// ---------- Detail-Sheets
+function sheet(...content) {
+  $("#sheet-body").replaceChildren(...content.flat().filter(x => x != null));
+  $("#sheet-bg").style.display = "block"; requestAnimationFrame(() => $("#sheet").classList.add("on"));
+}
+function closeSheet() { $("#sheet").classList.remove("on"); setTimeout(() => $("#sheet-bg").style.display = "none", 250); }
+$("#sheet-bg").onclick = closeSheet;
+
+async function act(path, body) {
+  try { const r = await api(path, {method: "POST", body: JSON.stringify(body || {})}); toast(r.meldung || "OK"); closeSheet(); load(); }
+  catch (e) { toast("Fehler: " + e.message); }
+}
+
+async function openCand(id) {
+  let d; try { d = await api("/api/kandidat/" + id); } catch (e) { return toast(e.message); }
+  const a = d.bewertung.assessment, c = DATA.kandidaten.find(x => x.id === id) || {};
+  const rows = [["Bereich", a.physician_specialty || a.nursing_field || a.category], ["Deutsch", a.german_level],
+    [a.category === "arzt" ? "MEBEKO" : "SRK", REC_DE[a.recognition_status] || a.recognition_status],
+    ["Diplom", a.has_diploma_certificate === true ? "ja" : a.has_diploma_certificate === false ? "nein" : "?"],
+    ["Wohnort", a.current_location || "?"], ["Verfügbar", a.availability || "?"], ["Score", d.bewertung.score + " / 100"],
+    ["Status", STATUS_DE[d.status] || d.status]];
+  sheet(
+    h("h2", {style: "margin-top:0"}, a.full_name),
+    h("div", {class: "muted small"}, a.summary),
+    h("div", {class: "card"}, rows.map(([k, v]) => h("div", {class: "row"}, h("span", {}, k), h("span", {}, v)))),
+    d.bewertung.missing.length ? h("div", {class: "card small"}, h("b", {}, "Fehlt noch: "), d.bewertung.missing.join(" · ")) : null,
+    h("button", {class: "btn", disabled: !d.darf_anrufen || !DATA.anrufzeit, onclick: () => act(`/api/kandidat/${id}/anrufen`)},
+      "📞 Jarvis ruft an"),
+    !d.darf_anrufen ? h("div", {class: "muted small"}, "Keine Anruf-Einwilligung: bitte selbst per WhatsApp kontaktieren.")
+      : !DATA.anrufzeit ? h("div", {class: "muted small"}, "Jarvis ruft nur Mo–Fr 9–18 Uhr an.") : null,
+    h("div", {class: "btns"},
+      c.whatsapp_link ? h("a", {class: "btn sec", href: c.whatsapp_link}, "💬 WhatsApp") : null,
+      a.phone ? h("a", {class: "btn sec", href: "tel:" + a.phone.replace(/[^+\d]/g, "")}, "☎️ Selbst anrufen") : null),
+    h("h2", {}, "Status"),
+    h("div", {class: "chips"}, ["kontaktiert", "interessiert", "kein_interesse", "vermittelt"].map(s =>
+      h("button", {class: "chip" + (d.status === s ? " on" : ""), onclick: () => act(`/api/kandidat/${id}/status`, {status: s})}, STATUS_DE[s]))),
+    d.anrufe.length ? h("h2", {}, "Anrufe") : null,
+    d.anrufe.map(k => { let s = {}; try { s = JSON.parse(k.summary || "{}"); } catch (e) {}
+      return h("div", {class: "card small"}, h("b", {}, (k.started || "").replace("T", " ").slice(0, 16) + " · " + k.status),
+        s.summary ? h("div", {}, s.summary) : null, s.next_step ? h("div", {class: "muted"}, "→ " + s.next_step) : null); }),
+    d.notizen ? h("div", {class: "card small", style: "white-space:pre-wrap"}, d.notizen.trim()) : null);
+}
+
+function openFirm(f) {
+  sheet(
+    h("h2", {style: "margin-top:0"}, f.name),
+    h("div", {class: "card"}, [["Ort", f.city], ["Bedarf", f.needs], ["Telefon", f.phone], ["Status", STATUS_DE[f.status] || f.status]]
+      .map(([k, v]) => h("div", {class: "row"}, h("span", {}, k), h("span", {}, v || "–")))),
+    f.notes ? h("div", {class: "card small", style: "white-space:pre-wrap"}, f.notes.trim()) : null,
+    h("button", {class: "btn", disabled: !f.phone || f.status === "nicht_anrufen" || !DATA.anrufzeit,
+      onclick: () => act(`/api/firma/${f.id}/anrufen`)}, "📞 Jarvis ruft an"),
+    h("div", {class: "btns"},
+      f.phone ? h("a", {class: "btn sec", href: "tel:" + f.phone.replace(/[^+\d]/g, "")}, "☎️ Selbst anrufen") : null,
+      f.website ? h("a", {class: "btn sec", href: f.website, target: "_blank", rel: "noopener"}, "🌐 Website") : null),
+    h("div", {class: "chips"}, ["interessiert", "kein_bedarf", "nicht_anrufen"].map(s =>
+      h("button", {class: "chip" + (f.status === s ? " on" : ""), onclick: () => act(`/api/firma/${f.id}/status`, {status: s})}, STATUS_DE[s]))));
+}
+
+// ---------- Jarvis-Chat
+const QUICK = ["Tagesbericht", "Ruf die besten 5 Kandidaten an", "Such Kliniken in Zürich mit offenen Stellen",
+  "Schreib ein Inserat für Facebook-Gruppen Pflege", "Wer ist heute interessiert?", "Starte die Web-Suche"];
+for (const q of QUICK) {
+  $("#quick").append(h("button", {class: "chip", onclick: () => { tab("jarvis"); send(q); }}, q));
+  $("#sugg").append(h("button", {class: "chip", onclick: () => send(q)}, q));
+}
+let speakOn = false; try { speakOn = localStorage.getItem("speak") === "1"; } catch (e) {}
+const setSpeakIcon = () => $("#speak").textContent = speakOn ? "🔊" : "🔇";
+setSpeakIcon();
+$("#speak").onclick = () => { speakOn = !speakOn; setSpeakIcon(); try { localStorage.setItem("speak", speakOn ? "1" : "0"); } catch (e) {}
+  if (!speakOn) speechSynthesis.cancel(); };
+function say(t) {
+  if (!speakOn || !("speechSynthesis" in window)) return;
+  const u = new SpeechSynthesisUtterance(t.replace(/[*_]/g, "")); u.lang = "de-DE"; speechSynthesis.speak(u);
+}
+function bubble(von, text, cls = "") {
+  const el = h("div", {class: `msg ${von === "du" ? "me" : "j"} ${cls}`}, text); $("#chat").append(el);
+  scrollTo(0, document.body.scrollHeight); return el;
+}
+let chatLoaded = false;
+async function loadChat() {
+  if (chatLoaded) return; chatLoaded = true;
+  try { const v = await api("/api/verlauf"); $("#chat").replaceChildren();
+    if (!v.length) bubble("jarvis", "Hallo! Ich bin Jarvis. Was soll ich für dich erledigen?");
+    v.forEach(m => bubble(m.von, m.text)); } catch (e) {}
+}
+async function send(text) {
+  text = text.trim(); if (!text) return;
+  bubble("du", text); $("#input").value = ""; autosize();
+  const wait = bubble("jarvis", "Jarvis arbeitet …", "typing");
+  try {
+    const {job} = await api("/api/befehl", {method: "POST", body: JSON.stringify({text})});
+    for (let i = 0; i < 600; i++) {
+      await new Promise(r => setTimeout(r, i < 10 ? 1500 : 3000));
+      const r = await api("/api/befehl/" + job);
+      if (r.status === "fertig") { wait.remove(); bubble("jarvis", r.antwort); say(r.antwort); load(); return; }
+    }
+    wait.textContent = "Dauert länger – das Ergebnis kommt hier, sobald es fertig ist.";
+  } catch (e) { wait.textContent = "Fehler: " + e.message; wait.classList.remove("typing"); }
+}
+$("#send").onsubmit = e => { e.preventDefault(); send($("#input").value); };
+$("#input").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send($("#input").value); } });
+function autosize() { const t = $("#input"); t.style.height = "auto"; t.style.height = Math.min(120, t.scrollHeight) + "px"; }
+$("#input").addEventListener("input", autosize);
+
+// Spracheingabe (falls der Browser es kann; sonst Mikrofon-Taste der iPhone-Tastatur nutzen)
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!SR) $("#mic").onclick = () => { $("#input").focus(); toast("Tipp: Mikrofon-Taste auf der iPhone-Tastatur benutzen 🎤"); };
+else {
+  let rec = null;
+  $("#mic").onclick = () => {
+    if (rec) { rec.stop(); return; }
+    rec = new SR(); rec.lang = "de-DE"; rec.interimResults = true;
+    $("#mic").classList.add("rec");
+    rec.onresult = e => { $("#input").value = Array.from(e.results).map(r => r[0].transcript).join(""); autosize(); };
+    rec.onend = () => { $("#mic").classList.remove("rec"); const t = $("#input").value; rec = null; if (t.trim()) send(t); };
+    rec.onerror = () => { $("#mic").classList.remove("rec"); rec = null; toast("Spracheingabe nicht verfügbar – Tastatur-Mikrofon nutzen."); };
+    rec.start();
+  };
+}
+
+// ---------- Start
+$("#reload").onclick = () => { chatLoaded = false; load(); if ($("#s-jarvis").classList.contains("on")) loadChat(); };
+document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+let start = "heute"; try { start = localStorage.getItem("tab") || "heute"; } catch (e) {}
+tab(TITLES[start] ? start : "heute");
+load(); setInterval(load, 60000);
+</script>
+</body>
+</html>

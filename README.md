@@ -7,7 +7,7 @@ Jarvis arbeitet selbstständig wie ein Personalvermittler:
 - **Telefoniert selbst:** ruft Kandidaten mit Einwilligung und Arbeitgeber an, führt das Gespräch live auf Deutsch und fasst es danach zusammen
 - **Chattet selbst:** beantwortet WhatsApp-Nachrichten von Kandidaten, fragt fehlende Angaben nach und nimmt Lebensläufe als PDF an
 - **Akquiriert Arbeitgeber:** sucht Spitäler, Kliniken und Heime mit offenen Stellen und bietet anonymisierte Kandidaten an
-- **Wird von dir per WhatsApp gesteuert** und meldet sich bei dir mit Morgenbericht, heissen Kandidaten und Anrufergebnissen
+- **Wird von dir per WhatsApp, iPhone-App oder Siri gesteuert** und meldet sich bei dir mit Morgenbericht, heissen Kandidaten und Anrufergebnissen
 
 ## Was Jarvis sucht (`jarvis/config.py`)
 
@@ -26,6 +26,38 @@ Pflicht sind Urkunde und B2. Ausländische Diplome brauchen die SRK-Anerkennung.
 | Mo–Fr 9–18 Uhr, stündlich | Kandidaten mit Einwilligung anrufen, WhatsApp-Erstkontakt per Vorlage, Arbeitgeber anrufen |
 | sofort | Neue Bewerbung über das Formular mit Tier A/B: Jarvis ruft innerhalb von Minuten an |
 | nach jedem Anruf | Zusammenfassung und nächster Schritt an dich, Status wird automatisch gesetzt |
+
+## 📱 Bedienung am iPhone
+
+### Jarvis-App auf dem Home-Bildschirm
+1. In **Safari** öffnen: `https://DEINE-ADRESSE/app`
+2. Zugangscode eingeben (= `JARVIS_ADMIN_TOKEN`). Du bleibst ein Jahr angemeldet.
+3. **Teilen** (Quadrat mit Pfeil) → **„Zum Home-Bildschirm"** → Hinzufügen
+
+Jetzt liegt Jarvis als App mit eigenem Symbol auf dem iPhone. Die App ist in vier Bereiche aufgeteilt:
+
+| Tab | Inhalt |
+|---|---|
+| **Heute** | Fortschritt zum Tagesziel, Zahlen, Schnellbefehle, letzte Anrufe mit Zusammenfassung |
+| **Kandidaten** | Liste mit Filtern (🔥 Interessiert, Tier A, Pflege, Ärzte). Antippen zeigt alle Details mit den Knöpfen **📞 Jarvis ruft an**, **💬 WhatsApp**, **☎️ Selbst anrufen** und Status setzen |
+| **Firmen** | Arbeitgeber mit Bedarf; Jarvis anrufen lassen oder selbst anrufen |
+| **Jarvis** | Chat mit Jarvis, gleicher Verlauf wie per WhatsApp. 🎤 Spracheingabe, 🔊 Antworten vorlesen lassen |
+
+### „Hey Siri, Jarvis"
+Mit einem Kurzbefehl sprichst du Jarvis direkt über Siri an, und Siri liest die Antwort vor.
+
+1. App **Kurzbefehle** → **+** → Name: **Jarvis**
+2. Aktion **„Text diktieren"** (Sprache: Deutsch)
+3. Aktion **„Inhalte von URL abrufen"**
+   - URL: `https://DEINE-ADRESSE/api/befehl`
+   - Methode: **POST**
+   - Header: `Authorization` = `Bearer DEIN_ADMIN_TOKEN`
+   - Hauptteil: **JSON** mit `text` = *Diktierter Text* und `warten` = Zahl `25`
+4. Aktion **„Wörterbuchwert abrufen"**, Schlüssel: `antwort`
+5. Aktion **„Text sprechen"**, Eingabe: *Wörterbuchwert*
+
+Danach sagst du z.B. **„Hey Siri, Jarvis"**, Siri fragt nach, und du antwortest: *„Ruf die besten drei Kandidaten an."*
+Dauert ein Auftrag länger als 25 Sekunden (z.B. eine Web-Suche), sagt Siri „Ich arbeite daran" und das Ergebnis kommt per WhatsApp.
 
 ## Befehle per WhatsApp (normale Sprache)
 
@@ -116,11 +148,13 @@ jarvis/
   agent.py       WhatsApp: deine Befehle + Kandidaten-Chat
   autopilot.py   Tagesablauf
   server.py      Formular, Webhooks, Dashboard
+  mobile.py      iPhone-App + Siri-Schnittstelle
+  static/        App-Oberfläche und Symbol
   store.py       Datenbank (SQLite)
 ```
 
 ## Tests
 
 ```bash
-python -m pytest -q     # 22 Tests, simuliert Claude und Twilio – keine echten Anrufe
+python -m pytest -q     # 28 Tests, simuliert Claude und Twilio – keine echten Anrufe
 ```

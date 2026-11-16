@@ -27,7 +27,7 @@ from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 from starlette.websockets import WebSocketDisconnect
 
-from . import agent, autopilot, config, messaging, pipeline, report, sources, store, voice
+from . import agent, autopilot, config, messaging, mobile, pipeline, report, sources, store, voice
 from .config import NURSING_FIELDS, PHYSICIAN_SPECIALTIES
 
 log = logging.getLogger("jarvis.server")
@@ -59,6 +59,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="Jarvis", lifespan=lifespan, docs_url=None, redoc_url=None)
+app.include_router(mobile.router)
 
 
 # --------------------------------------------------------------------------- Twilio-Signatur
