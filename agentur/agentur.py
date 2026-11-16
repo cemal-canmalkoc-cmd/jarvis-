@@ -129,12 +129,13 @@ def cmd_neu(a):
           f"python agentur.py produzieren {p.stem}")
 
 
-def produzieren(k, c):
+def produzieren(k, c, feedback="", log=print):
     b = lade_brief(k)
     pk = PAKETE[b["paket"]]
     out = LIEFER / k / date.today().strftime("%Y-%m")
     out.mkdir(parents=True, exist_ok=True)
-    print(f"→ {b['firma']} (Paket {b['paket']}) …")
+    log(f"→ {b['firma']} (Paket {b['paket']}) …")
+    vorher = sorted(p.name for p in (LIEFER / k).glob("*") if p.is_dir() and p != out)
 
     prompt = f"""Erstelle das komplette Monatspaket für diesen Kunden.
 
@@ -146,7 +147,9 @@ LIEFERUNG:
 - google_ads: {"lokale Suchkampagne, 15–25 Keywords mit Ortsbezug, 10+ ausschließende Keywords, genau 15 Anzeigentitel (je MAX 30 Zeichen!), genau 4 Beschreibungen (je MAX 90 Zeichen!), 4 Sitelinks (je max 25 Zeichen)." if pk['ads'] else "leere Listen und leerer Name (nicht im Paket)."}
 - meta_ads: {"3 Anzeigenvarianten mit unterschiedlichem Winkel (Angebot, Vertrauen/Geschichte, Problem/Lösung)." if pk['ads'] else "leere Liste (nicht im Paket)."}
 - social_posts: genau {pk['posts']} Posts, verteilt über 30 Tage (tag 1–30), Mix aus Instagram/Facebook/Google-Unternehmensprofil, Formate Bild/Karussell/Reel. Je Post fertiger Text mit Call-to-Action ({b.get('kontakt_cta', '')}), 3–8 Hashtags inkl. lokaler, konkrete Bildidee, die der Kunde selbst mit dem Handy fotografieren kann.
-Tonalität: {b.get('tonalitaet', '')}. Tabu: {b.get('verboten', '') or 'nichts Besonderes'}."""
+Tonalität: {b.get('tonalitaet', '')}. Tabu: {b.get('verboten', '') or 'nichts Besonderes'}.
+{'Dies ist Monat ' + str(len(vorher) + 1) + ' der Zusammenarbeit: wähle neue Themen und Winkel, wiederhole nicht die Vormonate.' if vorher else ''}
+{('ÄNDERUNGSWÜNSCHE DES KUNDEN (unbedingt umsetzen): ' + feedback) if feedback else ''}"""
     d = frage(c, prompt, SCHEMA_KAMPAGNE, effort="high")
 
     # Strategie
@@ -172,7 +175,7 @@ Tonalität: {b.get('tonalitaet', '')}. Tabu: {b.get('verboten', '') or 'nichts B
             w.writerow(["Campaign", "Ad group"] + [f"Headline {i}" for i in range(1, len(titel) + 1)]
                        + [f"Description {i}" for i in range(1, len(besch) + 1)])
             w.writerow([g["kampagnenname"], "Haupt"] + titel + besch)
-        print(f"   Google Ads: {len(g['keywords'])} Keywords, {len(titel)} Titel, {len(besch)} Beschreibungen")
+        log(f"   Google Ads: {len(g['keywords'])} Keywords, {len(titel)} Titel, {len(besch)} Beschreibungen")
 
         (out / "3_meta_ads.md").write_text(f"# Meta-Anzeigen {b['firma']}\n\n" + "\n".join(
             f"## {m['name']}\n**Zielgruppe:** {m['zielgruppe']}\n\n**Text:**\n{m['primaertext']}\n\n"
@@ -185,7 +188,7 @@ Tonalität: {b.get('tonalitaet', '')}. Tabu: {b.get('verboten', '') or 'nichts B
         w.writerow(["Tag", "Kanal", "Format", "Thema", "Text", "Hashtags", "Bildidee"])
         for p in sorted(d["social_posts"], key=lambda x: x["tag"]):
             w.writerow([p["tag"], p["kanal"], p["format"], p["thema"], p["text"], " ".join(p["hashtags"]), p["bildidee"]])
-    print(f"   Social: {len(d['social_posts'])} Posts")
+    log(f"   Social: {len(d['social_posts'])} Posts")
 
     # Landingpage
     if pk["landingpage"]:
@@ -195,10 +198,11 @@ Ziel: {b.get('ziel', '')}. Hauptaktion: {b.get('kontakt_cta', '')}. Aktion: {b.g
 Abschnitte: Hero mit klarer Aktion, Leistungen, Warum wir (nur Fakten aus dem Briefing), Ablauf/Bestellung, FAQ (4), Kontakt, Footer mit Links "Impressum" und "Datenschutz".
 Keine erfundenen Bewertungen, Zahlen oder Siegel.
 Briefing: {json.dumps(b, ensure_ascii=False)}
+{('Änderungswünsche des Kunden: ' + feedback) if feedback else ''}
 Gib NUR den HTML-Code aus, beginnend mit <!doctype html>.""", effort="medium")
         lp = lp[lp.lower().find("<!doctype"):] if "<!doctype" in lp.lower() else lp
         (out / "5_landingpage.html").write_text(lp, encoding="utf-8")
-        print("   Landingpage: fertig")
+        log("   Landingpage: fertig")
 
     (out / "LIES_MICH.txt").write_text(
         f"Lieferung {b['firma']}, {date.today():%d.%m.%Y}\n\n"
@@ -208,7 +212,7 @@ Gib NUR den HTML-Code aus, beginnend mit <!doctype html>.""", effort="medium")
         + "4_social_redaktionsplan   → in Buffer/Later/Meta Business Suite einplanen (CSV-Import)\n"
         + ("5_landingpage.html        → auf Netlify/Vercel hochladen, Impressum ergänzen\n" if pk["landingpage"] else "")
         + "\nVor Veröffentlichung: Fakten, Preise und Öffnungszeiten vom Kunden freigeben lassen.\n", encoding="utf-8")
-    print(f"   ✓ {out}")
+    log(f"   ✓ {out}")
     return out
 
 

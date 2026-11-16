@@ -4,10 +4,20 @@
   "email": "hallo@deine-agentur.de",
   "telefon": "+49 170 0000000",
   "buchungslink": "https://cal.com/DEIN-NAME/15min",
-  "fragebogen_link": "https://tally.so/r/DEIN-FORMULAR",
-  "stripe": {
-    "start": "https://buy.stripe.com/DEIN-LINK-START",
-    "wachstum": "https://buy.stripe.com/DEIN-LINK-WACHSTUM",
-    "komplett": "https://buy.stripe.com/DEIN-LINK-KOMPLETT"
+  "basis_url": "https://deine-agentur.de",
+  "admin_passwort": "LANGES-ZUFAELLIGES-PASSWORT",
+  "testmodus": false,
+  "stripe_webhook_secret": "whsec_...",
+  "payment_links": {
+    "plink_XXXX_START": "start",
+    "plink_XXXX_WACHSTUM": "wachstum",
+    "plink_XXXX_KOMPLETT": "komplett"
+  },
+  "smtp": {
+    "host": "smtp.deinanbieter.de",
+    "port": 587,
+    "user": "hallo@deine-agentur.de",
+    "passwort": "...",
+    "absender": "DEIN AGENTURNAME <hallo@deine-agentur.de>"
   }
 }

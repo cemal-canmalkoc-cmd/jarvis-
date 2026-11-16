@@ -7,7 +7,8 @@ Pro Kunde brauchst du dafür **etwa 1–2 Stunden im Monat** statt 2–3 Tage.
 | Ordner/Datei | Wozu |
 |---|---|
 | `website/index.html` | Deine Agentur-Website mit 3 Paketen und Stripe-Links |
-| `agentur.py` | Produziert die komplette Kunden-Lieferung automatisch |
+| `server.py` | **Vollautomatischer Betrieb:** Zahlung → Fragebogen → Produktion → Kundenportal → Monatslieferung |
+| `agentur.py` | Produziert die komplette Kunden-Lieferung (auch manuell nutzbar) |
 | `kunden/*.json` | Ein Briefing pro Kunde (Beispiel: `beispiel-baeckerei.json`) |
 | `../ki-sprint/` | Kundengewinnung: findet Betriebe, schreibt Nachrichten, plant das Nachfassen |
 
@@ -60,6 +61,49 @@ python agentur.py bericht elektro-huber zahlen.csv    # Monatsbericht (Spalten: 
 ```
 
 **Wichtig:** Vor der Veröffentlichung jede Lieferung kurz durchsehen und vom Kunden freigeben lassen, besonders Preise, Öffnungszeiten und Aussagen über Leistungen. Das kostet 10 Minuten und schützt dich vor Haftungsärger.
+
+## Vollautomatischer Betrieb (`server.py`)
+
+Der Server wickelt das Tagesgeschäft ohne dich ab:
+
+```
+Kunde kauft auf der Website (Stripe)
+  → automatische Willkommens-Mail mit Fragebogen-Link
+  → Kunde füllt den Fragebogen aus
+  → Claude produziert Strategie, Anzeigen, Posts und Landingpage
+  → Mail: „Ihre Inhalte sind fertig“ → Kundenportal
+  → Kunde gibt frei oder wünscht Änderungen (2 automatische Überarbeitungen pro Monat)
+  → jeden Monat bei Zahlungseingang: neue Lieferung automatisch
+  → bei Kündigung: Produktion stoppt
+```
+
+Dein Job: einmal am Tag `/admin?pw=…` öffnen (Kunden, Monatsumsatz, Protokoll). Bei Fehlern kommt eine Mail.
+
+### Online stellen (ca. 1 Stunde, ab ~6 €/Monat)
+
+1. **Server:** z. B. Hetzner Cloud (CX22) oder Render.com. Wichtig ist eine **dauerhafte Festplatte** für `agentur.db`, `kunden/` und `lieferungen/`.
+   ```bash
+   git clone <dein-repo> && cd jarvis-/agentur
+   pip install -r requirements.txt
+   cp config.example.json config.json   # ausfüllen, siehe unten
+   export ANTHROPIC_API_KEY=sk-ant-...
+   gunicorn -w 1 --threads 8 -b 0.0.0.0:8000 server:app
+   ```
+   Davor gehört ein HTTPS-Proxy, am einfachsten **Caddy** mit `deine-agentur.de { reverse_proxy localhost:8000 }`. Mit einer systemd-Unit startet der Server nach einem Neustart automatisch.
+   Nur **einen** Worker verwenden (`-w 1`), weil die Produktion im Hintergrund-Thread läuft.
+2. **Stripe:**
+   - 3 Abo-Produkte plus Einrichtungsgebühr anlegen und daraus Payment Links erstellen. Die Links kommen in `website/index.html`, die IDs `plink_…` in `config.json` → `payment_links`.
+   - Unter Developers → Webhooks einen Endpoint `https://deine-agentur.de/webhook/stripe` mit den Events `checkout.session.completed`, `invoice.paid` und `customer.subscription.deleted` anlegen. Das Signing Secret kommt nach `stripe_webhook_secret`.
+   - Im Kundenportal von Stripe die Selbst-Kündigung aktivieren, dann braucht auch die Kündigung dich nicht.
+3. **E-Mail:** Die SMTP-Daten deines Mail-Anbieters (z. B. IONOS, Strato, Google Workspace) unter `smtp` eintragen.
+4. **Testen:** `"testmodus": true` setzen, dann
+   `curl -X POST -d "email=du@example.com&paket=komplett" https://deine-agentur.de/test/kauf` aufrufen und den Ablauf einmal selbst durchklicken. Danach den Testmodus wieder ausschalten.
+
+### Was weiterhin nicht automatisch läuft (ehrlich)
+
+- **Veröffentlichen:** Die Inhalte werden fertig geliefert, als Import-Dateien für Google Ads und als CSV für Buffer, Later oder die Meta Business Suite. Direkt in die Konten der Kunden posten geht nur mit eigenen API-Freigaben von Meta und Google, und die brauchen Wochen. Bis dahin: Pakete als „Inhalte & Anzeigen fertig zum Einspielen“ verkaufen, oder einen Freelancer für etwa 30 € pro Kunde und Monat einspielen lassen.
+- **Neukunden:** Die Website verkauft selbst, aber jemand muss Besucher hinschicken. Möglich sind Google-Anzeigen für die eigene Agentur (Budget nötig), `ki-sprint` mit einem Vertriebler auf Provision (siehe unten) oder Empfehlungen.
+- **Qualitätskontrolle:** Der Kunde gibt jede Lieferung selbst frei, bevor etwas live geht. Trotzdem gelegentlich Stichproben im Admin machen.
 
 ## Kunden gewinnen mit ki-sprint
 
