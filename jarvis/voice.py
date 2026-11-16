@@ -131,6 +131,58 @@ Du hast das Gespräch bereits begonnen mit: "{greeting}"
     return system, greeting
 
 
+def inbound_context(call) -> tuple[str, str]:
+    """Eingehender Anruf: Jarvis ist die Telefonzentrale von Hansa Personal."""
+    conn = store.connect()
+    known = ""
+    cand = store.find_candidate_by_phone(conn, call["phone"])
+    if cand:
+        c = store.load(cand)
+        known = (f"Die Nummer gehört vermutlich zu einem bekannten Kandidaten: {c.assessment.full_name}, "
+                 f"{role_phrase(c.assessment)}, Status {cand['status']}. Bestätige kurz den Namen.")
+    else:
+        firm = next((f for f in conn.execute("SELECT * FROM companies WHERE phone IS NOT NULL").fetchall()
+                     if store.digits(f["phone"])[-9:] == store.digits(call["phone"])[-9:]), None)
+        if firm:
+            known = f"Die Nummer gehört vermutlich zum Arbeitgeber {firm['name']} ({firm['city'] or '?'})."
+    greeting = (f"Grüezi, Sie sind bei {config.AGENCY_NAME}. Hier spricht Jarvis, der digitale "
+                f"KI-Assistent. Wie kann ich Ihnen helfen?")
+    system = f"""Du bist Jarvis, die KI-Telefonzentrale der Personalvermittlung {config.AGENCY_NAME}
+(Inhaber/Ansprechperson: {config.RECRUITER_NAME}). Jemand ruft UNS an.
+
+{config.REQUIREMENTS_TEXT}
+
+{known}
+
+Finde zuerst heraus, wer anruft:
+A) KANDIDAT (sucht eine Stelle): Erfrage nacheinander Vor- und Nachname, Beruf bzw. Fachrichtung,
+   Diplom/Urkunde, Deutsch-Zertifikat (mind. B2), Stand SRK- bzw. MEBEKO-Anerkennung, Wohnort,
+   ab wann verfügbar, Wunschregion und Pensum. Frage, ob wir per WhatsApp schreiben dürfen
+   (für den Lebenslauf), und ob die E-Mail-Adresse für Unterlagen gewünscht ist (buchstabieren lassen).
+B) ARBEITGEBER (sucht Personal): Erfrage Firma, Ort, Name und Funktion der Ansprechperson,
+   welche Stellen (Bereich, Anzahl, Pensum, Start) und die E-Mail-Adresse (buchstabieren lassen).
+   Sage zu, dass {config.RECRUITER_NAME} sich persönlich zurückmeldet, und frage nach einer guten Rückrufzeit.
+C) SONSTIGES: Anliegen und Rückrufnummer aufnehmen, Rückruf durch {config.RECRUITER_NAME} zusagen.
+
+{pricing.phone_text()}
+
+Wenn jemand ausdrücklich {config.RECRUITER_NAME} persönlich sprechen will: Nimm das Anliegen auf und
+sage einen Rückruf so bald wie möglich zu.
+
+Du hast das Gespräch bereits begonnen mit: "{greeting}"
+
+{PHONE_STYLE.format(hangup=HANGUP)}"""
+    return system, greeting
+
+
+def context_for(conn, call) -> tuple[str, str]:
+    if call["target_type"] == "kandidat":
+        return candidate_context(store.get_candidate(conn, call["target_key"]))
+    if call["target_type"] == "firma":
+        return company_context(store.get_company(conn, int(call["target_key"])))
+    return inbound_context(call)
+
+
 # --------------------------------------------------------------------------- Anruf starten
 def place_call(target_type: str, target_key: str, force_hours: bool = False) -> str:
     """Startet einen Anruf. Gibt eine Statusmeldung zurück (für den Owner-Chat)."""
@@ -193,11 +245,24 @@ def twiml_for(call_id: int, answered_by: str | None) -> str:
         resp.hangup()
         return str(resp)
 
-    if call["target_type"] == "kandidat":
-        _, greeting = candidate_context(store.get_candidate(conn, call["target_key"]))
-    else:
-        _, greeting = company_context(store.get_company(conn, int(call["target_key"])))
+    _, greeting = context_for(conn, call)
+    return _relay_twiml(call_id, greeting)
 
+
+def inbound_twiml(from_number: str) -> str:
+    """Eingehender Anruf (auch umgeleitet von eurer Firmennummer): Jarvis nimmt ab."""
+    conn = store.connect()
+    number = e164(from_number) or from_number or "unbekannt"
+    call_id = store.create_call(conn, "eingehend", "", number)
+    store.update_call(conn, call_id, status="läuft")
+    _, greeting = inbound_context(store.get_call(conn, call_id))
+    return _relay_twiml(call_id, greeting)
+
+
+def _relay_twiml(call_id: int, greeting: str) -> str:
+    from twilio.twiml.voice_response import Connect, ConversationRelay, VoiceResponse
+
+    resp = VoiceResponse()
     ws_url = config.PUBLIC_URL.replace("https://", "wss://").replace("http://", "ws://") + "/voice/relay"
     opts = {"url": ws_url, "language": config.VOICE_LANGUAGE, "welcome_greeting": greeting}
     if config.VOICE_TTS_PROVIDER:
@@ -256,10 +321,7 @@ class RelaySession:
             self.call_id = int(params.get("call_id", 0))
             conn = store.connect()
             call = store.get_call(conn, self.call_id)
-            if call["target_type"] == "kandidat":
-                self.system, greeting = candidate_context(store.get_candidate(conn, call["target_key"]))
-            else:
-                self.system, greeting = company_context(store.get_company(conn, int(call["target_key"])))
+            self.system, greeting = context_for(conn, call)
             self.transcript.append({"jarvis": greeting})
             store.update_call(conn, self.call_id, status="verbunden")
         elif t == "prompt":
@@ -364,6 +426,86 @@ def summarize(target_type: str, transcript: list[dict]) -> dict:
     return json.loads(text)
 
 
+INBOUND_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "anrufer_typ": {"type": "string", "enum": ["kandidat", "arbeitgeber", "sonstiges"]},
+        "name": {"type": ["string", "null"]},
+        "firma": {"type": ["string", "null"]},
+        "ort": {"type": ["string", "null"]},
+        "email": {"type": ["string", "null"]},
+        "bedarf": {"type": ["string", "null"]},
+        "interessiert": {"type": "boolean"},
+        "whatsapp_ok": {"type": ["boolean", "null"]},
+        "rueckruf_zeit": {"type": ["string", "null"]},
+        "summary": {"type": "string"},
+        "next_step": {"type": "string"},
+    },
+    "required": ["anrufer_typ", "name", "firma", "ort", "email", "bedarf", "interessiert",
+                 "whatsapp_ok", "rueckruf_zeit", "summary", "next_step"],
+}
+
+
+def summarize_inbound(transcript: list[dict]) -> dict:
+    lines = "\n".join(f"{k.upper()}: {v}" for turn in transcript for k, v in turn.items())
+    resp = brain.create(
+        model=config.MODEL, max_tokens=4000,
+        system=("Werte einen eingehenden Anruf bei einer Personalvermittlung aus. Nur belegte Fakten. "
+                "bedarf: bei Arbeitgebern die gesuchten Stellen, bei Kandidaten Beruf/Fachrichtung. "
+                "summary: 2-3 Sätze Deutsch. next_step: konkrete Aktion für den Recruiter."),
+        output_config={"effort": "low", "format": {"type": "json_schema", "schema": INBOUND_SCHEMA}},
+        messages=[{"role": "user", "content": f"Transkript:\n{lines}"}],
+    )
+    return json.loads("".join(b.text for b in resp.content if b.type == "text"))
+
+
+def finalize_inbound(call, transcript: list[dict]) -> None:
+    from . import matching, pipeline, sources
+
+    conn = store.connect()
+    r = summarize_inbound(transcript)
+    store.update_call(conn, call["id"], status=f"eingehend_{r['anrufer_typ']}",
+                      summary=json.dumps(r, ensure_ascii=False),
+                      transcript=json.dumps(transcript, ensure_ascii=False))
+    phone = call["phone"]
+    cb = f"\nRückruf: {r['rueckruf_zeit']}" if r.get("rueckruf_zeit") else ""
+
+    if r["anrufer_typ"] == "kandidat":
+        row = store.find_candidate_by_phone(conn, phone)
+        if row is None:
+            lines = "\n".join(f"{k}: {v}" for t in transcript for k, v in t.items())
+            raw = sources.RawProfile(
+                source=f"Anruf von {phone}",
+                text=f"Telefon: {phone}\nE-Mail: {r.get('email') or ''}\n\nTelefonat mit Jarvis:\n{lines}",
+                consent_call=True, consent_whatsapp=bool(r.get("whatsapp_ok")))
+            c = pipeline.evaluate(raw)
+            store.upsert(conn, c)
+            row = store.get_candidate(conn, store.candidate_key(c))
+        if r["interessiert"]:
+            store.set_status(conn, row["key"], "interessiert", r["summary"])
+            matching.auto_deliver()
+        c = store.load(row)
+        messaging.notify_owner(
+            f"☎️🔥 Kandidat hat angerufen: {c.assessment.full_name} – {role_phrase(c.assessment)}, "
+            f"Tier {c.tier} ({c.score})\n{r['summary']}\nNächster Schritt: {r['next_step']}{cb}\n"
+            f"Tel: {phone} · ID {row['key'][:6]}")
+    elif r["anrufer_typ"] == "arbeitgeber":
+        name = r.get("firma") or f"Anrufer {phone}"
+        store.add_company(conn, name=name, city=r.get("ort"), phone=phone, needs=r.get("bedarf"),
+                          source_url="eingehender Anruf")
+        firm = conn.execute("SELECT id FROM companies WHERE name=? AND city IS ?", (name, r.get("ort"))).fetchone()
+        if firm:
+            store.set_company_status(conn, firm["id"], "interessiert", r["summary"])
+            store.set_company_contact(conn, firm["id"], r.get("email"), r.get("name"))
+        messaging.notify_owner(
+            f"☎️🏥🔥 ARBEITGEBER hat angerufen: {name} ({r.get('ort') or '?'})\n"
+            f"Kontakt: {r.get('name') or '?'} {r.get('email') or ''}\nBedarf: {r.get('bedarf') or '?'}\n"
+            f"{r['summary']}{cb}\n👉 Bitte zurückrufen: {phone}")
+    else:
+        messaging.notify_owner(f"☎️ Anruf von {phone}: {r['summary']}{cb}\nNächster Schritt: {r['next_step']}")
+
+
 def finalize_call(call_id: int, transcript: list[dict]) -> None:
     conn = store.connect()
     call = store.get_call(conn, call_id)
@@ -373,6 +515,16 @@ def finalize_call(call_id: int, transcript: list[dict]) -> None:
     if not spoke:
         store.update_call(conn, call_id, status=call["status"] if call["status"] == "anrufbeantworter"
                           else "nicht_erreicht", transcript=json.dumps(transcript, ensure_ascii=False))
+        return
+    if call["target_type"] == "eingehend":
+        try:
+            finalize_inbound(call, transcript)
+        except Exception as exc:  # noqa: BLE001
+            log.exception("Auswertung eingehender Anruf fehlgeschlagen")
+            store.update_call(conn, call_id, status="eingehend",
+                              transcript=json.dumps(transcript, ensure_ascii=False))
+            messaging.notify_owner(f"☎️ Anruf von {call['phone']} – Auswertung fehlgeschlagen ({exc}). "
+                                   "Bitte zurückrufen.")
         return
     try:
         result = summarize(call["target_type"], transcript)

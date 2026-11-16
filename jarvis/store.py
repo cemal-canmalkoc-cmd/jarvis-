@@ -95,6 +95,8 @@ def connect() -> sqlite3.Connection:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=30)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")  # Lesen blockiert Schreiben nicht (Server + Autopilot parallel)
+    conn.execute("PRAGMA busy_timeout=30000")
     conn.executescript(SCHEMA)
     for table, extra in (("candidates", CANDIDATE_EXTRA_COLUMNS), ("companies", COMPANY_EXTRA_COLUMNS)):
         existing = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
@@ -149,7 +151,7 @@ def get_candidate(conn: sqlite3.Connection, key: str) -> sqlite3.Row | None:
 
 def find_candidate_by_phone(conn: sqlite3.Connection, phone: str) -> sqlite3.Row | None:
     d = digits(phone)
-    for row in conn.execute("SELECT * FROM candidates WHERE phone IS NOT NULL"):
+    for row in conn.execute("SELECT * FROM candidates WHERE phone IS NOT NULL").fetchall():
         rd = digits(row["phone"])
         if rd and (rd[-9:] == d[-9:]):
             return row

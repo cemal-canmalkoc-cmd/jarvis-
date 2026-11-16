@@ -158,6 +158,15 @@ async def voice_twiml(request: Request, call_id: int):
     return Response(xml, media_type="application/xml")
 
 
+@app.post("/voice/inbound")
+async def voice_inbound(request: Request):
+    """Twilio-Nummer → 'A call comes in'. Auch für umgeleitete Anrufe eurer Firmennummer."""
+    form = await _verify_twilio(request)
+    caller = form.get("From", "")
+    xml = await asyncio.to_thread(voice.inbound_twiml, caller)
+    return Response(xml, media_type="application/xml")
+
+
 @app.post("/voice/status")
 async def voice_status(request: Request, call_id: int):
     form = await _verify_twilio(request)
@@ -235,11 +244,16 @@ async def root():
 @app.get("/bewerbung", response_class=HTMLResponse)
 async def bewerbung_form():
     agency = html.escape(config.AGENCY_NAME)
+    call_hint = ""
+    if config.CALL_IN_NUMBER:
+        tel = "".join(ch for ch in config.CALL_IN_NUMBER if ch.isdigit() or ch == "+")
+        call_hint = (f' Oder einfach anrufen: <a href="tel:{html.escape(tel)}">'
+                     f'{html.escape(config.CALL_IN_NUMBER)}</a>')
     body = f"""
 <div class="brand">{agency}</div>
 <h1>Ihre Stelle in der Schweiz</h1>
 <p class="lead">Pflege & Ärzteschaft – wir vermitteln Sie kostenlos an Spitäler, Kliniken und Heime.
-In 2 Minuten bewerben, wir melden uns schnell.</p>
+In 2 Minuten bewerben, wir melden uns schnell.{call_hint}</p>
 <form method="post" action="/bewerbung" enctype="multipart/form-data">
  <fieldset><legend>Kontakt</legend>
   <label for="name">Vor- und Nachname *</label><input id="name" name="name" type="text" required maxlength="120">
@@ -374,6 +388,11 @@ LEBENSLAUF:
         msg = quote(f"Hallo, ich habe mich gerade beworben ({bereich}). Mein Name: {name}")
         chat = (f'<p>Schneller geht\'s per WhatsApp – schreiben Sie uns direkt:</p>'
                 f'<a class="btn" href="https://wa.me/{num}?text={msg}">WhatsApp-Chat starten</a>')
+    if config.CALL_IN_NUMBER:
+        tel = "".join(ch for ch in config.CALL_IN_NUMBER if ch.isdigit() or ch == "+")
+        chat += (f'<p style="margin-top:16px">Lieber telefonieren? Rufen Sie uns an:</p>'
+                 f'<a class="btn" style="background:var(--card);color:var(--accent);border:1px solid var(--line)" '
+                 f'href="tel:{html.escape(tel)}">📞 {html.escape(config.CALL_IN_NUMBER)}</a>')
     body = f"""<div class="card"><h1>Vielen Dank, {html.escape(name.split()[0])}!</h1>
 <p>Wir prüfen Ihre Angaben und melden uns in Kürze{" – eventuell zuerst unser KI-Assistent Jarvis" if consent_call == "1" else ""}.</p>
 {chat}</div>"""

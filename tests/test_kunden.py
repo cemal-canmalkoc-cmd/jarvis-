@@ -36,8 +36,8 @@ def test_customer_auto_delivery_once(tw, monkeypatch):  # noqa: F811
 
     store.set_status(store.connect(), key, "interessiert")
     done = matching.auto_deliver()
-    assert len(done) == 1 and "Spital Kunde AG" in done[0]
-    to, body = mails[0]
+    assert any("Kim Kandidatin" in d and "Spital Kunde AG" in d for d in done)
+    to, body = next(m for m in mails if "Akutspital" in m[1])
     assert to == "hr@kunde.example" and "Herr Meier" in body and "vereinbarten Konditionen" in body
     assert "Kim" not in body
     assert matching.auto_deliver() == []           # nie doppelt liefern

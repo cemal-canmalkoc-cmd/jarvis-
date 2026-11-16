@@ -46,7 +46,7 @@ def matches(conn, cand_row, limit: int = 5) -> list[dict]:
     kws = _keywords(role)
     group = ["arzt", "ärzt", "medizin"] if a.category == "arzt" else ["pflege", "fage", "fachperson"]
     out = []
-    for f in conn.execute("SELECT * FROM companies WHERE status NOT IN ('kein_bedarf','nicht_anrufen')"):
+    for f in conn.execute("SELECT * FROM companies WHERE status NOT IN ('kein_bedarf','nicht_anrufen')").fetchall():
         needs = f"{f['needs'] or ''} {f['name']}".lower()
         score = sum(2 for k in kws if k in needs) + sum(1 for g in group if g in needs)
         if a.current_location and f["city"] and f["city"].lower() in a.current_location.lower():
@@ -131,7 +131,7 @@ nach Rücksprache mit der Kandidatin bzw. dem Kandidaten.
 
 Freundliche Grüsse
 {config.RECRUITER_NAME}
-{config.AGENCY_NAME}"""
+{config.AGENCY_NAME}{chr(10) + "Tel. " + config.CALL_IN_NUMBER if config.CALL_IN_NUMBER else ""}"""
     subject = f"Kandidatenvorschlag: {role_phrase(store.load(cand).assessment)}"
     if not firm["email"]:
         return (f"Für {firm['name']} ist noch keine E-Mail hinterlegt. Text zum Kopieren:\n\n"
@@ -149,7 +149,7 @@ Freundliche Grüsse
 def suggestions(conn, limit: int = 5) -> list[str]:
     """Vermittlungsvorschläge für den Morgenbericht."""
     out = []
-    for r in conn.execute("SELECT * FROM candidates WHERE status='interessiert' ORDER BY score DESC LIMIT 20"):
+    for r in conn.execute("SELECT * FROM candidates WHERE status='interessiert' ORDER BY score DESC LIMIT 20").fetchall():
         m = matches(conn, r, 1)
         if m:
             out.append(f"{r['name']} → {m[0]['name']} ({m[0]['ort'] or '?'}) · "
@@ -166,7 +166,7 @@ def auto_deliver(max_per_run: int = 10) -> list[str]:
         return []
     conn = store.connect()
     done = []
-    for cand in conn.execute("SELECT * FROM candidates WHERE status='interessiert' ORDER BY score DESC"):
+    for cand in conn.execute("SELECT * FROM candidates WHERE status='interessiert' ORDER BY score DESC").fetchall():
         for m in matches(conn, cand, 5):
             if m["status"] != "kunde" or not m["email"] or store.was_presented(conn, cand["key"], m["id"]):
                 continue

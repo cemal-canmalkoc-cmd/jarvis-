@@ -118,13 +118,19 @@ async def uebersicht(request: Request):
     calls = conn.execute("SELECT * FROM calls ORDER BY id DESC LIMIT 15").fetchall()
     call_list = []
     for c in calls:
-        label = c["target_key"]
+        label = c["target_key"] or c["phone"]
         if c["target_type"] == "kandidat":
             r = store.get_candidate(conn, c["target_key"])
             label = r["name"] if r else label
-        else:
+        elif c["target_type"] == "firma":
             r = store.get_company(conn, int(c["target_key"]))
             label = r["name"] if r else label
+        else:  # eingehender Anruf
+            try:
+                info = json.loads(c["summary"] or "{}")
+                label = "☎️ " + (info.get("firma") or info.get("name") or c["phone"])
+            except json.JSONDecodeError:
+                label = "☎️ " + c["phone"]
         summary = ""
         if c["summary"]:
             try:

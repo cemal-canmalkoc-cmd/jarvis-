@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 from urllib.parse import quote
 
+from . import config
 from .config import AGENCY_NAME, RECRUITER_NAME
 from .models import Assessment
 
@@ -62,7 +63,8 @@ def build_message(a: Assessment) -> str:
         f"Ich bin auf Ihr Profil als {role} aufmerksam geworden. "
         f"{hook}. "
         "Hätten Sie diese Woche kurz 10 Minuten für ein unverbindliches Gespräch? "
-        "Falls kein Interesse besteht, genügt ein kurzes Nein – dann melde ich mich nicht mehr."
+        + (f"Sie können uns auch jederzeit anrufen: {config.CALL_IN_NUMBER}. " if config.CALL_IN_NUMBER else "")
+        + "Falls kein Interesse besteht, genügt ein kurzes Nein – dann melde ich mich nicht mehr."
     )
 
 

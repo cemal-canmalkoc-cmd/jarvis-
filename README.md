@@ -144,6 +144,42 @@ Test: Schreib Jarvis von deinem Handy „Tagesbericht".
 Twilio-Konto anlegen, eine Schweizer Nummer kaufen (Regulatory Bundle nötig) und ConversationRelay aktivieren.
 Dann `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` und `TWILIO_VOICE_FROM` in die `.env` eintragen.
 
+## ☎️ Anrufe annehmen: Jarvis als Telefonzentrale (+49 151 28143836)
+
+Kandidaten und Kliniken rufen **euch** an, und Jarvis nimmt ab. Das ist rechtlich die sauberste Lösung, denn wer
+selbst anruft, hat zugestimmt. Die Nummer steht automatisch in WhatsApp-Nachrichten, im Formular, in
+E-Mails und in Inseraten.
+
+Was Jarvis am Telefon macht:
+- **Kandidat ruft an:** fragt Beruf, Diplom, Deutsch, SRK/MEBEKO, Wohnort und Verfügbarkeit ab, legt das Profil an, bewertet es und
+  liefert bei Interesse direkt an passende Kunden. Du bekommst ☎️🔥 per WhatsApp.
+- **Klinik ruft an:** nimmt Firma, Ansprechperson, E-Mail und Bedarf auf, nennt eure Honorare (falls hinterlegt) und
+  sagt deinen Rückruf zu. Du bekommst ☎️🏥🔥 mit der Rückrufnummer.
+- **Bekannte Nummern** erkennt er (Kandidat oder Klinik) und spricht passend.
+
+### Einrichtung
+1. Bei Twilio eine **deutsche Nummer** kaufen (Regulatory Bundle nötig) und bei „A call comes in" eintragen:
+   `https://DEINE-ADRESSE/voice/inbound` (POST).
+2. Auf dem Handy mit der SIM **+49 151 28143836** eine Rufumleitung zu dieser Twilio-Nummer einrichten. Zwei Varianten:
+
+**Variante A: Alle Anrufe gehen an Jarvis** (die Nummer ist nur für Jarvis):
+`**21*+49TWILIONUMMER#` wählen und anrufen. Ausschalten mit `##21#`.
+
+**Variante B: Du nimmst Bekannte selbst ab, Jarvis nimmt Unbekannte ab:**
+- iPhone: Einstellungen → Apps → Telefon → **Unbekannte Anrufer stummschalten** einschalten
+- Rufumleitung bei Nichtannahme, besetzt und nicht erreichbar zu Jarvis:
+  `**61*+49TWILIONUMMER*11*15#`, `**67*+49TWILIONUMMER#`, `**62*+49TWILIONUMMER#`
+
+Kontakte klingeln dann normal bei dir. Unbekannte Anrufer werden stummgeschaltet und landen statt auf der Mailbox bei Jarvis.
+
+3. Optional: Die +49 151 … bei Twilio als **Verified Caller ID** bestätigen und als `TWILIO_VOICE_FROM` setzen.
+   Dann sehen Angerufene eure Nummer, und Rückrufe landen wieder bei Jarvis.
+
+**Kosten:** Das ist nicht gratis.
+- Die Umleitung kostet je nach Handytarif; zu einer deutschen Nummer ist sie meist in der Flatrate.
+- Dazu kommen Twilio-Gebühren pro Gesprächsminute (Nummer, Sprachdienst).
+- Ohne Twilio geht die Telefonzentrale nicht. Alles andere läuft trotzdem.
+
 ## So kommst du auf 20+ vermittelbare Kandidaten pro Tag
 
 1. **Formular verbreiten:** `https://DEINE-ADRESSE/bewerbung`
@@ -188,5 +224,5 @@ jarvis/
 ## Tests
 
 ```bash
-python -m pytest -q     # 45 Tests, simuliert Claude/WhatsApp/Telefon – keine echten Kosten
+python -m pytest -q     # 49 Tests, simuliert Claude/WhatsApp/Telefon – keine echten Kosten
 ```

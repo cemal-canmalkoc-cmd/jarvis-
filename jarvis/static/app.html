@@ -204,7 +204,7 @@ function renderCalls() {
   if (!DATA.anrufe.length) return box.append(h("div", {class: "empty"}, "Noch keine Anrufe."));
   for (const c of DATA.anrufe) box.append(h("div", {class: "card"},
     h("div", {style: "display:flex;justify-content:space-between;gap:8px"},
-      h("b", {}, (c.typ === "firma" ? "🏥 " : "👤 ") + c.name),
+      h("b", {}, ({firma: "🏥 ", kandidat: "👤 "}[c.typ] || "") + c.name),
       h("span", {class: "pill" + (["interessiert", "rueckruf"].includes(c.status) ? " hot" : "")}, c.status)),
     h("div", {class: "muted small"}, (c.zeit || "").replace("T", " ").slice(0, 16)),
     c.zusammenfassung ? h("div", {class: "small", style: "margin-top:6px"}, c.zusammenfassung) : null));

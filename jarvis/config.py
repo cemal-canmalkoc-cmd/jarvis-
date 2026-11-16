@@ -131,3 +131,7 @@ SMTP_FROM = os.environ.get("JARVIS_SMTP_FROM", "")
 # Bestandskunden automatisch beliefern (anonyme Vorstellung per E-Mail, sobald ein passender
 # Kandidat Interesse bestätigt hat). 0 = nur auf deinen Befehl.
 AUTO_DELIVER = _flag("JARVIS_AUTO_DELIVER", "1")
+
+# Öffentliche Rufnummer von Hansa Personal für Kandidaten & Kliniken. Anrufe darauf werden zu
+# Jarvis umgeleitet (siehe README „Anrufe annehmen"). Steht in Nachrichten, Formular und Inseraten.
+CALL_IN_NUMBER = os.environ.get("JARVIS_CALL_IN_NUMBER", "")
