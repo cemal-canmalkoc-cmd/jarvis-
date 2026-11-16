@@ -7,6 +7,7 @@ Pro Kunde brauchst du dafür **etwa 1–2 Stunden im Monat** statt 2–3 Tage.
 | Ordner/Datei | Wozu |
 |---|---|
 | `website/index.html` | Deine Agentur-Website mit 3 Paketen und Stripe-Links |
+| `kostenlos/` | **0-€-Variante, heute startklar:** Website-Baukasten, Kopier-Prompts für claude.ai, Schritt-für-Schritt `HEUTE-LIVE.md` |
 | `server.py` | **Vollautomatischer Betrieb:** Zahlung → Fragebogen → Produktion → Kundenportal → Monatslieferung |
 | `agentur.py` | Produziert die komplette Kunden-Lieferung (auch manuell nutzbar) |
 | `kunden/*.json` | Ein Briefing pro Kunde (Beispiel: `beispiel-baeckerei.json`) |

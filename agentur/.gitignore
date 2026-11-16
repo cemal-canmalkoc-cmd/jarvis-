@@ -4,3 +4,5 @@ __pycache__/
 agentur.db
 kunden/*
 !kunden/beispiel-baeckerei.json
+kostenlos/daten.json
+kostenlos/fertig/
