@@ -1,4 +1,4 @@
-# Jarvis: autonomer Recruiting-Assistent (Gesundheitswesen Schweiz)
+# Jarvis: autonomer Recruiting-Assistent von Hansa Personal (Gesundheitswesen Schweiz)
 
 Jarvis arbeitet selbstständig wie ein Personalvermittler:
 
@@ -78,7 +78,7 @@ Lokal testen geht ohne WhatsApp: `python -m jarvis befehl "Tagesbericht"`
 1. Konto auf twilio.com anlegen und eine **Schweizer Telefonnummer** kaufen. Für CH-Nummern verlangt Twilio ein „Regulatory Bundle" (Firmenangaben).
 2. **WhatsApp-Sender** registrieren (Twilio Console → Messaging → WhatsApp Senders). Dafür braucht es ein verifiziertes Meta-Business-Konto.
 3. Eine **Vorlage für den Erstkontakt** anlegen und von Meta freigeben lassen (Content Template Builder), z.B.:
-   > Grüezi {{1}}, hier ist das Recruiting-Team von [Agentur]. Wir haben passende Stellen für {{2}} in der Schweiz. Interesse an einem kurzen Gespräch? Antworten Sie mit JA – oder STOP, wenn Sie keine Nachrichten wünschen.
+   > Grüezi {{1}}, hier ist Cemal-Can Malkoc von Hansa Personal. Wir haben passende Stellen für {{2}} in der Schweiz. Interesse an einem kurzen Gespräch? Antworten Sie mit JA – oder STOP, wenn Sie keine Nachrichten wünschen.
 
    Die Content-SID (beginnt mit `HX…`) kommt als `TWILIO_TEMPLATE_FIRST_CONTACT` in die `.env`.
 4. **ConversationRelay** für Sprachanrufe aktivieren (Voice → Settings: AI-/Predictive-Features akzeptieren).

@@ -21,7 +21,7 @@ from zoneinfo import ZoneInfo
 import anthropic
 
 from . import brain, config, messaging, store
-from .whatsapp import normalize_phone
+from .whatsapp import normalize_phone, role_phrase
 
 log = logging.getLogger("jarvis.voice")
 HANGUP = "[AUFLEGEN]"
@@ -63,7 +63,7 @@ PHONE_STYLE = """Telefon-Stil:
 def candidate_context(row) -> tuple[str, str]:
     c = store.load(row)
     a = c.assessment
-    role = a.physician_specialty if a.category == "arzt" else (a.nursing_field or "Pflegefachperson")
+    role = role_phrase(a)
     rec = "SRK" if a.category == "pflege" else "MEBEKO"
     greeting = (f"Grüezi, hier ist Jarvis, der digitale KI-Assistent von {config.AGENCY_NAME}. "
                 f"Ich rufe wegen Ihres Profils als {role} an. Passt es Ihnen gerade für zwei, drei Minuten?")

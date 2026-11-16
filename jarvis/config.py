@@ -27,8 +27,8 @@ MODEL = os.environ.get("JARVIS_MODEL", "claude-opus-5-5")
 EFFORT = os.environ.get("JARVIS_EFFORT", "medium")
 
 # Absender-Angaben für die WhatsApp-Nachrichten
-RECRUITER_NAME = os.environ.get("JARVIS_RECRUITER_NAME", "Ihr Recruiting-Team")
-AGENCY_NAME = os.environ.get("JARVIS_AGENCY_NAME", "unserer Personalvermittlung")
+RECRUITER_NAME = os.environ.get("JARVIS_RECRUITER_NAME", "Cemal-Can Malkoc")
+AGENCY_NAME = os.environ.get("JARVIS_AGENCY_NAME", "Hansa Personal")
 
 # Wie viele Top-Kandidaten pro Tag in die Shortlist kommen
 DAILY_SHORTLIST_SIZE = int(os.environ.get("JARVIS_DAILY_SIZE", "25"))

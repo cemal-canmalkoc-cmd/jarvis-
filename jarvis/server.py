@@ -153,6 +153,7 @@ input[type=file]{width:100%;font-size:15px}
 .check input{margin-top:4px;width:18px;height:18px;flex:none}
 button,.btn{display:inline-block;width:100%;padding:13px;border:0;border-radius:10px;background:var(--accent);color:var(--accent-text);font-size:17px;font-weight:600;cursor:pointer;text-align:center;text-decoration:none}
 .small{font-size:13px;color:var(--muted)}.hp{position:absolute;left:-5000px}
+.brand{font-weight:700;color:var(--accent);letter-spacing:.3px;margin-top:4px}
 """
 
 _rate: dict[str, deque] = defaultdict(deque)
@@ -188,6 +189,7 @@ async def root():
 async def bewerbung_form():
     agency = html.escape(config.AGENCY_NAME)
     body = f"""
+<div class="brand">{agency}</div>
 <h1>Ihre Stelle in der Schweiz</h1>
 <p class="lead">Pflege & Ärzteschaft – wir vermitteln Sie kostenlos an Spitäler, Kliniken und Heime.
 In 2 Minuten bewerben, wir melden uns schnell.</p>
@@ -245,7 +247,7 @@ In 2 Minuten bewerben, wir melden uns schnell.</p>
  <button type="submit">Jetzt bewerben</button>
  <p class="small">Mit * markierte Felder sind Pflicht. Für Sie ist die Vermittlung kostenlos.</p>
 </form>"""
-    return _page("Bewerbung Schweiz", body)
+    return _page(f"Bewerbung Schweiz – {config.AGENCY_NAME}", body)
 
 
 def _evaluate_form(raw: sources.RawProfile) -> None:

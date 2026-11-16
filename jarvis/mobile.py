@@ -276,6 +276,6 @@ input{width:100%;box-sizing:border-box;padding:14px;border-radius:12px;border:1p
 color:var(--text);font-size:17px}button{margin-top:12px;width:100%;padding:14px;border:0;border-radius:12px;
 background:var(--accent);color:#fff;font-size:17px;font-weight:600}.f{color:#e5484d;min-height:22px;margin-top:8px}
 </style></head><body><form method="post" action="/app/login">
-<img src="/app/icon-180.png" alt=""><h1>Jarvis</h1><p>Zugangscode eingeben</p>
+<img src="/app/icon-180.png" alt=""><h1>Jarvis</h1><p>Hansa Personal · Zugangscode eingeben</p>
 <input name="token" type="password" autocomplete="current-password" required autofocus>
 <button type="submit">Anmelden</button><div class="f">{{FEHLER}}</div></form></body></html>"""
