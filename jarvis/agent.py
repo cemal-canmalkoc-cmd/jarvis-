@@ -151,6 +151,8 @@ def t_kunde_anlegen(name: str, ort: str = "", email: str = "", ansprechperson: s
     cid = store.add_customer(store.connect(), name, ort or None, email or None, ansprechperson or None,
                              telefon or None, bedarf or None)
     hint = "" if email else " Ohne E-Mail kann ich nicht automatisch liefern – bitte nachreichen."
+    hint += (" Tipp: Bewilligung des Partners im SECO-Verzeichnis prüfen (www.avg-seco.admin.ch) "
+             "und eine schriftliche Kooperationsvereinbarung abschliessen.")
     return f"Kunde gespeichert (Firma {cid}).{hint}"
 
 
@@ -223,7 +225,8 @@ TOOLS = {
     "firma_kontakt": (t_firma_kontakt, "E-Mail/Ansprechperson einer Firma speichern.",
                       {"id": {"type": "integer"}, "email": {"type": "string"}, "name": {"type": "string"}}),
     "nachfassen": (t_nachfassen, "Kandidaten, die seit 3+ Tagen nicht geantwortet haben.", {}),
-    "kunde_anlegen": (t_kunde_anlegen, "Bestandskunden (Arbeitgeber mit Vereinbarung) anlegen oder aktualisieren.",
+    "kunde_anlegen": (t_kunde_anlegen, "Partner-Vermittler (Schweizer Personalvermittlung mit Bewilligung, "
+                      "an die Hansa Kandidaten liefert) anlegen oder aktualisieren.",
                       {"name": {"type": "string"}, "ort": {"type": "string"}, "email": {"type": "string"},
                        "ansprechperson": {"type": "string"}, "telefon": {"type": "string"},
                        "bedarf": {"type": "string", "description": "z.B. '2 Dipl. Pflegefachpersonen Psychiatrie 80-100%'"}}),
@@ -292,7 +295,11 @@ Du wirst per WhatsApp gesteuert. Regeln:
 - Arbeite wie der beste Personalvermittler: Interessierte Kandidaten sofort passenden Firmen zuordnen
   (passende_firmen) und nach deiner Bestätigung anonym vorstellen (kandidat_vorstellen). Wer nicht
   antwortet, wird nachgefasst. Ein Kandidat ist erst vermittelt, wenn ein Vertrag unterschrieben ist.
-- Bestandskunden (Status 'kunde') haben Vorrang: Sie werden automatisch beliefert, sobald ein passender
+- GESCHÄFTSMODELL: Hansa Personal findet und qualifiziert Kandidaten und liefert sie an Schweizer
+  Partner-Personalvermittler (mit kantonaler und SECO-Bewilligung). Die Partner vermitteln an die Arbeitgeber.
+  Hansa schliesst KEINE Vermittlungsverträge mit Arbeitgebern ab. Rufen Arbeitgeber an oder melden Bedarf,
+  nimm die Anfrage auf und leite sie als Lead an Cemal-Can / den Partner weiter. Kandidaten zahlen nie etwas.
+- 'Kunden' (Status 'kunde') sind die Partner-Vermittler. Sie haben Vorrang: Sie werden automatisch beliefert, sobald ein passender
   Kandidat Interesse bestätigt. Fehlt einem Kunden die E-Mail, frag danach. Wenn Cemal-Can eine Liste von
   Arbeitgebern schickt, lege jeden mit kunde_anlegen an.
 - Preise: Nenne nur Honorare, die mit preis_setzen hinterlegt sind. Erfinde nie Preise oder Rabatte.

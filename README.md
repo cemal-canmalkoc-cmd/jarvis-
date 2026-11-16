@@ -49,9 +49,24 @@ Die Honorare stehen in neuen Angeboten an Kliniken und im Telefonleitfaden (nur 
 schreibt Jarvis „Es gelten die mit Ihnen vereinbarten Konditionen“.
 Ohne hinterlegte Preise verweist Jarvis auf ein persönliches Angebot von dir.
 
-> ⚖️ Hinweis: Private Arbeitsvermittlung braucht in der Schweiz eine kantonale Bewilligung, die Vermittlung
-> aus dem Ausland (z.B. Deutschland) zusätzlich eine SECO-Bewilligung. Kandidaten dürfen grundsätzlich
-> nichts bezahlen; das Honorar trägt der Arbeitgeber.
+> ⚖️ **Rechtliches Modell:** Hansa Personal findet und qualifiziert Kandidaten und liefert sie an
+> **Schweizer Partner-Personalvermittler mit Bewilligung**. Die Partner vermitteln an die Arbeitgeber.
+> Jarvis ist darauf eingestellt:
+> - keine Akquise-Anrufe bei Arbeitgebern
+> - Anfragen von Arbeitgebern werden als Lead weitergegeben
+> - Kandidaten willigen im Formular in die Weitergabe an Partner ein
+> - Kandidaten zahlen nie etwas
+>
+> Damit das sauber ist, bitte vor dem Start erledigen:
+> 1. **Bewilligung jedes Partners prüfen.** Er braucht die kantonale Bewilligung und, weil die Kandidaten aus dem Ausland kommen,
+>    die **SECO-Bewilligung für Auslandsvermittlung**. Das öffentliche Verzeichnis findet sich auf www.avg-seco.admin.ch.
+> 2. **Schriftliche Kooperationsvereinbarung** mit jedem Partner abschliessen: Rollen, Honorarteilung, Datenschutz und
+>    die Regel, dass Hansa keine eigenen Verträge mit Arbeitgebern schliesst.
+> 3. **Gewerbeanmeldung** in Deutschland (private Arbeitsvermittlung ist dort erlaubnisfrei, aber anmeldepflichtig).
+> 4. **Datenschutzerklärung** (DSGVO/nDSG) verlinken. Darin muss die Weitergabe an Schweizer Partner stehen.
+> 5. **Kurz absichern lassen.** Ob reines Zuliefern von Kandidaten an einen Schweizer Vermittler selbst schon
+>    bewilligungspflichtige Vermittlung ist, entscheidet im Einzelfall das kantonale Arbeitsamt bzw. das SECO.
+>    Eine kurze schriftliche Anfrage dort (kostenlos) oder bei einer Anwältin bzw. einem Anwalt gibt euch Sicherheit.
 
 ## Was Jarvis sucht (`jarvis/config.py`)
 

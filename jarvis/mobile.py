@@ -162,7 +162,7 @@ def leitfaden(row) -> list[str]:
     if not a.availability:
         q.append("Ab wann könnten Sie starten?")
     q += ["Welche Regionen in der Schweiz kommen in Frage?",
-          "Darf ich Ihr Profil anonym passenden Kliniken vorstellen?",
+          "Darf ich Ihr Profil an unsere Schweizer Partner-Personalvermittlung weitergeben?",
           "Abschluss: nächsten Schritt + Termin festhalten, Lebenslauf per WhatsApp anfordern."]
     return q
 

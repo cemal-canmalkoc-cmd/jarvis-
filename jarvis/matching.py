@@ -112,7 +112,7 @@ def present(cand_key: str, company_id: int) -> str:
     a = store.load(cand).assessment
     role = (a.physician_specialty if a.category == "arzt" else a.nursing_field)
     if firm["status"] == "kunde":
-        terms = "Es gelten die mit Ihnen vereinbarten Konditionen."
+        terms = "Es gelten die Konditionen unserer Kooperationsvereinbarung."
     else:
         price = pricing.for_candidate(a.category, role)
         terms = (f"Unser Honorar: {price}." if price else

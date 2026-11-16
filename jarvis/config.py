@@ -87,7 +87,7 @@ MORNING_HOUR = int(os.environ.get("JARVIS_MORNING_HOUR", "7"))
 CALL_HOURS = (9, 18)               # Anrufe nur Mo-Fr in diesem Fenster (lokale Zeit)
 MAX_CALLS_PER_ROUND = int(os.environ.get("JARVIS_MAX_CALLS_PER_ROUND", "5"))
 AUTO_CALL_CANDIDATES = _flag("JARVIS_AUTO_CALL_CANDIDATES", "1")
-AUTO_CALL_COMPANIES = _flag("JARVIS_AUTO_CALL_COMPANIES", "1")
+AUTO_CALL_COMPANIES = _flag("JARVIS_AUTO_CALL_COMPANIES", "0")  # Arbeitgeber betreut der Partner-Vermittler
 
 PUBLIC_URL = os.environ.get("JARVIS_PUBLIC_URL", "http://localhost:8000").rstrip("/")
 OWNER_WHATSAPP = os.environ.get("JARVIS_OWNER_WHATSAPP", "")    # deine Nummer, z.B. +49176...

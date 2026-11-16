@@ -298,8 +298,9 @@ In 2 Minuten bewerben, wir melden uns schnell.{call_hint}</p>
  </fieldset>
  <fieldset><legend>Einwilligung</legend>
   <label class="check"><input type="checkbox" name="consent_data" value="1" required>
-   <span>Ich bin einverstanden, dass {agency} meine Angaben zur Stellenvermittlung speichert und anonymisiert an
-   mögliche Arbeitgeber weitergibt. Widerruf jederzeit möglich. *</span></label>
+   <span>Ich bin einverstanden, dass {agency} meine Angaben speichert und zur Stellensuche an Schweizer
+   Partner-Personalvermittler (mit behördlicher Bewilligung) weitergibt. Für mich ist das kostenlos.
+   Widerruf jederzeit möglich. *</span></label>
   <label class="check"><input type="checkbox" name="consent_whatsapp" value="1" checked>
    <span>Kontakt per WhatsApp ist ok.</span></label>
   <label class="check"><input type="checkbox" name="consent_call" value="1" checked>

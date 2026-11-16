@@ -170,7 +170,7 @@ function toast(t) { const el = $("#toast"); el.textContent = t; el.style.display
   clearTimeout(toast.t); toast.t = setTimeout(() => el.style.display = "none", 3500); }
 
 const STATUS_DE = {neu: "Neu", kontaktiert: "Kontaktiert", interessiert: "Interessiert", kein_interesse: "Kein Interesse",
-  vermittelt: "Vermittelt", kunde: "Kunde ⭐", angerufen: "Angerufen", kein_bedarf: "Kein Bedarf", nicht_anrufen: "Nicht anrufen"};
+  vermittelt: "Vermittelt", kunde: "Partner ⭐", angerufen: "Angerufen", kein_bedarf: "Kein Bedarf", nicht_anrufen: "Nicht anrufen"};
 const REC_DE = {anerkannt: "anerkannt ⭐", positiver_precheck: "positiver Pre-Check ⭐", laufend: "läuft",
   nicht_noetig: "CH-Diplom", fehlt: "fehlt", unbekannt: "unbekannt"};
 let DATA = null, filter = "alle";
