@@ -170,7 +170,7 @@ function toast(t) { const el = $("#toast"); el.textContent = t; el.style.display
   clearTimeout(toast.t); toast.t = setTimeout(() => el.style.display = "none", 3500); }
 
 const STATUS_DE = {neu: "Neu", kontaktiert: "Kontaktiert", interessiert: "Interessiert", kein_interesse: "Kein Interesse",
-  vermittelt: "Vermittelt", angerufen: "Angerufen", kein_bedarf: "Kein Bedarf", nicht_anrufen: "Nicht anrufen"};
+  vermittelt: "Vermittelt", kunde: "Kunde ⭐", angerufen: "Angerufen", kein_bedarf: "Kein Bedarf", nicht_anrufen: "Nicht anrufen"};
 const REC_DE = {anerkannt: "anerkannt ⭐", positiver_precheck: "positiver Pre-Check ⭐", laufend: "läuft",
   nicht_noetig: "CH-Diplom", fehlt: "fehlt", unbekannt: "unbekannt"};
 let DATA = null, filter = "alle";
@@ -226,11 +226,14 @@ document.querySelectorAll("#filter .chip").forEach(b => b.onclick = () => {
 
 function renderFirms() {
   const box = $("#firms"); box.replaceChildren();
+  box.append(h("div", {class: "card small"}, h("b", {}, "💰 Honorare"),
+    Object.entries(DATA.preise).map(([k, v]) => h("div", {class: "row"}, h("span", {}, k), h("span", {}, v))),
+    h("div", {class: "muted", style: "margin-top:6px"}, "Ändern: im Jarvis-Chat, z.B. „Pflege: 18 % vom Jahreslohn, 3 Monate Garantie“")));
   if (!DATA.firmen.length) return box.append(h("div", {class: "empty"}, "Noch keine Arbeitgeber. Schreib Jarvis: „Such Kliniken in Zürich“."));
   for (const f of DATA.firmen) box.append(h("button", {class: "item", onclick: () => openFirm(f)},
     h("div", {class: "badge", style: "background:var(--accent)"}, "🏥"),
     h("div", {class: "t"}, h("div", {class: "n"}, f.name), h("div", {class: "s"}, [f.city, f.needs].filter(Boolean).join(" · "))),
-    h("span", {class: "pill" + (f.status === "interessiert" ? " hot" : "")}, STATUS_DE[f.status] || f.status)));
+    h("span", {class: "pill" + (["interessiert", "kunde"].includes(f.status) ? " hot" : "")}, STATUS_DE[f.status] || f.status)));
 }
 
 // ---------- Detail-Sheets
@@ -301,7 +304,8 @@ async function presentTo(id, f) {
 function openFirm(f) {
   sheet(
     h("h2", {style: "margin-top:0"}, f.name),
-    h("div", {class: "card"}, [["Ort", f.city], ["Bedarf", f.needs], ["Telefon", f.phone], ["Status", STATUS_DE[f.status] || f.status]]
+    h("div", {class: "card"}, [["Ort", f.city], ["Bedarf", f.needs], ["Kontakt", [f.contact_name, f.email].filter(Boolean).join(" · ")],
+      ["Telefon", f.phone], ["Status", STATUS_DE[f.status] || f.status]]
       .map(([k, v]) => h("div", {class: "row"}, h("span", {}, k), h("span", {}, v || "–")))),
     f.notes ? h("div", {class: "card small", style: "white-space:pre-wrap"}, f.notes.trim()) : null,
     h("button", {class: "btn", disabled: !f.phone || f.status === "nicht_anrufen" || !DATA.anrufzeit,
@@ -309,7 +313,7 @@ function openFirm(f) {
     h("div", {class: "btns"},
       f.phone ? h("a", {class: "btn sec", href: "tel:" + f.phone.replace(/[^+\d]/g, "")}, "☎️ Selbst anrufen") : null,
       f.website ? h("a", {class: "btn sec", href: f.website, target: "_blank", rel: "noopener"}, "🌐 Website") : null),
-    h("div", {class: "chips"}, ["interessiert", "kein_bedarf", "nicht_anrufen"].map(s =>
+    h("div", {class: "chips"}, ["kunde", "interessiert", "kein_bedarf", "nicht_anrufen"].map(s =>
       h("button", {class: "chip" + (f.status === s ? " on" : ""), onclick: () => act(`/api/firma/${f.id}/status`, {status: s})}, STATUS_DE[s]))));
 }
 

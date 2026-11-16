@@ -30,6 +30,29 @@ Jarvis arbeitet wie dein bester Mitarbeiter in der Personalvermittlung:
 - Ganz ohne Web-Suche (nur Formular, WhatsApp und E-Mail) liegt die KI bei wenigen Rappen pro Tag.
 - Mehr Qualität für mehr Geld: `JARVIS_SPARMODUS=0` nutzt Claude Opus 5.5.
 
+## Bestandskunden & Honorare
+
+**Kunden anlegen** – einfach per WhatsApp, auch mehrere auf einmal:
+> Neue Kunden: Spital Muster AG, Zürich, hr@muster.ch, Frau Huber, sucht 2 Dipl. Pflegefachpersonen Psychiatrie 80–100 %.
+> Pflegeheim Sonne, Bern, jobs@sonne.ch, sucht FaGe Langzeitpflege.
+
+Danach liefert Jarvis automatisch: Sobald ein passender Kandidat Interesse bestätigt, bekommt der
+Kunde ein anonymes Kurzprofil per E-Mail (jeder Kandidat nur einmal pro Kunde) und du eine 📦-Meldung.
+Offene Kundenaufträge sucht Jarvis jeden Morgen **zuerst**. Abschalten: `JARVIS_AUTO_DELIVER=0`.
+
+**Honorare festlegen** – Jarvis nennt nur, was du hinterlegst, und erfindet nie Preise:
+> Pflege: 18 % vom Jahreslohn, 3 Monate Garantie
+> FaGe: pauschal 6500 Franken, 3 Monate Garantie
+> Arzt: 20 % vom Jahreslohn, 6 Monate Garantie
+
+Die Honorare stehen in neuen Angeboten an Kliniken und im Telefonleitfaden (nur wenn gefragt). Bei Kunden
+schreibt Jarvis „Es gelten die mit Ihnen vereinbarten Konditionen“.
+Ohne hinterlegte Preise verweist Jarvis auf ein persönliches Angebot von dir.
+
+> ⚖️ Hinweis: Private Arbeitsvermittlung braucht in der Schweiz eine kantonale Bewilligung, die Vermittlung
+> aus dem Ausland (z.B. Deutschland) zusätzlich eine SECO-Bewilligung. Kandidaten dürfen grundsätzlich
+> nichts bezahlen; das Honorar trägt der Arbeitgeber.
+
 ## Was Jarvis sucht (`jarvis/config.py`)
 
 **Pflege:** Dipl. Pflegefachpersonen (Akutspital, Psychiatrie, Geriatrie/Langzeitpflege) und FaGe.
@@ -150,7 +173,8 @@ jarvis/
   brain.py       Claude: Profile auslesen, Stellengesuche finden
   scoring.py     Bewertung A/B/C/X
   pipeline.py    Sammeln → Prüfen → Speichern → Shortlist
-  matching.py    Kandidat ↔ Klinik, anonyme Vorstellung, Nachfassen
+  matching.py    Kandidat ↔ Klinik, Kunden beliefern, Nachfassen
+  pricing.py     Honorare je Bereich
   companies.py   Kliniken finden
   agent.py       WhatsApp/App/Siri-Befehle + Kandidaten-Chat
   messaging.py   WhatsApp (Meta oder Twilio)
@@ -164,5 +188,5 @@ jarvis/
 ## Tests
 
 ```bash
-python -m pytest -q     # 38 Tests, simuliert Claude/WhatsApp/Telefon – keine echten Kosten
+python -m pytest -q     # 45 Tests, simuliert Claude/WhatsApp/Telefon – keine echten Kosten
 ```

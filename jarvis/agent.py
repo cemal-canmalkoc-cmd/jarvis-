@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 import anthropic
 import requests
 
-from . import brain, companies, config, matching, messaging, pipeline, sources, store, voice
+from . import brain, companies, config, matching, messaging, pipeline, pricing, sources, store, voice
 
 log = logging.getLogger("jarvis.agent")
 
@@ -146,6 +146,37 @@ def t_nachfassen() -> list[dict]:
             for r in rows] or [{"info": "Niemand muss heute nachgefasst werden."}]
 
 
+def t_kunde_anlegen(name: str, ort: str = "", email: str = "", ansprechperson: str = "",
+                    telefon: str = "", bedarf: str = "") -> str:
+    cid = store.add_customer(store.connect(), name, ort or None, email or None, ansprechperson or None,
+                             telefon or None, bedarf or None)
+    hint = "" if email else " Ohne E-Mail kann ich nicht automatisch liefern – bitte nachreichen."
+    return f"Kunde gespeichert (Firma {cid}).{hint}"
+
+
+def t_kunden_liste() -> list[dict]:
+    conn = store.connect()
+    out = []
+    for k in store.customers(conn):
+        n = conn.execute("SELECT COUNT(*) FROM presentations WHERE company_id=?", (k["id"],)).fetchone()[0]
+        out.append({"id": k["id"], "name": k["name"], "ort": k["city"], "bedarf": k["needs"],
+                    "email": k["email"], "ansprechperson": k["contact_name"], "vorgestellt": n})
+    return out or [{"info": "Noch keine Kunden hinterlegt."}]
+
+
+def t_preis_setzen(bereich: str, modell: str, wert: float, garantie_monate: int = 0, notiz: str = "") -> str:
+    store.set_price(store.connect(), bereich, modell, wert, garantie_monate, notiz)
+    return f"{bereich}: {pricing.overview()[bereich]}"
+
+
+def t_preise_anzeigen() -> dict:
+    return pricing.overview()
+
+
+def t_kunden_beliefern() -> list[str]:
+    return matching.auto_deliver() or ["Gerade nichts zu liefern (keine neuen interessierten, passenden Kandidaten)."]
+
+
 def t_autopilot_jetzt() -> dict:
     from . import autopilot
     return autopilot.morning(force=True)
@@ -192,10 +223,23 @@ TOOLS = {
     "firma_kontakt": (t_firma_kontakt, "E-Mail/Ansprechperson einer Firma speichern.",
                       {"id": {"type": "integer"}, "email": {"type": "string"}, "name": {"type": "string"}}),
     "nachfassen": (t_nachfassen, "Kandidaten, die seit 3+ Tagen nicht geantwortet haben.", {}),
+    "kunde_anlegen": (t_kunde_anlegen, "Bestandskunden (Arbeitgeber mit Vereinbarung) anlegen oder aktualisieren.",
+                      {"name": {"type": "string"}, "ort": {"type": "string"}, "email": {"type": "string"},
+                       "ansprechperson": {"type": "string"}, "telefon": {"type": "string"},
+                       "bedarf": {"type": "string", "description": "z.B. '2 Dipl. Pflegefachpersonen Psychiatrie 80-100%'"}}),
+    "kunden_liste": (t_kunden_liste, "Alle Bestandskunden mit Bedarf und Anzahl vorgestellter Kandidaten.", {}),
+    "kunden_beliefern": (t_kunden_beliefern, "Interessierte Kandidaten jetzt an passende Kunden liefern.", {}),
+    "preis_setzen": (t_preis_setzen, "Vermittlungshonorar für einen Bereich festlegen (nur auf Anweisung von Cemal-Can).",
+                     {"bereich": {"type": "string", "enum": list(store.PRICE_AREAS)},
+                      "modell": {"type": "string", "enum": list(store.PRICE_MODELS)},
+                      "wert": {"type": "number", "description": "Prozent (z.B. 18) oder CHF-Betrag"},
+                      "garantie_monate": {"type": "integer"}, "notiz": {"type": "string"}}),
+    "preise_anzeigen": (t_preise_anzeigen, "Aktuelle Honorare je Bereich.", {}),
     "autopilot_jetzt": (t_autopilot_jetzt, "Kompletten Tagesablauf sofort ausführen.", {}),
 }
 
-REQUIRED = {"passende_firmen": ["id"], "kandidat_vorstellen": ["id", "firma_id"],
+REQUIRED = {"kunde_anlegen": ["name"], "preis_setzen": ["bereich", "modell", "wert"],
+            "passende_firmen": ["id"], "kandidat_vorstellen": ["id", "firma_id"],
             "firma_kontakt": ["id", "email"], "kandidat": ["id"], "status_setzen": ["id", "status"], "kandidat_anrufen": ["id"],
             "firmen_suchen": ["fokus"], "firma_anrufen": ["id"], "firma_status": ["id", "status"],
             "whatsapp_an_kandidat": ["id", "text"]}
@@ -246,6 +290,10 @@ Du wirst per WhatsApp gesteuert. Regeln:
 - Arbeite wie der beste Personalvermittler: Interessierte Kandidaten sofort passenden Firmen zuordnen
   (passende_firmen) und nach deiner Bestätigung anonym vorstellen (kandidat_vorstellen). Wer nicht
   antwortet, wird nachgefasst. Ein Kandidat ist erst vermittelt, wenn ein Vertrag unterschrieben ist.
+- Bestandskunden (Status 'kunde') haben Vorrang: Sie werden automatisch beliefert, sobald ein passender
+  Kandidat Interesse bestätigt. Fehlt einem Kunden die E-Mail, frag danach. Wenn Cemal-Can eine Liste von
+  Arbeitgebern schickt, lege jeden mit kunde_anlegen an.
+- Preise: Nenne nur Honorare, die mit preis_setzen hinterlegt sind. Erfinde nie Preise oder Rabatte.
 - Kandidaten-IDs dürfen abgekürzt werden (die ersten 6 Zeichen reichen).
 - Wenn das Tagesziel nicht erreicht ist, schlage konkrete Schritte vor (z.B. Web-Suche mit weiterem Fokus,
   Stelleninserat mit Formular-Link posten) – du kannst Inseratstexte selbst schreiben.
@@ -391,7 +439,8 @@ def handle_candidate(sender: str, text: str, media: list[tuple[str, str]]) -> st
         if kind == "STATUS" and row and value in store.STATUSES:
             store.set_status(conn, row["key"], value, "WhatsApp-Chat")
             if value == "interessiert":
-                messaging.notify_owner(f"🔥 {row['name']} ist interessiert (WhatsApp). ID {row['key']}")
+                messaging.notify_owner(f"🔥 {row['name']} ist interessiert (WhatsApp). ID {row['key'][:6]}")
+                matching.auto_deliver()
         elif kind == "OWNER":
             who = row["name"] if row else f"+{store.digits(sender)}"
             messaging.notify_owner(f"💬 {who}: {value}")

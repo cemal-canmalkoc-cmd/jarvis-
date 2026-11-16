@@ -52,6 +52,21 @@ CREATE TABLE IF NOT EXISTS chats (
     messages TEXT DEFAULT '[]',
     updated TEXT
 );
+CREATE TABLE IF NOT EXISTS presentations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cand_key TEXT,
+    company_id INTEGER,
+    sent_on TEXT,
+    channel TEXT,
+    UNIQUE(cand_key, company_id)
+);
+CREATE TABLE IF NOT EXISTS prices (
+    bereich TEXT PRIMARY KEY,   -- Pflege | FaGe | Arzt
+    modell TEXT,                -- prozent_jahreslohn | pauschal_chf
+    wert REAL,
+    garantie_monate INTEGER,
+    notiz TEXT DEFAULT ''
+);
 CREATE TABLE IF NOT EXISTS optout (
     phone TEXT PRIMARY KEY,
     added TEXT
@@ -71,7 +86,7 @@ COMPANY_EXTRA_COLUMNS = {
 }
 
 STATUSES = ("neu", "kontaktiert", "interessiert", "kein_interesse", "vermittelt")
-COMPANY_STATUSES = ("neu", "angerufen", "interessiert", "kein_bedarf", "nicht_anrufen")
+COMPANY_STATUSES = ("neu", "angerufen", "interessiert", "kunde", "kein_bedarf", "nicht_anrufen")
 
 _lock = threading.Lock()
 
@@ -333,3 +348,59 @@ def followups_due(conn: sqlite3.Connection, days: int = 3) -> list[sqlite3.Row]:
     return conn.execute(
         "SELECT * FROM candidates WHERE status='kontaktiert' AND last_contact IS NOT NULL "
         "AND last_contact < ? ORDER BY score DESC LIMIT 20", (cutoff,)).fetchall()
+
+
+# --------------------------------------------------------------------------- Kunden
+def add_customer(conn: sqlite3.Connection, name: str, city: str | None = None, email: str | None = None,
+                 contact_name: str | None = None, phone: str | None = None, needs: str | None = None) -> int:
+    """Bestandskunde anlegen oder bestehende Firma zum Kunden machen."""
+    with _lock:
+        conn.execute("INSERT OR IGNORE INTO companies (name, city, phone, needs, found_on, status) "
+                     "VALUES (?,?,?,?,?, 'kunde')", (name, city, phone, needs, date.today().isoformat()))
+        row = conn.execute("SELECT id FROM companies WHERE name=? AND city IS ?", (name, city)).fetchone()
+        cid = row["id"]
+        conn.execute("UPDATE companies SET status='kunde', needs=COALESCE(?, needs), phone=COALESCE(?, phone), "
+                     "email=COALESCE(?, email), contact_name=COALESCE(?, contact_name) WHERE id=?",
+                     (needs, phone, email, contact_name, cid))
+        conn.commit()
+    return cid
+
+
+def customers(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    return conn.execute("SELECT * FROM companies WHERE status='kunde' ORDER BY name").fetchall()
+
+
+def was_presented(conn: sqlite3.Connection, cand_key: str, company_id: int) -> bool:
+    return conn.execute("SELECT 1 FROM presentations WHERE cand_key=? AND company_id=?",
+                        (cand_key, company_id)).fetchone() is not None
+
+
+def record_presentation(conn: sqlite3.Connection, cand_key: str, company_id: int, channel: str) -> None:
+    with _lock:
+        conn.execute("INSERT OR IGNORE INTO presentations (cand_key, company_id, sent_on, channel) "
+                     "VALUES (?,?,?,?)", (cand_key, company_id, datetime.now().isoformat(timespec="minutes"),
+                                          channel))
+        conn.commit()
+
+
+# --------------------------------------------------------------------------- Preise
+PRICE_AREAS = ("Pflege", "FaGe", "Arzt")
+PRICE_MODELS = ("prozent_jahreslohn", "pauschal_chf")
+
+
+def set_price(conn: sqlite3.Connection, bereich: str, modell: str, wert: float,
+              garantie_monate: int = 0, notiz: str = "") -> None:
+    if bereich not in PRICE_AREAS:
+        raise ValueError(f"Bereich muss einer von {PRICE_AREAS} sein")
+    if modell not in PRICE_MODELS:
+        raise ValueError(f"Modell muss einer von {PRICE_MODELS} sein")
+    with _lock:
+        conn.execute("INSERT INTO prices (bereich, modell, wert, garantie_monate, notiz) VALUES (?,?,?,?,?) "
+                     "ON CONFLICT(bereich) DO UPDATE SET modell=excluded.modell, wert=excluded.wert, "
+                     "garantie_monate=excluded.garantie_monate, notiz=excluded.notiz",
+                     (bereich, modell, wert, garantie_monate, notiz))
+        conn.commit()
+
+
+def get_prices(conn: sqlite3.Connection) -> dict[str, sqlite3.Row]:
+    return {r["bereich"]: r for r in conn.execute("SELECT * FROM prices")}

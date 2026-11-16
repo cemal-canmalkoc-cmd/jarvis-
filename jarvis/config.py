@@ -127,3 +127,7 @@ SMTP_PORT = int(os.environ.get("JARVIS_SMTP_PORT", "587"))
 SMTP_USER = os.environ.get("JARVIS_SMTP_USER", "")
 SMTP_PASSWORD = os.environ.get("JARVIS_SMTP_PASSWORD", "")
 SMTP_FROM = os.environ.get("JARVIS_SMTP_FROM", "")
+
+# Bestandskunden automatisch beliefern (anonyme Vorstellung per E-Mail, sobald ein passender
+# Kandidat Interesse bestätigt hat). 0 = nur auf deinen Befehl.
+AUTO_DELIVER = _flag("JARVIS_AUTO_DELIVER", "1")

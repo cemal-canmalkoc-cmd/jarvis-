@@ -18,7 +18,7 @@ from pathlib import Path
 from fastapi import APIRouter, Body, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 
-from . import agent, config, matching, messaging, store, voice
+from . import agent, config, matching, messaging, pricing, store, voice
 
 router = APIRouter()
 STATIC = Path(__file__).parent / "static"
@@ -134,7 +134,9 @@ async def uebersicht(request: Request):
         call_list.append({"typ": c["target_type"], "name": label, "status": c["status"],
                           "zeit": c["started"], "zusammenfassung": summary})
     return {"stats": stats, "kandidaten": [_cand_summary(r) for r in rows],
-            "firmen": [dict(r) for r in store.list_companies(conn, None, 60)],
+            "firmen": [dict(r) for r in conn.execute(
+                "SELECT * FROM companies ORDER BY status='kunde' DESC, status='interessiert' DESC, id DESC LIMIT 80")],
+            "preise": pricing.overview(),
             "anrufe": call_list, "anrufzeit": voice.within_call_hours()}
 
 

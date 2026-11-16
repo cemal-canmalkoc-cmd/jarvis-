@@ -35,7 +35,10 @@ def morning(force: bool = False) -> dict:
     store.set_state(conn, "morning", today)
     messaging.notify_owner("☀️ Jarvis startet die Tagessuche …")
 
-    result = pipeline.run(use_web=True)
+    # Offene Kundenaufträge zuerst suchen – dort ist das Geld schon sicher
+    customer_focuses = [f"{k['needs']} {k['city'] or ''}".strip()
+                        for k in store.customers(conn) if k["needs"]]
+    result = pipeline.run(use_web=True, web_focuses=customer_focuses + pipeline.default_web_focuses())
 
     # Tagesziel noch nicht erreicht → zusätzliche Runden mit regionalem Fokus
     day_idx = date.today().toordinal()
@@ -68,6 +71,14 @@ def morning(force: bool = False) -> dict:
         a = c.assessment
         role = a.physician_specialty if a.category == "arzt" else a.nursing_field
         lines.append(f"{c.tier} {c.score} · {a.full_name} · {role} · ID {store.candidate_key(c)[:6]}")
+    delivered = matching.auto_deliver()
+    if delivered:
+        lines.append("\n📦 *Heute an Kunden geliefert*")
+        lines += delivered
+    open_needs = matching.open_customer_needs()
+    if open_needs:
+        lines.append("\n🎯 *Offene Kundenaufträge* (Jarvis sucht gezielt)")
+        lines += open_needs[:8]
     sugg = matching.suggestions(conn)
     if sugg:
         lines.append("\n🤝 *Vermittlungsvorschläge*")

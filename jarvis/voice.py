@@ -20,7 +20,7 @@ from zoneinfo import ZoneInfo
 
 import anthropic
 
-from . import brain, config, messaging, store
+from . import brain, config, messaging, pricing, store
 from .whatsapp import normalize_phone, role_phrase
 
 log = logging.getLogger("jarvis.voice")
@@ -113,6 +113,8 @@ Bekannte offene Stellen: {row["needs"] or "unbekannt"}
 
 Unsere aktuell verfügbaren, vorqualifizierten Kandidaten (NUR anonym erwähnen, niemals Namen nennen):
 {chr(10).join(pitch) or "- laufend neue Pflegefachpersonen und Ärzte mit SRK- bzw. MEBEKO-Anerkennung"}
+
+{pricing.phone_text()}
 
 Ziel des Anrufs:
 1. Zur zuständigen Person (HR / Pflegedienstleitung / Chefarzt-Sekretariat) verbinden lassen
@@ -391,6 +393,9 @@ def finalize_call(call_id: int, transcript: list[dict]) -> None:
         store.set_status(conn, call["target_key"], status, result["summary"])
         if outcome == "nicht_anrufen":
             store.add_optout(conn, call["phone"])
+        if status == "interessiert":
+            from . import matching
+            matching.auto_deliver()
         icon = "🔥" if outcome in ("interessiert", "rueckruf") else "📞"
         messaging.notify_owner(
             f"{icon} Anruf Kandidat: {name}\nErgebnis: {outcome}\n{result['summary']}\n"

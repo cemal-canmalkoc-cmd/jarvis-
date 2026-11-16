@@ -10,7 +10,7 @@ import logging
 import smtplib
 from email.message import EmailMessage
 
-from . import config, store
+from . import config, messaging, pricing, store
 from .whatsapp import role_phrase
 
 log = logging.getLogger("jarvis.matching")
@@ -53,6 +53,8 @@ def matches(conn, cand_row, limit: int = 5) -> list[dict]:
             score += 1
         if f["status"] == "interessiert":
             score += 2
+        if f["status"] == "kunde":
+            score += 3  # Bestandskunden zuerst beliefern
         if score >= 2:
             out.append({"id": f["id"], "name": f["name"], "ort": f["city"], "bedarf": f["needs"],
                         "status": f["status"], "email": f["email"], "passung": score})
@@ -104,7 +106,17 @@ def present(cand_key: str, company_id: int) -> str:
     if cand["status"] not in ("interessiert", "vermittelt"):
         return (f"{cand['name']} hat noch kein Interesse bestätigt (Status: {cand['status']}). "
                 "Erst nach Zusage vorstellen.")
+    if store.was_presented(conn, cand["key"], company_id):
+        return f"{cand['name']} wurde {firm['name']} bereits vorgestellt."
     profile = anonymous_profile(cand)
+    a = store.load(cand).assessment
+    role = (a.physician_specialty if a.category == "arzt" else a.nursing_field)
+    if firm["status"] == "kunde":
+        terms = "Es gelten die mit Ihnen vereinbarten Konditionen."
+    else:
+        price = pricing.for_candidate(a.category, role)
+        terms = (f"Unser Honorar: {price}." if price else
+                 "Für Sie entstehen nur bei erfolgreicher Anstellung Kosten; gerne sende ich Ihnen unsere Konditionen.")
     greeting = f"Guten Tag {firm['contact_name']}" if firm["contact_name"] else "Guten Tag"
     body = f"""{greeting}
 
@@ -114,6 +126,8 @@ wie besprochen stelle ich Ihnen eine passende Fachperson vor:
 
 Gerne organisiere ich ein Kennenlerngespräch. Den vollständigen Lebenslauf sende ich Ihnen
 nach Rücksprache mit der Kandidatin bzw. dem Kandidaten.
+
+{terms}
 
 Freundliche Grüsse
 {config.RECRUITER_NAME}
@@ -126,8 +140,8 @@ Freundliche Grüsse
         send_email(firm["email"], subject, body)
     except Exception as exc:  # noqa: BLE001
         return f"E-Mail nicht gesendet ({exc}). Text zum Kopieren:\n\nBetreff: {subject}\n\n{body}"
-    store.set_company_status(conn, company_id, "interessiert" if firm["status"] == "interessiert"
-                             else firm["status"], f"Kandidat {cand['key'][:6].upper()} vorgestellt")
+    store.record_presentation(conn, cand["key"], company_id, "email")
+    store.set_company_status(conn, company_id, firm["status"], f"Kandidat {cand['key'][:6].upper()} vorgestellt")
     store.set_status(conn, cand_key, cand["status"], f"Vorgestellt bei {firm['name']}")
     return f"✅ {cand['name']} anonym bei {firm['name']} ({firm['email']}) vorgestellt."
 
@@ -142,4 +156,36 @@ def suggestions(conn, limit: int = 5) -> list[str]:
                        f"„Stell {r['key'][:6]} bei Firma {m[0]['id']} vor\"")
         if len(out) >= limit:
             break
+    return out
+
+
+def auto_deliver(max_per_run: int = 10) -> list[str]:
+    """Bestandskunden automatisch beliefern: interessierte Kandidaten an den bestpassenden Kunden
+    (mit hinterlegter E-Mail) anonym vorstellen – jeder Kandidat pro Kunde nur einmal."""
+    if not config.AUTO_DELIVER:
+        return []
+    conn = store.connect()
+    done = []
+    for cand in conn.execute("SELECT * FROM candidates WHERE status='interessiert' ORDER BY score DESC"):
+        for m in matches(conn, cand, 5):
+            if m["status"] != "kunde" or not m["email"] or store.was_presented(conn, cand["key"], m["id"]):
+                continue
+            result = present(cand["key"], m["id"])
+            if result.startswith("✅"):
+                done.append(result)
+                messaging.notify_owner(f"📦 Lieferung: {result}")
+            break  # pro Lauf ein Kunde je Kandidat
+        if len(done) >= max_per_run:
+            break
+    return done
+
+
+def open_customer_needs() -> list[str]:
+    """Kundenaufträge, für die noch kein interessierter Kandidat vorgestellt wurde."""
+    conn = store.connect()
+    out = []
+    for k in store.customers(conn):
+        n = conn.execute("SELECT COUNT(*) FROM presentations WHERE company_id=?", (k["id"],)).fetchone()[0]
+        if k["needs"] and n == 0:
+            out.append(f"{k['name']} ({k['city'] or '?'}): {k['needs']}")
     return out
