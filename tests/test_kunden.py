@@ -74,3 +74,23 @@ def test_app_lists_customers_first_with_prices(tw, monkeypatch):  # noqa: F811
     agent.t_kunde_anlegen("AAA Kunde", "Basel", "a@b.example")
     d = TestClient(server.app).get("/api/uebersicht", headers={"Authorization": "Bearer t0k"}).json()
     assert d["firmen"][0]["status"] == "kunde" and "Pflege" in d["preise"]
+
+
+def test_owner_adds_candidate_from_text(monkeypatch):
+    from jarvis import pipeline
+    from jarvis.models import Assessment, ScoredCandidate
+    from jarvis.scoring import score
+
+    def fake_eval(raw):
+        assert raw.consent_whatsapp and "Lena" in raw.text
+        a = Assessment(full_name="Lena Text", phone="+41 79 777 00 01", category="pflege",
+                       nursing_field="Psychiatrie", has_diploma_certificate=True, german_level="C1",
+                       recognition_status="anerkannt")
+        pts, t, r, m = score(a)
+        return ScoredCandidate(assessment=a, source=raw.source, score=pts, tier=t, reasons=r, missing=m,
+                               consent_whatsapp=raw.consent_whatsapp)
+    monkeypatch.setattr(pipeline, "evaluate", fake_eval)
+    out, err = agent.run_tool("kandidat_hinzufuegen", {"angaben": "Lena Text, Pflege Psychiatrie, C1, SRK",
+                                                       "whatsapp_ok": True})
+    assert not err and '"tier": "A"' in out
+    assert "AUSFÜHREN STATT FRAGEN" in agent.OWNER_SYSTEM

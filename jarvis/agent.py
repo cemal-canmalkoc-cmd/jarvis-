@@ -179,6 +179,16 @@ def t_kunden_beliefern() -> list[str]:
     return matching.auto_deliver() or ["Gerade nichts zu liefern (keine neuen interessierten, passenden Kandidaten)."]
 
 
+def t_kandidat_hinzufuegen(angaben: str, whatsapp_ok: bool = False, anruf_ok: bool = False) -> dict:
+    """Kandidat aus frei geschriebenen Angaben oder eingefügtem Lebenslauf anlegen und bewerten."""
+    raw = sources.RawProfile(source="Eingabe Cemal-Can", text=angaben,
+                             consent_whatsapp=whatsapp_ok, consent_call=anruf_ok)
+    c = pipeline.evaluate(raw)
+    store.upsert(store.connect(), c)
+    return {"id": store.candidate_key(c)[:6], "name": c.assessment.full_name, "tier": c.tier,
+            "score": c.score, "fehlt": c.missing, "whatsapp_link": c.whatsapp_link}
+
+
 def t_autopilot_jetzt() -> dict:
     from . import autopilot
     return autopilot.morning(force=True)
@@ -238,10 +248,15 @@ TOOLS = {
                       "wert": {"type": "number", "description": "Prozent (z.B. 18) oder CHF-Betrag"},
                       "garantie_monate": {"type": "integer"}, "notiz": {"type": "string"}}),
     "preise_anzeigen": (t_preise_anzeigen, "Aktuelle Honorare je Bereich.", {}),
+    "kandidat_hinzufuegen": (t_kandidat_hinzufuegen, "Kandidat aus Text anlegen (Notizen, Telefonat, eingefügter "
+                             "Lebenslauf), sofort bewerten und speichern.",
+                             {"angaben": {"type": "string"},
+                              "whatsapp_ok": {"type": "boolean", "description": "Person hat WhatsApp-Kontakt erlaubt"},
+                              "anruf_ok": {"type": "boolean", "description": "Person hat Anruf erlaubt"}}),
     "autopilot_jetzt": (t_autopilot_jetzt, "Kompletten Tagesablauf sofort ausführen.", {}),
 }
 
-REQUIRED = {"kunde_anlegen": ["name"], "preis_setzen": ["bereich", "modell", "wert"],
+REQUIRED = {"kandidat_hinzufuegen": ["angaben"], "kunde_anlegen": ["name"], "preis_setzen": ["bereich", "modell", "wert"],
             "passende_firmen": ["id"], "kandidat_vorstellen": ["id", "firma_id"],
             "firma_kontakt": ["id", "email"], "kandidat": ["id"], "status_setzen": ["id", "status"], "kandidat_anrufen": ["id"],
             "firmen_suchen": ["fokus"], "firma_anrufen": ["id"], "firma_status": ["id", "status"],
@@ -288,19 +303,23 @@ Bewerbungsformular für Kandidaten: {config.PUBLIC_URL}/bewerbung
 Telefonnummer für Kandidaten und Kliniken (Jarvis nimmt ab): {config.CALL_IN_NUMBER or "noch nicht eingerichtet"}
 In Inseraten immer Formular-Link UND Telefonnummer nennen („Jetzt anrufen oder in 2 Minuten bewerben“).
 
-Du wirst per WhatsApp gesteuert. Regeln:
-- Erledige Aufträge selbstständig mit deinen Werkzeugen. Frag nur nach, wenn wirklich unklar ist, was gemeint ist.
+Du wirst per WhatsApp, App oder Siri gesteuert. Regeln:
+- AUSFÜHREN STATT FRAGEN: Jeder Befehl von Cemal-Can wird sofort und vollständig mit deinen Werkzeugen erledigt,
+  auch wenn er mehrere Schritte braucht (z.B. suchen → bewerten → zuordnen → vorstellen). Stelle KEINE Rückfragen.
+  Ist etwas mehrdeutig, wähle die sinnvollste Auslegung, führe sie aus und nenne die Annahme in einem Satz.
+  Fehlen Angaben (z.B. eine E-Mail), erledige alles andere trotzdem und melde am Ende kurz, was noch fehlt.
+- Antworte mit dem ERGEBNIS: was du erledigt hast, mit Namen und Zahlen. Keine Ankündigungen wie „ich werde…".
 - Antworte kurz und WhatsApp-tauglich: keine Tabellen, kein Markdown ausser *fett*, maximal ca. 15 Zeilen.
 - Nenne Kandidaten immer mit Name, Bereich, Tier und ID.
 - Arbeite wie der beste Personalvermittler: Interessierte Kandidaten sofort passenden Firmen zuordnen
-  (passende_firmen) und nach deiner Bestätigung anonym vorstellen (kandidat_vorstellen). Wer nicht
+  (passende_firmen) und direkt anonym vorstellen (kandidat_vorstellen). Wer nicht
   antwortet, wird nachgefasst. Ein Kandidat ist erst vermittelt, wenn ein Vertrag unterschrieben ist.
 - GESCHÄFTSMODELL: Hansa Personal findet und qualifiziert Kandidaten und liefert sie an Schweizer
   Partner-Personalvermittler (mit kantonaler und SECO-Bewilligung). Die Partner vermitteln an die Arbeitgeber.
   Hansa schliesst KEINE Vermittlungsverträge mit Arbeitgebern ab. Rufen Arbeitgeber an oder melden Bedarf,
   nimm die Anfrage auf und leite sie als Lead an Cemal-Can / den Partner weiter. Kandidaten zahlen nie etwas.
 - 'Kunden' (Status 'kunde') sind die Partner-Vermittler. Sie haben Vorrang: Sie werden automatisch beliefert, sobald ein passender
-  Kandidat Interesse bestätigt. Fehlt einem Kunden die E-Mail, frag danach. Wenn Cemal-Can eine Liste von
+  Kandidat Interesse bestätigt. Fehlt einem Kunden die E-Mail, lege ihn trotzdem an und erwähne es im Ergebnis. Wenn Cemal-Can eine Liste von
   Arbeitgebern schickt, lege jeden mit kunde_anlegen an.
 - Preise: Nenne nur Honorare, die mit preis_setzen hinterlegt sind. Erfinde nie Preise oder Rabatte.
 - Kandidaten-IDs dürfen abgekürzt werden (die ersten 6 Zeichen reichen).
@@ -325,7 +344,7 @@ def _handle_owner(text: str) -> str:
     messages = _conversation(conn, phone, max_age_h=3)
     messages.append({"role": "user", "content": f"[{datetime.now():%d.%m.%Y %H:%M}] {text}"})
     reply = ""
-    for _ in range(12):
+    for _ in range(25):
         response = brain.create(
             model=config.MODEL, max_tokens=16000,
             system=OWNER_SYSTEM, output_config={"effort": "low" if config.SPARMODUS else "medium"}, tools=TOOL_DEFS,
