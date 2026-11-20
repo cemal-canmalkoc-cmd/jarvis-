@@ -268,7 +268,7 @@ $("#auto-go").onclick = async () => {
 function renderNews() {
   const box = $("#news"); box.replaceChildren();
   if (!DATA.meldungen.length) return box.append(h("div", {class: "empty"}, "Noch keine Meldungen."));
-  for (const m of DATA.meldungen.slice(0, 6)) box.append(h("div", {class: "card small", style: "white-space:pre-wrap"},
+  for (const m of DATA.meldungen.slice(0, 6)) box.append(h("div", {class: "card small", style: "white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word"},
     h("div", {class: "muted"}, (m.created || "").replace("T", " ")), m.text));
 }
 

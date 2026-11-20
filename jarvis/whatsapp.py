@@ -25,7 +25,14 @@ def normalize_phone(raw: str | None, default_country: str = "41") -> str | None:
         digits = digits[2:]
     elif not plus:
         if digits.startswith("0"):
-            digits = default_country + digits[1:]
+            rest = digits[1:]
+            if rest.startswith("1"):                     # 015x/016x/017x = deutsche Handynummer
+                country = "49"
+            elif re.match(r"7[5-9]\d{7}$", rest):       # 075–079 + 7 Ziffern = Schweizer Handynummer
+                country = "41"
+            else:
+                country = default_country
+            digits = country + rest
     if len(digits) < 9 or len(digits) > 15:
         return None
     return digits
@@ -77,8 +84,8 @@ def build_message(a: Assessment) -> str:
     )
 
 
-def build_link(phone: str | None, message: str) -> str | None:
-    num = normalize_phone(phone)
+def build_link(phone: str | None, message: str, default_country: str = "41") -> str | None:
+    num = normalize_phone(phone, default_country)
     if not num:
         return None
     return f"https://wa.me/{num}?text={quote(message)}"

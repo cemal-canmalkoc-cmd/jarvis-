@@ -121,6 +121,10 @@ def _details(a) -> str:
 def _cand_summary(row) -> dict:
     c = store.load(row)
     a = c.assessment
+    if a.phone and c.whatsapp_message:  # Link immer mit richtiger Ländervorwahl neu bauen
+        from .whatsapp import build_link
+        de = a.category == "lkw" or "deutschland" in (a.current_location or "").lower()
+        c.whatsapp_link = build_link(a.phone, c.whatsapp_message, "49" if de else "41") or c.whatsapp_link
     return {"id": row["key"], "name": _display_name(a), "details": _details(a), "tier": c.tier, "score": c.score,
             "kategorie": a.category,
             "bereich": (a.physician_specialty if a.category == "arzt" else a.nursing_field) or "",

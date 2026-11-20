@@ -143,3 +143,11 @@ def test_invented_ad_links_are_replaced_by_real_search_results():
     fake = "https://www.kleinanzeigen.de/s-anzeige/erfunden/999-107-1"
     assert brain.real_url(fake, seen) in seen[:2]                         # erfunden → echter Treffer
     assert brain.real_url("https://erfunden.example/x", seen) == seen[0]
+
+
+def test_german_mobile_numbers_get_49():
+    from jarvis.whatsapp import normalize_phone
+    assert normalize_phone("01556 2669587") == "4915562669587"
+    assert normalize_phone("0176 12345678") == "4917612345678"
+    assert normalize_phone("079 123 45 67") == "41791234567"
+    assert normalize_phone("0231 123456", "49") == "49231123456"

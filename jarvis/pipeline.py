@@ -21,7 +21,8 @@ def evaluate(raw: sources.RawProfile) -> ScoredCandidate:
                         consent_whatsapp=raw.consent_whatsapp, consent_call=raw.consent_call)
     if tier in ("A", "B", "C"):
         c.whatsapp_message = whatsapp.build_message(a)
-        c.whatsapp_link = whatsapp.build_link(a.phone, c.whatsapp_message)
+        germany = a.category == "lkw" or "deutschland" in (a.current_location or "").lower()
+        c.whatsapp_link = whatsapp.build_link(a.phone, c.whatsapp_message, "49" if germany else "41")
     return c
 
 
