@@ -167,6 +167,9 @@ So gehst du vor (bewährt – genau so suchen):
    - "tutti.ch Stellengesuch <Beruf>"
    - "medi-jobs.de Stellengesuche <Bereich>"
    - "<Beruf> sucht neue Stelle Schweiz"
+   - "<Beruf> sucht Stelle Telefon" / "<Beruf> Stellengesuch Handy WhatsApp"
+   VORRANG haben Anzeigen, in denen die Person ihre Telefon-/WhatsApp-Nummer oder E-Mail SELBST öffentlich
+   angegeben hat – diese zuerst und vollständig aufnehmen (Nummer exakt so, wie sie in der Anzeige steht).
 2. Diese Treffer sind oft SAMMELSEITEN mit mehreren Gesuchen. Lies den Inhalt und nimm JEDE einzelne
    Person als eigenen Eintrag auf (Beruf, Ort, Erfahrung, Wunsch, Kontaktweg).
 3. Stellenangebote von Arbeitgebern, 24h-Betreuungs-Vermittler und Gesuche, die erkennbar älter als
@@ -206,6 +209,9 @@ So gehst du vor (genau so suchen, Begriff passend zum Fokus):
 - "markt.de Stellengesuch LKW Fahrer"
 - "Kraftfahrer CE sucht neue Herausforderung Fernverkehr"
 - "Berufskraftfahrer sucht Job Nahverkehr <Region>"
+- "LKW Fahrer sucht Arbeit Telefon" / "Kraftfahrer CE sucht Stelle Handy WhatsApp"
+VORRANG haben Anzeigen, in denen die Person ihre Telefon-/WhatsApp-Nummer oder E-Mail SELBST öffentlich angegeben
+hat – diese zuerst und vollständig aufnehmen (Nummer exakt so, wie sie in der Anzeige steht).
 Sammelseiten in einzelne Personen zerlegen. Stellenangebote von Speditionen/Personaldienstleistern und
 Gesuche älter als 12 Monate weglassen. Kontakt über das Portal reicht (Inserats-URL als Kontaktweg).
 Keine Login-Profile, keine erratenen Kontaktdaten.

@@ -102,8 +102,8 @@ nav button.on{color:var(--accent)}
     <div><b>Vermittelbar heute</b><div class="muted small" id="goal-txt">Lade …</div></div>
   </div>
   <div class="card" id="todo-card"><b>🎯 Jetzt anschreiben</b>
-    <div class="muted small">1 Tipp: Nachricht wird kopiert und die Anzeige öffnet sich – dort einfügen und senden.
-      Antworten + Lebensläufe kommen in dein WhatsApp.</div>
+    <div class="muted small">Nur Leute mit öffentlicher Nummer: 1 Tipp öffnet direkt ihr WhatsApp mit fertiger
+      Nachricht – nur noch senden. Antworten + Lebensläufe kommen in dein WhatsApp.</div>
     <div id="todo"></div></div>
   <div class="card" id="auto-card"><b>🤖 Jarvis arbeitet selbstständig</b>
     <div class="muted small" id="auto-txt">Lade …</div>
@@ -249,8 +249,12 @@ function reachOut(c) {
 function renderTodo() {
   const box = $("#todo"); box.replaceChildren();
   const list = (DATA.kandidaten || []).filter(c => c.status === "neu" && ["A", "B", "C"].includes(c.tier)
-    && (c.whatsapp_link || c.quelle)).slice(0, 15);
-  if (!list.length) return box.append(h("div", {class: "empty"}, "Alle angeschrieben ✅ – Jarvis sucht weiter."));
+    && c.whatsapp_link).slice(0, 15);
+  const portal = (DATA.kandidaten || []).filter(c => c.status === "neu" && !c.whatsapp_link && c.quelle).length;
+  if (!list.length) box.append(h("div", {class: "empty"}, "Gerade niemand mit Nummer offen ✅ – Jarvis sucht weiter."));
+  if (portal) box.append(h("div", {class: "muted small", style: "margin-top:6px"},
+    `${portal} weitere nur übers Portal erreichbar → Tab „Kandidaten“.`));
+  if (!list.length) return;
   for (const c of list) box.append(h("div", {class: "row", style: "align-items:center;gap:8px;margin-top:8px"},
     h("span", {style: "flex:1"}, h("b", {}, `${c.tier} · ${c.name}`), h("div", {class: "muted small"}, c.details)),
     h("button", {class: "btn", style: "width:auto;margin:0;padding:8px 14px", onclick: () => reachOut(c)},
