@@ -223,7 +223,7 @@ async function load() {
   const au = s.autonomie || {};
   $("#auto-txt").textContent = au.aktiv
     ? `Freigegeben bis ${au.bis} · Gespräche heute ${(au.chat_heute || 0).toFixed(3)} / ${(au.chat_max || 0).toFixed(2)} $`
-      + ` · ${au.gespraeche || 0} KI-Gespräche gesamt` + (au.postfach ? " · Postfach ✅" : " · Postfach: E-Mail unter ⚙️ eintragen")
+      + ` · ${au.gespraeche || 0} KI-Gespräche gesamt` + " · " + (au.postfach || "")
     : `⏸️ Pausiert seit ${au.bis} – Jarvis antwortet nur ohne KI.`;
   $("#auto-go").textContent = `▶️ Weiter (${au.tage || 5} Tage)`;
   $("#auto-go").style.display = au.aktiv && !au.bald ? "none" : "";

@@ -101,6 +101,24 @@ def handle(sender: str, subject: str, text: str, files: list[tuple[str, bytes]])
     return None
 
 
+def _set_status(ok: bool, err: str = "") -> None:
+    from datetime import datetime
+    store.set_state(store.connect(), "inbox_status",
+                    ("ok:" if ok else "fehler:") + f"{datetime.now():%d.%m. %H:%M}" + (f" {err[:80]}" if err else ""))
+
+
+def status_text() -> str:
+    """Für die App: echtes Ergebnis der letzten Anmeldung am Postfach."""
+    if not ready():
+        return "Postfach: E-Mail unter ⚙️ eintragen"
+    st = store.get_state(store.connect(), "inbox_status") or ""
+    if st.startswith("ok:"):
+        return f"Postfach ✅ ({st[3:]})"
+    if st.startswith("fehler:"):
+        return "Postfach ❌ Anmeldung abgelehnt – ⚙️ Testmail für Hilfe"
+    return "Postfach: noch nicht geprüft"
+
+
 def check() -> str:
     """Login am Posteingang testen (für den Testmail-Knopf)."""
     if not config.AUTO_INBOX:
@@ -114,8 +132,10 @@ def check() -> str:
         box.select("INBOX")
         _, ids = box.search(None, "UNSEEN")
         box.logout()
+        _set_status(True)
         return f"✅ verbunden ({host}), {len(ids[0].split())} ungelesene Mails – Jarvis liest alle 10 Minuten"
     except Exception as exc:  # noqa: BLE001
+        _set_status(False, str(exc))
         hint = (" GMX: im GMX-Postfach unter Einstellungen → POP3/IMAP-Abruf den Zugriff erlauben."
                 if "gmx" in host else " Prüfe, ob IMAP-Zugriff im Mailkonto erlaubt ist.")
         return f"❌ Anmeldung fehlgeschlagen ({host}): {str(exc)[:120]}.{hint}"
@@ -138,9 +158,14 @@ def poll(max_mails: int = 15) -> list[str]:
     if not ready():
         return []
     out = []
-    box = imaplib.IMAP4_SSL(imap_host())
     try:
+        box = imaplib.IMAP4_SSL(imap_host(), timeout=30)
         box.login(config.SMTP_USER, config.SMTP_PASSWORD)
+    except Exception as exc:  # noqa: BLE001
+        _set_status(False, str(exc))
+        raise
+    _set_status(True)
+    try:
         box.select("INBOX")
         _, ids = box.search(None, "UNSEEN")
         for mid in ids[0].split()[:max_mails]:

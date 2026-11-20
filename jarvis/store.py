@@ -530,7 +530,7 @@ EDITABLE_SETTINGS = {
     "META_PAGE_ID": "Facebook-Seiten-ID",
     "META_PAGE_TOKEN": "Facebook-Seiten-Token",
     "OWNER_EMAIL": "Deine E-Mail für Meldungen",
-    "SMTP_USER": "E-Mail-Adresse zum Senden (z.B. hansa.personal@outlook.de)",
+    "SMTP_USER": "E-Mail-Adresse zum Senden (z.B. hansa.personal@gmx.de)",
     "SMTP_PASSWORD": "E-Mail-Passwort bzw. App-Kennwort",
     "SMTP_HOST": "Mailserver (leer = automatisch)",
     "CONTACT_WHATSAPP": "Deine WhatsApp-Nummer für Kandidaten",

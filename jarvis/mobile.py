@@ -167,7 +167,7 @@ async def uebersicht(request: Request):
     until = budget.autonomy_until()
     stats["autonomie"] = {"aktiv": budget.autonomy_active(), "bis": f"{until:%d.%m.%Y}", "tage": config.AUTO_DAYS,
                           "bald": (until - date.today()).days <= 1, "chat_heute": budget.chat_spend_today(),
-                          "chat_max": config.CHAT_MAX_USD, "postfach": inbox.ready(),
+                          "chat_max": config.CHAT_MAX_USD, "postfach": inbox.status_text(),
                           "gespraeche": conn.execute("SELECT COUNT(*) FROM convos").fetchone()[0]}
     rows = conn.execute(
         "SELECT * FROM candidates WHERE tier IN ('A','B','C') AND status IN ('neu','kontaktiert','interessiert') "
@@ -537,7 +537,9 @@ async def testmail(request: Request):
         await asyncio.to_thread(send_email, to, "Jarvis Testmail ✅",
                                 "Hallo Cemal-Can,\n\ndas Senden von E-Mails funktioniert.\n\nJarvis")
     except Exception as exc:  # noqa: BLE001
-        raise HTTPException(502, str(exc)) from exc
+        from . import inbox
+        postfach = await asyncio.to_thread(inbox.check)
+        raise HTTPException(502, f"Senden: ❌ {exc}\n\nPosteingang: {postfach}") from exc
     from . import inbox
     postfach = await asyncio.to_thread(inbox.check)
     return {"meldung": f"Testmail an {to} gesendet ✅\nPosteingang: {postfach}"}
