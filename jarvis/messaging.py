@@ -121,6 +121,12 @@ def notify_owner(text: str) -> None:
     except Exception as exc:  # noqa: BLE001
         log.error("Meldung nicht gespeichert: %s", exc)
     try:
+        from . import push
+        lines = [ln for ln in text.strip().splitlines() if ln.strip()]
+        push.send(lines[0][:80] if lines else "Jarvis", "\n".join(lines[1:])[:300] or " ")
+    except Exception as exc:  # noqa: BLE001
+        log.error("Push fehlgeschlagen: %s", exc)
+    try:
         if owner_reachable_by_whatsapp():
             send_text(config.OWNER_WHATSAPP, text)
         elif config.OWNER_EMAIL and config.SMTP_HOST:

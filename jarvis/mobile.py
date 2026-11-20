@@ -296,6 +296,31 @@ async def einstellungen_setzen(request: Request, daten: dict = Body(...)):
     return {"meldung": "Gespeichert ✅"}
 
 
+@router.get("/sw.js")
+async def service_worker():
+    return FileResponse(STATIC / "sw.js", media_type="application/javascript",
+                        headers={"Service-Worker-Allowed": "/", "Cache-Control": "no-cache"})
+
+
+@router.get("/api/push/key")
+async def push_key(request: Request):
+    authed(request)
+    from . import push
+    return {"key": push.vapid_public_b64()}
+
+
+@router.post("/api/push/abo")
+async def push_abo(request: Request, daten: dict = Body(...)):
+    authed(request)
+    from . import push
+    try:
+        push.subscribe(daten)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    n = await asyncio.to_thread(push.send, "Jarvis 🔔", "Mitteilungen sind aktiviert. Ich melde mich, sobald ich gute Kandidaten finde.")
+    return {"meldung": "Mitteilungen aktiviert ✅" if n else "Gespeichert – Testmitteilung kam nicht an."}
+
+
 @router.post("/api/testmail")
 async def testmail(request: Request):
     authed(request)

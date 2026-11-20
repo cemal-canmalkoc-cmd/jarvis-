@@ -110,6 +110,7 @@ nav button.on{color:var(--accent)}
   <h2>Schnellbefehle</h2>
   <div class="chips" id="quick"></div>
   <button class="btn sec" id="update-btn">⬇️ Jarvis aktualisieren</button>
+  <button class="btn" id="push-btn">🔔 Mitteilungen aktivieren</button>
   <button class="btn sec" id="mail-btn">📧 Testmail an mich</button>
   <button class="btn sec" id="call-btn">📞 Testanruf an mich</button>
   <button class="btn sec" id="settings-btn">⚙️ Verbindungen &amp; Einstellungen</button>
@@ -401,6 +402,25 @@ $("#update-btn").onclick = async () => {
   } catch (e) { toast("Fehler: " + e.message); }
 };
 
+function b64ToBytes(s) {
+  s = s.replace(/-/g, "+").replace(/_/g, "/"); s += "=".repeat((4 - s.length % 4) % 4);
+  return Uint8Array.from(atob(s), c => c.charCodeAt(0));
+}
+async function swReg() { return navigator.serviceWorker.register("/sw.js", {scope: "/"}); }
+if ("serviceWorker" in navigator) swReg().catch(() => {});
+if ("Notification" in window && Notification.permission === "granted") $("#push-btn").textContent = "🔔 Mitteilungen aktiv (erneut testen)";
+$("#push-btn").onclick = async () => {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window))
+    return alert("Mitteilungen gehen nur in der App vom Home-Bildschirm (iOS 16.4 oder neuer). Öffne Jarvis über das grüne J-Symbol.");
+  try {
+    if (await Notification.requestPermission() !== "granted") return toast("Mitteilungen wurden nicht erlaubt");
+    const reg = await swReg(); await navigator.serviceWorker.ready;
+    const {key} = await api("/api/push/key");
+    const sub = await reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: b64ToBytes(key)});
+    toast((await api("/api/push/abo", {method: "POST", body: JSON.stringify(sub.toJSON())})).meldung);
+    $("#push-btn").textContent = "🔔 Mitteilungen aktiv (erneut testen)";
+  } catch (e) { alert("Fehler: " + e.message); }
+};
 $("#mail-btn").onclick = async () => {
   try { toast((await api("/api/testmail", {method: "POST"})).meldung); } catch (e) { alert(e.message); }
 };
