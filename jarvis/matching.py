@@ -148,7 +148,9 @@ def send_email(to: str, subject: str, body: str, attachments: list[str] | None =
     except smtplib.SMTPAuthenticationError as exc:
         hint = (" Outlook/Hotmail: Microsoft lässt das normale Passwort oft nicht mehr zu – erstelle unter "
                 "account.microsoft.com → Sicherheit ein App-Kennwort (2-Schritt-Prüfung nötig) und trage das ein."
-                if "outlook" in host else " Prüfe Login/Passwort bzw. ob SMTP-Zugriff erlaubt ist.")
+                if "outlook" in host else
+                " GMX: im GMX-Postfach unter Einstellungen → POP3/IMAP-Abruf den Zugriff erlauben (gilt auch fürs Senden)."
+                if "gmx" in host else " Prüfe Login/Passwort bzw. ob SMTP-Zugriff erlaubt ist.")
         raise RuntimeError(f"Anmeldung beim Mailserver abgelehnt ({host}).{hint}") from exc
 
 

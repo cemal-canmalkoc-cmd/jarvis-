@@ -101,6 +101,26 @@ def handle(sender: str, subject: str, text: str, files: list[tuple[str, bytes]])
     return None
 
 
+def check() -> str:
+    """Login am Posteingang testen (für den Testmail-Knopf)."""
+    if not config.AUTO_INBOX:
+        return "ausgeschaltet (⚙️ AUTO_INBOX)"
+    host = imap_host()
+    if not host:
+        return "Server unbekannt – unter ⚙️ 'Posteingangs-Server' eintragen"
+    try:
+        box = imaplib.IMAP4_SSL(host, timeout=20)
+        box.login(config.SMTP_USER, config.SMTP_PASSWORD)
+        box.select("INBOX")
+        _, ids = box.search(None, "UNSEEN")
+        box.logout()
+        return f"✅ verbunden ({host}), {len(ids[0].split())} ungelesene Mails – Jarvis liest alle 10 Minuten"
+    except Exception as exc:  # noqa: BLE001
+        hint = (" GMX: im GMX-Postfach unter Einstellungen → POP3/IMAP-Abruf den Zugriff erlauben."
+                if "gmx" in host else " Prüfe, ob IMAP-Zugriff im Mailkonto erlaubt ist.")
+        return f"❌ Anmeldung fehlgeschlagen ({host}): {str(exc)[:120]}.{hint}"
+
+
 def _rate_ok(sender: str, per_day: int = 6) -> bool:
     """Schutz vor Endlos-Schleifen mit Abwesenheitsnotizen: höchstens X Antworten pro Absender und Tag."""
     from datetime import date

@@ -546,7 +546,7 @@ $("#push-btn").onclick = async () => {
   } catch (e) { alert("Fehler: " + e.message); }
 };
 $("#mail-btn").onclick = async () => {
-  try { toast((await api("/api/testmail", {method: "POST"})).meldung); } catch (e) { alert(e.message); }
+  try { alert((await api("/api/testmail", {method: "POST"})).meldung); } catch (e) { alert(e.message); }
 };
 $("#call-btn").onclick = async () => {
   try { toast((await api("/api/testanruf", {method: "POST"})).meldung); } catch (e) { toast(e.message); }

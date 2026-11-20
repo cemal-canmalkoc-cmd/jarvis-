@@ -538,7 +538,9 @@ async def testmail(request: Request):
                                 "Hallo Cemal-Can,\n\ndas Senden von E-Mails funktioniert.\n\nJarvis")
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(502, str(exc)) from exc
-    return {"meldung": f"Testmail an {to} gesendet ✅"}
+    from . import inbox
+    postfach = await asyncio.to_thread(inbox.check)
+    return {"meldung": f"Testmail an {to} gesendet ✅\nPosteingang: {postfach}"}
 
 
 @router.post("/api/testanruf")
