@@ -3,7 +3,7 @@ import os
 
 FIRMA = os.environ.get("ABSENDER_NAME") or "PflegeJobs Direkt"
 HONORAR = os.environ.get("HONORAR_TEXT") or ("18 % des vereinbarten Bruttojahresgehalts (zzgl. MwSt.), fällig bei Arbeitsantritt, "
-                                         "mit 3 Monaten kostenloser Nachbesetzung bei Kündigung in der Probezeit"))
+                                         "mit 3 Monaten kostenloser Nachbesetzung bei Kündigung in der Probezeit")
 SIGNATUR = f"\n\nViele Grüße\nIhr Team von {FIRMA}\n(Antworten Sie mit ABMELDEN, wenn Sie keine weiteren Nachrichten wünschen.)"
 
 
