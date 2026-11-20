@@ -555,6 +555,13 @@ async def microsoft_start(request: Request):
         raise HTTPException(400, str(exc)) from exc
 
 
+@router.post("/api/facebook/test")
+async def facebook_test(request: Request):
+    authed(request)
+    from . import ads
+    return {"meldung": await asyncio.to_thread(ads.check_facebook)}
+
+
 @router.post("/api/testanruf")
 async def testanruf(request: Request):
     authed(request)

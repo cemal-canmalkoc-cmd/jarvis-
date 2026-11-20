@@ -108,6 +108,18 @@ def post_facebook_page(text: str) -> str:
     return r.json().get("id", "")
 
 
+def check_facebook() -> str:
+    """Prüft Seiten-ID + Token, ohne etwas zu posten."""
+    if not facebook_ready():
+        return "Facebook-Seiten-ID und Token fehlen noch (⚙️)."
+    r = requests.get(f"https://graph.facebook.com/{config.META_GRAPH_VERSION}/{config.META_PAGE_ID}",
+                     params={"fields": "name", "access_token": config.META_PAGE_TOKEN}, timeout=20)
+    if r.status_code >= 400:
+        msg = r.json().get("error", {}).get("message", r.text)[:200]
+        return f"❌ Facebook lehnt ab: {msg}"
+    return f"✅ Verbunden mit der Seite „{r.json().get('name', '?')}“ – Jarvis postet täglich selbst."
+
+
 def daily_round(offset: int = 0) -> dict:
     """Ein Inserat schreiben und veröffentlichen (Facebook-Seite) + Gruppen-Text als Meldung."""
     target = target_for_today(offset)
@@ -119,6 +131,7 @@ def daily_round(offset: int = 0) -> dict:
         except Exception as exc:  # noqa: BLE001
             log.error("Facebook-Post fehlgeschlagen: %s", exc)
             out["fehler"] = str(exc)
+            messaging.notify_owner(f"⚠️ Facebook-Post ging nicht: {str(exc)[:200]}\nApp → ⚙️ → „Facebook testen“.")
     group_text = write_ad(target, "Facebook-Gruppe (persönlicher, kürzer)")
     store.set_state(store.connect(), f"ad:{date.today()}:{offset}", group_text)
     posted = "✅ Auf eurer Facebook-Seite gepostet.\n\n" if out.get("facebook_seite") else ""
