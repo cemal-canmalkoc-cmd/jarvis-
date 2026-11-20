@@ -57,7 +57,7 @@ def test_day_round_rotates_and_runs(monkeypatch):
     assert len(a) == 4 and a != b and calls[0] == a
     assert "Autopilot" not in config.__name__  # sanity
     from jarvis import agent
-    assert "alle 2 Stunden" in agent.OWNER_SYSTEM and "cron" in agent.OWNER_SYSTEM
+    assert "alle 2 h" in agent.OWNER_SYSTEM and "cron" in agent.OWNER_SYSTEM
 
 
 def test_owner_chat_resets_after_update_and_self_heals(monkeypatch):

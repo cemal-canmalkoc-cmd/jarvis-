@@ -179,6 +179,12 @@ def tick() -> None:
     """Wird vom Server alle paar Minuten aufgerufen."""
     now = _now()
     conn = store.connect()
+    from . import budget
+    morning_cost = budget.EST_SEARCH_FOCUS_USD * (len(NURSING_FIELDS) + len(PHYSICIAN_SPECIALTIES))
+    if (now.hour >= config.MORNING_HOUR and store.get_state(conn, "morning") != date.today().isoformat()
+            and not budget.auto_allowed(morning_cost)):
+        store.set_state(conn, "morning", date.today().isoformat())
+        budget.ask_once("heute nach Kandidaten suchen", morning_cost)
     if now.hour >= config.MORNING_HOUR and store.get_state(conn, "morning") != date.today().isoformat():
         try:
             morning()
@@ -197,6 +203,9 @@ def tick() -> None:
         if store.get_state(conn, key):
             continue
         store.set_state(conn, key, "1")
+        if not budget.auto_allowed(budget.EST_AD_USD * 2):
+            budget.ask_once("ein Inserat schreiben", budget.EST_AD_USD * 2)
+            continue
         try:
             from . import ads
             log.info("Inserat: %s", ads.daily_round(slot_i))
@@ -207,6 +216,8 @@ def tick() -> None:
             and store.get_state(conn, "morning") == date.today().isoformat()):
         last = store.get_state(conn, "day_round")
         due = not last or (now - datetime.fromisoformat(last)).total_seconds() >= every * 3600 - 300
+        if due and not budget.auto_allowed(budget.EST_SEARCH_FOCUS_USD * 4):
+            due = False
         if due:
             store.set_state(conn, "day_round", now.isoformat(timespec="minutes"))
             try:

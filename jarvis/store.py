@@ -440,6 +440,7 @@ EDITABLE_SETTINGS = {
     "TWILIO_ACCOUNT_SID": "Twilio Account SID",
     "TWILIO_AUTH_TOKEN": "Twilio Auth Token",
     "TWILIO_VOICE_FROM": "Twilio-Telefonnummer (Absender)",
+    "DAILY_BUDGET_USD": "Automatisches Tagesbudget in $ (0 = Jarvis fragt immer vorher)",
     "SEARCH_EVERY_HOURS": "Suche alle X Stunden",
     "ADS_PER_DAY": "Inserate pro Tag",
 }
@@ -455,7 +456,14 @@ def apply_settings(conn: sqlite3.Connection | None = None) -> None:
         if val is None:
             continue
         cur = getattr(config, key, "")
-        setattr(config, key, int(val) if isinstance(cur, int) and val.strip().lstrip("-").isdigit() else val)
+        if isinstance(cur, float):
+            try:
+                val = float(val.replace(",", "."))
+            except ValueError:
+                continue
+        elif isinstance(cur, int) and val.strip().lstrip("-").isdigit():
+            val = int(val)
+        setattr(config, key, val)
     from . import messaging
     messaging._twilio = None  # neue Zugangsdaten sofort verwenden
 

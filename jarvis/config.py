@@ -156,3 +156,7 @@ CONTACT_WHATSAPP = os.environ.get("JARVIS_CONTACT_WHATSAPP", "")
 # Jarvis ruft DICH an, wenn er gute Kandidaten gefunden hat (Twilio nötig). Max. Anrufe pro Tag.
 OWNER_PHONE = os.environ.get("JARVIS_OWNER_PHONE", "")
 OWNER_CALLS_PER_DAY = int(os.environ.get("JARVIS_OWNER_CALLS_PER_DAY", "3"))
+
+# Ausgaben: automatisches Tagesbudget in $ für Arbeit, die Jarvis von SICH AUS startet
+# (Suchrunden, Inserate). 0 = nichts automatisch, Jarvis fragt stattdessen. Befehle von dir laufen immer.
+DAILY_BUDGET_USD = float(os.environ.get("JARVIS_DAILY_BUDGET_USD", "0"))

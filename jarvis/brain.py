@@ -22,10 +22,14 @@ def fallback_kwargs(model: str) -> dict:
 
 def create(**kw):
     """Ein Claude-Aufruf; nutzt automatisch das Ersatzmodell, wo verfügbar."""
+    from . import budget
     extra = fallback_kwargs(kw["model"])
     if extra:
-        return client().beta.messages.create(**kw, **extra)
-    return client().messages.create(**kw)
+        resp = client().beta.messages.create(**kw, **extra)
+    else:
+        resp = client().messages.create(**kw)
+    budget.record(kw["model"], resp)
+    return resp
 
 
 def web_search_tool(model: str, max_uses: int) -> dict:

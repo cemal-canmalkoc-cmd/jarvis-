@@ -364,6 +364,8 @@ class RelaySession:
                         spoken += out
                         await self.send_json({"type": "text", "token": out, "last": False})
                 final = await stream.get_final_message()
+            from . import budget
+            budget.record(config.MODEL, final)
         except asyncio.CancelledError:
             self.messages.pop()  # Antwort wurde unterbrochen → Nutzertext bleibt offen
             raise
