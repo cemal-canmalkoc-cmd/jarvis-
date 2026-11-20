@@ -77,6 +77,40 @@ async def app_page(request: Request):
     return FileResponse(STATIC / "app.html", media_type="text/html")
 
 
+@router.get("/app/zentrale", response_class=HTMLResponse)
+async def zentrale_page(request: Request):
+    """Großer Bildschirm (Notebook/Monitor): Jarvis-Kommandozentrale."""
+    try:
+        authed(request)
+    except HTTPException:
+        return RedirectResponse("/app/login", status_code=303)
+    return FileResponse(STATIC / "zentrale.html", media_type="text/html")
+
+
+@router.get("/api/zentrale")
+async def zentrale_daten(request: Request):
+    authed(request)
+    from datetime import timedelta
+    from . import budget
+    conn = store.connect()
+    days = [(date.today() - timedelta(days=i)).isoformat() for i in range(13, -1, -1)]
+    found = dict(conn.execute("SELECT found_on, COUNT(*) FROM candidates WHERE found_on >= ? AND tier != 'X' "
+                              "GROUP BY found_on", (days[0],)).fetchall())
+    serie = [{"tag": d, "neu": found.get(d, 0),
+              "kosten": round(float(store.get_state(conn, f"spend:{d}") or 0), 2)} for d in days]
+    cnt = lambda q, *a: conn.execute(q, a).fetchone()[0]  # noqa: E731
+    bereiche = {k: cnt("SELECT COUNT(*) FROM candidates WHERE category=? AND tier != 'X'", k)
+                for k in ("lkw", "pflege", "arzt")}
+    pipeline = {s: cnt("SELECT COUNT(*) FROM candidates WHERE status=? AND tier != 'X'", s)
+                for s in ("neu", "kontaktiert", "interessiert", "vorgestellt", "gespraech", "vermittelt")}
+    return {"serie": serie, "bereiche": bereiche, "pipeline": pipeline,
+            "direkt": cnt("SELECT COUNT(*) FROM candidates WHERE status='neu' AND tier != 'X' AND phone IS NOT NULL AND phone != ''"),
+            "firmen": cnt("SELECT COUNT(*) FROM companies"),
+            "kosten_heute": round(budget.today_spend(), 2), "budget": config.DAILY_BUDGET_USD,
+            "freigegeben": budget.autonomy_active(), "umsatz": store.revenue_month(conn),
+            "ziel": config.REVENUE_GOAL, "meldungen": store.notifications(conn, 12)}
+
+
 @router.get("/app/manifest.webmanifest")
 async def manifest():
     return JSONResponse({

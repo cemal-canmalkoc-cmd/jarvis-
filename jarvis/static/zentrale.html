@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jarvis Zentrale</title>
+<style>
+:root{--bg:#0d0d0c;--panel:#1a1a19;--line:#2c2b29;--ink:#f1ece6;--ink2:#b9b2a9;--muted:#7d766e;--acc:#e8612e;--good:#3fbf8f;--warn:#e0b14a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+header{display:flex;align-items:center;gap:16px;padding:14px 22px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h1{margin:0;font:600 15px/1 ui-monospace,Menlo,monospace;letter-spacing:.18em;color:var(--acc)}
+header .meta{font:12px ui-monospace,Menlo,monospace;color:var(--muted);letter-spacing:.06em}
+header .sp{flex:1}
+header a{color:var(--ink2);font-size:13px}
+.pill{font:12px ui-monospace,Menlo,monospace;padding:4px 10px;border-radius:99px;border:1px solid var(--line)}
+.pill.ok{color:var(--good);border-color:#24533f}.pill.wait{color:var(--warn);border-color:#5a4a20}
+main{display:grid;grid-template-columns:340px 1fr 380px;gap:16px;padding:16px 22px}
+@media (max-width:1100px){main{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.panel h2{margin:0 0 12px;font:600 11px/1 ui-monospace,Menlo,monospace;letter-spacing:.16em;color:var(--muted);text-transform:uppercase}
+#orb{width:100%;aspect-ratio:1;display:block}
+.status{text-align:center;font:12px ui-monospace,Menlo,monospace;color:var(--ink2);margin-top:6px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+@media (max-width:700px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi b{display:block;font:600 30px/1.1 ui-sans-serif,system-ui;font-variant-numeric:tabular-nums}
+.kpi span{font-size:12px;color:var(--ink2)}
+.bar{height:6px;background:#2c2b29;border-radius:3px;margin-top:8px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--acc);border-radius:3px}
+.chart{position:relative}
+.chart svg{width:100%;height:220px;display:block}
+.tip{position:absolute;pointer-events:none;background:#000;border:1px solid var(--line);border-radius:8px;padding:6px 10px;
+  font-size:12px;color:var(--ink);display:none;white-space:nowrap;transform:translate(-50%,-110%)}
+.pipe{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:16px}
+.pipe div{background:#121211;border:1px solid var(--line);border-radius:8px;padding:10px;text-align:center}
+.pipe b{display:block;font:600 22px/1.1 ui-sans-serif;font-variant-numeric:tabular-nums}
+.pipe span{font-size:11px;color:var(--ink2)}
+.cats{display:flex;gap:16px;margin-top:12px;color:var(--ink2);font-size:13px;flex-wrap:wrap}
+.cats b{color:var(--ink);font-variant-numeric:tabular-nums}
+#feed{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow:auto}
+.ev{border-left:2px solid var(--acc);padding:4px 10px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12.5px;color:var(--ink2)}
+.ev time{display:block;font:11px ui-monospace,Menlo,monospace;color:var(--muted)}
+#log{max-height:30vh;overflow:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.msg{padding:8px 12px;border-radius:10px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}
+.msg.u{background:#3a2014;align-self:flex-end;max-width:85%}.msg.j{background:#121211;border:1px solid var(--line)}
+form{display:flex;gap:8px}
+input{flex:1;min-width:0;background:#121211;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:10px 12px;font:inherit}
+button{background:var(--acc);color:#140904;border:0;border-radius:8px;padding:0 16px;font:600 13px ui-sans-serif;cursor:pointer}
+button.sec{background:#121211;color:var(--ink);border:1px solid var(--line);padding:8px 12px}
+.quick{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+#approve{width:100%;padding:10px;margin-top:10px;display:none}
+table{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>JARVIS // KOMMANDOZENTRALE</h1>
+  <span class="meta" id="clock">–</span>
+  <span class="sp"></span>
+  <span class="pill" id="state">–</span>
+  <a href="/app">📱 App-Ansicht</a>
+</header>
+<main>
+  <section class="panel">
+    <h2>Kern</h2>
+    <canvas id="orb" width="600" height="600" aria-label="Jarvis-Aktivität"></canvas>
+    <div class="status" id="orbtxt">verbinde …</div>
+    <button id="approve">✅ Ja, heute arbeiten</button>
+    <h2 style="margin-top:18px">Befehl</h2>
+    <div id="log"></div>
+    <form id="cmd"><input id="t" placeholder="z. B. Starte die Suche nach LKW-Fahrern" autocomplete="off"><button>Senden</button></form>
+    <div class="quick">
+      <button class="sec" data-q="Starte die Suche nach LKW-Fahrern">🚛 LKW suchen</button>
+      <button class="sec" data-q="Starte die Suche nach Pflegefachkräften für die Schweiz">🏥 Pflege suchen</button>
+      <button class="sec" data-q="Tagesbericht">📋 Tagesbericht</button>
+      <button class="sec" data-q="Schreib ein Inserat für LKW-Fahrer für Facebook-Gruppen">📣 Inserat</button>
+    </div>
+  </section>
+
+  <section>
+    <div class="kpis">
+      <div class="panel kpi"><b id="k-new">–</b><span>Neue Profile heute</span></div>
+      <div class="panel kpi"><b id="k-direct">–</b><span>Direkt per WhatsApp erreichbar</span></div>
+      <div class="panel kpi"><b id="k-cost">–</b><span>Kosten heute</span><div class="bar"><i id="k-costbar" style="width:0"></i></div></div>
+      <div class="panel kpi"><b id="k-rev">–</b><span>Umsatz Monat</span><div class="bar"><i id="k-revbar" style="width:0"></i></div></div>
+    </div>
+    <div class="panel">
+      <h2>Neue Profile pro Tag · 14 Tage</h2>
+      <div class="chart" id="chart"><svg id="svg" role="img" aria-label="Neue Profile pro Tag"></svg><div class="tip" id="tip"></div></div>
+      <table id="tbl"><thead><tr><th>Tag</th><th>Neue Profile</th><th>Kosten $</th></tr></thead><tbody></tbody></table>
+      <div class="cats" id="cats"></div>
+      <div class="pipe" id="pipe"></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Live-Meldungen</h2>
+    <div id="feed"></div>
+  </section>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const fmtEur = x => Math.round(x).toLocaleString("de-DE") + " €";
+let D = null, activity = 0.15;
+
+async function api(p, o = {}) {
+  const r = await fetch(p, {credentials: "same-origin", headers: {"Content-Type": "application/json"}, ...o});
+  if (r.status === 401) { location.href = "/app/login"; throw new Error("login"); }
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+  return r.json();
+}
+
+// ---------- Orb (Partikelkugel, schneller bei Aktivität)
+const cv = $("#orb"), cx = cv.getContext("2d"), N = 900, pts = [];
+for (let i = 0; i < N; i++) {
+  const u = Math.random() * 2 - 1, th = Math.random() * Math.PI * 2, r = Math.sqrt(1 - u * u);
+  pts.push([r * Math.cos(th), u, r * Math.sin(th)]);
+}
+let ang = 0;
+function draw() {
+  const W = cv.width, R = W * 0.36;
+  cx.clearRect(0, 0, W, W);
+  ang += 0.002 + activity * 0.02;
+  const ca = Math.cos(ang), sa = Math.sin(ang), cb = Math.cos(ang * 0.6), sb = Math.sin(ang * 0.6);
+  const t = performance.now() / 1000;
+  for (const [x, y, z] of pts) {
+    let X = x * ca + z * sa, Z = -x * sa + z * ca;
+    let Y = y * cb - Z * sb; Z = y * sb + Z * cb;
+    const wob = 1 + activity * 0.08 * Math.sin(t * 3 + x * 6 + y * 4);
+    const px = W / 2 + X * R * wob, py = W / 2 + Y * R * wob, d = (Z + 1) / 2;
+    cx.fillStyle = `rgba(232,97,46,${0.15 + d * 0.75})`;
+    cx.fillRect(px, py, 1 + d * 1.6, 1 + d * 1.6);
+  }
+  requestAnimationFrame(draw);
+}
+draw();
+
+// ---------- Balkendiagramm (eine Reihe, Hover-Tooltip)
+function chart(serie) {
+  const svg = $("#svg"), W = svg.clientWidth || 600, H = 220, pl = 34, pb = 26, pt = 10;
+  const max = Math.max(4, ...serie.map(d => d.neu)), step = (W - pl) / serie.length, bw = Math.max(6, step - 6);
+  const y = v => pt + (H - pt - pb) * (1 - v / max);
+  let g = "";
+  for (const v of [0, Math.round(max / 2), max]) g += `<line x1="${pl}" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="#2c2b29"/>`
+    + `<text x="${pl - 6}" y="${y(v) + 4}" text-anchor="end" fill="#7d766e" font-size="11">${v}</text>`;
+  serie.forEach((d, i) => {
+    const x = pl + i * step + (step - bw) / 2, h = Math.max(0, H - pb - y(d.neu));
+    const r = Math.min(4, h);
+    g += `<path d="M${x},${H - pb} v${-(h - r)} q0,${-r} ${r},${-r} h${bw - 2 * r} q${r},0 ${r},${r} v${h - r} z" fill="#e8612e"/>`;
+    g += `<rect class="hit" data-i="${i}" x="${pl + i * step}" y="${pt}" width="${step}" height="${H - pt - pb}" fill="transparent"/>`;
+    if (i % 2 === serie.length % 2 || i === serie.length - 1)
+      g += `<text x="${x + bw / 2}" y="${H - 8}" text-anchor="middle" fill="#7d766e" font-size="11">${d.tag.slice(8)}.${d.tag.slice(5, 7)}</text>`;
+  });
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = g;
+  const tip = $("#tip");
+  svg.querySelectorAll(".hit").forEach(el => {
+    el.onmousemove = () => {
+      const d = serie[+el.dataset.i];
+      tip.innerHTML = `<b>${d.tag.slice(8)}.${d.tag.slice(5, 7)}.</b> · ${d.neu} neue Profile · ${d.kosten.toFixed(2)} $`;
+      tip.style.display = "block";
+      tip.style.left = (+el.getAttribute("x") + step / 2) / W * svg.clientWidth + "px";
+      tip.style.top = y(d.neu) + "px";
+    };
+    el.onmouseleave = () => tip.style.display = "none";
+  });
+  $("#tbl tbody").innerHTML = serie.map(d => `<tr><td>${d.tag}</td><td>${d.neu}</td><td>${d.kosten}</td></tr>`).join("");
+}
+
+async function load() {
+  try { D = await api("/api/zentrale"); } catch (e) { $("#orbtxt").textContent = "Fehler: " + e.message; return; }
+  const today = D.serie[D.serie.length - 1];
+  $("#k-new").textContent = today.neu;
+  $("#k-direct").textContent = D.direkt;
+  $("#k-cost").textContent = D.kosten_heute.toFixed(2) + " $";
+  $("#k-costbar").style.width = Math.min(100, D.kosten_heute / (D.budget || 1) * 100) + "%";
+  $("#k-rev").textContent = fmtEur(D.umsatz.umsatz);
+  $("#k-revbar").style.width = Math.min(100, D.umsatz.umsatz / (D.ziel || 25000) * 100) + "%";
+  $("#state").textContent = D.freigegeben ? "● HEUTE FREIGEGEBEN" : "● WARTET AUF DEIN JA";
+  $("#state").className = "pill " + (D.freigegeben ? "ok" : "wait");
+  $("#approve").style.display = D.freigegeben ? "none" : "block";
+  activity = D.freigegeben ? 0.5 : 0.12;
+  $("#orbtxt").textContent = D.freigegeben ? "aktiv · sucht alle 2 Stunden" : "Ruhemodus · gibt nichts aus";
+  chart(D.serie);
+  $("#cats").innerHTML = `🚛 LKW <b>${D.bereiche.lkw}</b> · 🏥 Pflege <b>${D.bereiche.pflege}</b> · 🩺 Ärzte <b>${D.bereiche.arzt}</b> · 🏢 Firmen <b>${D.firmen}</b>`;
+  const P = {neu: "Gefunden", kontaktiert: "Angeschrieben", interessiert: "Interessiert", vorgestellt: "Vorgestellt", gespraech: "Gespräch", vermittelt: "Vermittelt"};
+  $("#pipe").innerHTML = Object.entries(P).map(([k, l]) => `<div><b>${D.pipeline[k]}</b><span>${l}</span></div>`).join("");
+  $("#feed").innerHTML = "";
+  for (const m of D.meldungen) {
+    const el = document.createElement("div"); el.className = "ev";
+    const t = document.createElement("time"); t.textContent = (m.created || "").replace("T", " ").slice(0, 16);
+    el.append(t, document.createTextNode(m.text.slice(0, 600)));
+    $("#feed").append(el);
+  }
+}
+
+function say(text, cls) { const d = document.createElement("div"); d.className = "msg " + cls; d.textContent = text;
+  $("#log").append(d); $("#log").scrollTop = 1e9; return d; }
+async function command(text) {
+  say(text, "u"); const w = say("Jarvis arbeitet …", "j"); activity = 1;
+  try {
+    const r = await api("/api/befehl", {method: "POST", body: JSON.stringify({text})});
+    let st = r;
+    while (st.status !== "fertig") { await new Promise(r => setTimeout(r, 1500)); st = await api("/api/befehl/" + r.job); }
+    w.textContent = st.antwort;
+  } catch (e) { w.textContent = "Fehler: " + e.message; }
+  load();
+}
+$("#cmd").onsubmit = e => { e.preventDefault(); const t = $("#t").value.trim(); if (t) { $("#t").value = ""; command(t); } };
+document.querySelectorAll("[data-q]").forEach(b => b.onclick = () => command(b.dataset.q));
+$("#approve").onclick = async () => { try { await api("/api/autonomie/weiter", {method: "POST"}); load(); } catch (e) { alert(e.message); } };
+setInterval(() => { $("#clock").textContent = new Date().toLocaleString("de-DE"); }, 1000);
+load(); setInterval(load, 30000);
+addEventListener("resize", () => D && chart(D.serie));
+</script>
+</body>
+</html>
