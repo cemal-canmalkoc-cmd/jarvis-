@@ -60,10 +60,11 @@ def test_referral_page_and_tracked_link(monkeypatch):
     from urllib.parse import unquote
     monkeypatch.setattr(config, "CONTACT_WHATSAPP", "+49 176 00000000")
     monkeypatch.setattr(config, "CHAT_FIRST", False)
-    monkeypatch.setattr(config, "REFERRAL_BONUS", "100 €")
+    monkeypatch.setattr(config, "REFERRAL_BONUS_LKW", "200 €")
     c = TestClient(server.app)
     page = c.get("/empfehlen?b=lkw").text
-    assert "Kennst du LKW-Fahrer" in page and "100 €" in page and "wa.me/?text=" in page
+    assert "Kennst du LKW-Fahrer" in page and "200 €" in page and "wa.me/?text=" in page
+    assert "1.000 €" in c.get("/empfehlen?b=pflege").text
     r = c.get("/wa?b=lkw&q=empfehlung&ref=Ali%20K.", follow_redirects=False)
     assert "Empfohlen von: Ali K." in unquote(r.headers["location"])
 

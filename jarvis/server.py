@@ -480,8 +480,10 @@ async def empfehlen(b: str = "lkw"):
     """„Fahrer werben Fahrer“: Bewerber teilen ihren persönlichen Link mit Kollegen."""
     b = b if b in ("lkw", "pflege", "arzt") else "lkw"
     who = {"lkw": "LKW-Fahrer", "pflege": "Pflegekräfte", "arzt": "Ärztinnen und Ärzte"}[b]
-    bonus = (f"<p class='lead'>🎁 Als Dankeschön: <b>{html.escape(config.REFERRAL_BONUS)}</b>, wenn deine Empfehlung "
-             f"bei uns eine Stelle antritt.</p>" if config.REFERRAL_BONUS else "")
+    amount = {"lkw": config.REFERRAL_BONUS_LKW, "pflege": config.REFERRAL_BONUS_PFLEGE,
+              "arzt": config.REFERRAL_BONUS_ARZT}[b] or config.REFERRAL_BONUS
+    bonus = (f"<p class='lead'>🎁 Als Dankeschön: <b>{html.escape(amount)}</b>, wenn deine Empfehlung bei uns eine "
+             f"Stelle antritt und die Probezeit besteht.</p>" if amount else "")
     share_intro = {"lkw": "Hey, ich hab hier was für Fahrer: Hansa Personal vermittelt LKW-Fahrer kostenlos an "
                           "Speditionen. Einfach Führerschein oder Lebenslauf per WhatsApp schicken:",
                    "pflege": "Hallo, kennst du schon Hansa Personal? Sie vermitteln Pflegekräfte kostenlos in die "
