@@ -104,9 +104,49 @@ def score(a: Assessment) -> tuple[int, str, list[str], list[str]]:
             missing.append(f"Deutsch {a.german_level} – mind. B2 nötig")
         else:
             missing.append("Deutschniveau klären")
+    elif a.category == "lkw":
+        lic = (a.driving_license or "").upper().replace(" ", "")
+        if "CE" in lic:
+            pts += 35
+            reasons.append("Führerschein CE")
+        elif lic.startswith("C") and "C1" not in lic:
+            pts += 25
+            reasons.append("Führerschein C")
+        elif lic:
+            pts += 5
+            reasons.append(f"Führerschein {lic} (C/CE gesucht)")
+            knockout = lic in ("B", "BE")
+        else:
+            missing.append("Führerscheinklasse (C/CE) klären")
+        if a.code95:
+            pts += 15
+            reasons.append("Modul 95 / Schlüsselzahl 95")
+        elif a.code95 is False:
+            missing.append("Modul 95 fehlt (Weiterbildung nötig)")
+        else:
+            missing.append("Modul 95 klären")
+        if a.driver_card:
+            pts += 10
+            reasons.append("Fahrerkarte vorhanden")
+        else:
+            missing.append("Fahrerkarte klären")
+        if a.adr:
+            pts += 5
+            reasons.append("ADR-Schein (Gefahrgut)")
+        if german >= GERMAN_RANK["B1"]:
+            pts += 10
+            reasons.append(f"Deutsch {a.german_level}")
+        elif german:
+            missing.append(f"Deutsch {a.german_level} – B1 empfohlen")
+        if a.years_experience and a.years_experience >= 2:
+            pts += 10
+            reasons.append(f"{a.years_experience:g} Jahre Erfahrung")
+        if a.traffic_type:
+            pts += 5
+            reasons.append(f"Erfahrung: {a.traffic_type}")
     else:
         knockout = True
-        reasons.append("Kein Pflege- oder Arztprofil")
+        reasons.append("Kein Pflege-, Arzt- oder Fahrerprofil")
 
     if a.currently_in_switzerland:
         pts += 10

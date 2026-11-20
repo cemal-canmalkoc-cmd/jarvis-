@@ -26,6 +26,12 @@ TARGETS = [
     "Pflegekräfte, die bereits in der Schweiz leben und wechseln wollen",
     "Pflegefachkräfte mit SRK-Anerkennung",
 ]
+LKW_TARGETS = [
+    "LKW-Fahrer CE Fernverkehr (Deutschland)",
+    "Berufskraftfahrer CE Nahverkehr – abends zu Hause",
+    "LKW-Fahrer mit ADR-Schein",
+    "Kraftfahrer C/CE für Baustelle und Kipper",
+]
 
 AD_SYSTEM = f"""Du schreibst Stelleninserate für {config.AGENCY_NAME}, eine Personalvermittlung für
 Gesundheitsfachpersonen in die Schweiz. Ton: warm, klar, seriös, Sie- oder Du-Form passend zur Plattform.
@@ -42,19 +48,33 @@ Regeln:
 - Gib NUR den fertigen Inseratstext aus, ohne Vorbemerkung."""
 
 
-def _system() -> str:
+LKW_AD_SYSTEM = f"""Du schreibst Stelleninserate für {config.AGENCY_NAME}, eine Personalvermittlung für
+LKW-Fahrer in Deutschland. Ton: direkt, ehrlich, auf Augenhöhe, Du-Form.
+
+{config.LKW_REQUIREMENTS_TEXT}
+
+Regeln:
+- Keine erfundenen Löhne, keine Firmennamen, keine Garantien.
+- Kontaktwege: WhatsApp {{wa}} und Formular {config.PUBLIC_URL}/bewerbung?bereich=lkw
+- 3–5 Emojis, kurze Absätze, max. ca. 100 Wörter, am Ende 3–5 Hashtags.
+- Gib NUR den fertigen Text aus."""
+
+
+def _system(lkw: bool = False) -> str:
     from .outreach import contact_number
-    return AD_SYSTEM.replace("{wa}", contact_number() or "(keine)")
+    return (LKW_AD_SYSTEM if lkw else AD_SYSTEM).replace("{wa}", contact_number() or "(keine)")
 
 
 def target_for_today(offset: int = 0) -> str:
-    return TARGETS[(date.today().toordinal() + offset) % len(TARGETS)]
+    pool = TARGETS + (LKW_TARGETS if config.LKW_ENABLED else [])
+    return pool[(date.today().toordinal() * 2 + offset) % len(pool)]
 
 
 def write_ad(target: str | None = None, platform: str = "Facebook") -> str:
     target = target or target_for_today()
+    lkw = any(w in target.lower() for w in ("lkw", "fahrer", "kraftfahrer"))
     resp = brain.create(
-        model=config.MODEL, max_tokens=2000, system=_system(), output_config={"effort": "low"},
+        model=config.MODEL, max_tokens=2000, system=_system(lkw), output_config={"effort": "low"},
         messages=[{"role": "user", "content": f"Plattform: {platform}. Zielgruppe: {target}. "
                                               f"Schreib ein neues, abwechslungsreiches Inserat (Datum {date.today()})."}],
     )

@@ -5,7 +5,7 @@ import json
 import re
 
 from . import brain, store
-from .config import EFFORT, MODEL, REQUIREMENTS_TEXT, WEB_SEARCHES_PER_FOCUS
+from .config import EFFORT, LKW_REQUIREMENTS_TEXT, MODEL, REQUIREMENTS_TEXT, WEB_SEARCHES_PER_FOCUS
 
 SYSTEM = f"""Du bist Jarvis, Business-Development für eine Personalvermittlung im Schweizer Gesundheitswesen.
 
@@ -28,7 +28,31 @@ Antworte am Ende ausschliesslich mit einem JSON-Codeblock:
 ```"""
 
 
-def find(focus: str, region: str = "Deutschschweiz", max_searches: int | None = None) -> dict:
+LKW_SYSTEM = f"""Du bist Jarvis, Business-Development für eine Personalvermittlung von LKW-Fahrern in Deutschland.
+
+{LKW_REQUIREMENTS_TEXT}
+
+Aufgabe: Finde deutsche Speditionen, Logistik-, Bau- und Entsorgungsunternehmen, die AKTUELL
+LKW-Fahrer/Berufskraftfahrer (C/CE) suchen (Stellenanzeigen auf Karriereseiten, Indeed, StepStone,
+Arbeitsagentur, kleinanzeigen).
+
+Für jedes Unternehmen:
+- name, city (Ort mit PLZ wenn möglich), website
+- phone: öffentlich angegebene Telefonnummer der Personalabteilung oder Zentrale. Niemals raten.
+- needs: welche Fahrerstellen konkret offen sind (Klasse, Nah-/Fernverkehr, ADR …)
+- source_url: URL der Stellenanzeige
+- no_cold_calls: true, wenn die Anzeige ausdrücklich keine Vermittler/Personaldienstleister wünscht
+
+Antworte am Ende ausschliesslich mit einem JSON-Codeblock:
+```json
+[{{"name": "...", "city": "...", "website": "...", "phone": "...", "needs": "...", "source_url": "...", "no_cold_calls": false}}]
+```"""
+
+
+def find(focus: str, region: str = "Deutschschweiz", max_searches: int | None = None, branche: str = "") -> dict:
+    lkw = branche == "lkw" or "lkw" in focus.lower() or "fahrer" in focus.lower()
+    if lkw and region == "Deutschschweiz":
+        region = "Deutschland"
     messages: list[dict] = [{
         "role": "user",
         "content": f"Finde Arbeitgeber mit offenen Stellen für: {focus}. Region: {region}.",
@@ -38,7 +62,7 @@ def find(focus: str, region: str = "Deutschschweiz", max_searches: int | None = 
     for _ in range(5):
         response = brain.create(
             model=MODEL, max_tokens=16000,
-            system=SYSTEM, output_config={"effort": EFFORT}, tools=tools, messages=messages,
+            system=LKW_SYSTEM if lkw else SYSTEM, output_config={"effort": EFFORT}, tools=tools, messages=messages,
         )
         if response.stop_reason != "pause_turn":
             break

@@ -256,9 +256,70 @@ async def root():
     return RedirectResponse("/bewerbung")
 
 
+LKW_FORM = """
+<div class="brand">{agency}</div>
+<h1>LKW-Fahrer gesucht 🚛</h1>
+<p class="lead">Speditionen in ganz Deutschland suchen Fahrer – Nah- und Fernverkehr.
+Für dich kostenlos. In 2 Minuten bewerben, wir melden uns schnell.{contact}</p>
+<form method="post" action="/bewerbung" enctype="multipart/form-data">
+ <input type="hidden" name="in_schweiz" value="nein">
+ <fieldset><legend>Kontakt</legend>
+  <label for="name">Vor- und Nachname *</label><input id="name" name="name" type="text" required maxlength="120">
+  <div class="row">
+   <div><label for="phone">Handy (WhatsApp) *</label><input id="phone" name="phone" type="tel" required placeholder="+49 1…" maxlength="30"></div>
+   <div><label for="email">E-Mail</label><input id="email" name="email" type="email" maxlength="120"></div>
+  </div>
+  <label for="wohnort">Wohnort mit PLZ *</label><input id="wohnort" name="wohnort" type="text" required maxlength="80">
+ </fieldset>
+ <fieldset><legend>Fahrer-Profil</legend>
+  <label for="bereich">Was suchst du? *</label>
+  <select id="bereich" name="bereich" required>
+   <option>LKW-Fahrer Fernverkehr</option><option>LKW-Fahrer Nahverkehr</option>
+   <option>LKW-Fahrer Baustelle / Kipper</option><option>LKW-Fahrer Tank / Gefahrgut</option><option>Egal / offen</option>
+  </select>
+  <div class="row">
+   <div><label for="fuehrerschein">Führerschein *</label>
+    <select id="fuehrerschein" name="fuehrerschein"><option>CE</option><option>C</option><option>C1E</option><option>C1</option><option>nur B</option></select></div>
+   <div><label for="fahrerkarte">Fahrerkarte?</label>
+    <select id="fahrerkarte" name="fahrerkarte"><option>ja</option><option>nein</option></select></div>
+  </div>
+  <div class="row">
+   <div><label for="modul95">Modul 95 / Schlüsselzahl 95?</label>
+    <select id="modul95" name="modul95"><option>ja</option><option>nein</option><option>weiss nicht</option></select></div>
+   <div><label for="adr">ADR-Schein (Gefahrgut)?</label>
+    <select id="adr" name="adr"><option>nein</option><option>ja</option></select></div>
+  </div>
+  <div class="row">
+   <div><label for="erfahrung">Jahre Fahrerfahrung</label><input id="erfahrung" name="erfahrung" type="text" maxlength="20"></div>
+   <div><label for="deutsch">Deutsch</label>
+    <select id="deutsch" name="deutsch"><option>Muttersprache</option><option>C1</option><option selected>B2</option>
+    <option>B1</option><option>A2 oder tiefer</option></select></div>
+  </div>
+  <label for="verfuegbar">Verfügbar ab</label><input id="verfuegbar" name="verfuegbar" type="text" placeholder="z.B. sofort" maxlength="40">
+  <label for="cv">Lebenslauf (optional)</label><input id="cv" name="cv" type="file" accept=".pdf,.docx,.txt">
+  <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+ </fieldset>
+ <fieldset><legend>Einwilligung</legend>
+  <label class="check"><input type="checkbox" name="consent_data" value="1" required>
+   <span>Ich bin einverstanden, dass {agency} meine Angaben speichert und mein Profil (anonym, ohne Name und
+   Kontaktdaten) passenden Arbeitgebern vorstellt. Für mich kostenlos. Widerruf jederzeit möglich. *</span></label>
+  <label class="check"><input type="checkbox" name="consent_whatsapp" value="1" checked><span>Kontakt per WhatsApp ist ok.</span></label>
+  <label class="check"><input type="checkbox" name="consent_call" value="1" checked><span>Anruf ist ok.</span></label>
+ </fieldset>
+ <button type="submit">Jetzt bewerben</button>
+</form>"""
+
+
 @app.get("/bewerbung", response_class=HTMLResponse)
-async def bewerbung_form():
+async def bewerbung_form(bereich: str = ""):
     agency = html.escape(config.AGENCY_NAME)
+    if bereich == "lkw":
+        from .outreach import contact_number
+        num = contact_number()
+        contact = (f' Oder direkt per WhatsApp: <a href="https://wa.me/{"".join(ch for ch in num if ch.isdigit())}">'
+                   f'{html.escape(num)}</a>') if num else ""
+        return _page(f"LKW-Fahrer – {config.AGENCY_NAME}", LKW_FORM.replace("{agency}", agency)
+                     .replace("{contact}", contact))
     call_hint = ""
     if config.CALL_IN_NUMBER:
         tel = "".join(ch for ch in config.CALL_IN_NUMBER if ch.isdigit() or ch == "+")
@@ -355,6 +416,8 @@ async def bewerbung_submit(
     diplom_land: str = Form(""), deutsch: str = Form(""), anerkennung: str = Form(""),
     verfuegbar: str = Form(""), pensum: str = Form(""), website: str = Form(""),
     consent_data: str = Form(""), consent_whatsapp: str = Form(""), consent_call: str = Form(""),
+    fuehrerschein: str = Form(""), fahrerkarte: str = Form(""), modul95: str = Form(""), adr: str = Form(""),
+    erfahrung: str = Form(""),
     cv: UploadFile | None = File(None),
 ):
     if website:  # Spam-Bot
@@ -378,7 +441,26 @@ async def bewerbung_submit(
         except Exception:  # noqa: BLE001
             cv_text = ""
 
-    text = f"""BEWERBUNGSFORMULAR (Angaben der Person selbst)
+    if fuehrerschein:
+        text = f"""BEWERBUNGSFORMULAR LKW-FAHRER (Angaben der Person selbst)
+Name: {name}
+Telefon/WhatsApp: {phone}
+E-Mail: {email}
+Wohnort: {wohnort} (Deutschland)
+Gesucht: {bereich}
+Führerscheinklasse: {fuehrerschein}
+Fahrerkarte: {fahrerkarte}
+Modul 95 / Schlüsselzahl 95: {modul95}
+ADR-Schein: {adr}
+Jahre Fahrerfahrung: {erfahrung}
+Deutsch: {deutsch}
+Verfügbar ab: {verfuegbar}
+
+LEBENSLAUF:
+{cv_text or "(kein Lebenslauf hochgeladen)"}"""
+    else:
+        text = None
+    text = text or f"""BEWERBUNGSFORMULAR (Angaben der Person selbst)
 Name: {name}
 Telefon/WhatsApp: {phone}
 E-Mail: {email}

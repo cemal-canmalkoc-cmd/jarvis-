@@ -7,7 +7,7 @@ from tests.test_system import add_candidate, tw  # noqa: F401
 
 def test_no_invented_prices():
     ov = pricing.overview()
-    assert set(ov) == {"Pflege", "FaGe", "Arzt"}
+    assert set(ov) == {"Pflege", "FaGe", "Arzt", "LKW"}
     assert "Nenne KEINE Preise" in pricing.phone_text() or "Konditionen (nur nennen" in pricing.phone_text()
 
 

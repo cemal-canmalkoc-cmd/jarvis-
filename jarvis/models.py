@@ -5,7 +5,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel
 
-Category = Literal["pflege", "arzt", "andere"]
+Category = Literal["pflege", "arzt", "lkw", "andere"]
 Recognition = Literal[
     "anerkannt",          # SRK- bzw. MEBEKO-Anerkennung liegt vor
     "positiver_precheck", # positiver Pre-Check / positiver Verfahrensstand
@@ -33,6 +33,12 @@ class Assessment(BaseModel):
     german_level: GermanLevel = "unbekannt"
     recognition_status: Recognition = "unbekannt"  # SRK (Pflege) bzw. MEBEKO (Arzt)
     years_experience: Optional[float] = None
+    # LKW-Fahrer
+    driving_license: Optional[str] = None    # z.B. "CE", "C", "C1E"
+    driver_card: Optional[bool] = None       # Fahrerkarte vorhanden
+    code95: Optional[bool] = None            # Schlüsselzahl 95 / Modul 95
+    adr: Optional[bool] = None               # Gefahrgutschein
+    traffic_type: Optional[str] = None       # Fernverkehr, Nahverkehr, Baustelle …
     availability: Optional[str] = None
     summary: str = ""
     evidence: list[str] = []                 # Zitate aus dem Profil als Beleg

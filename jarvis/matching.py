@@ -27,6 +27,9 @@ SYNONYMS = {
     "radiologie": ["radiolog", "bildgebung"],
     "neurologie": ["neurolog"],
     "rehabilitation": ["reha"],
+    "fernverkehr": ["fernverkehr", "international", "eu-verkehr", "touren"],
+    "nahverkehr": ["nahverkehr", "regional", "verteiler", "nahbereich"],
+    "lkw": ["lkw", "kraftfahrer", "berufskraftfahrer", "ce-fahrer", "fahrer ce"],
 }
 
 
@@ -42,9 +45,12 @@ def _keywords(role: str) -> list[str]:
 def matches(conn, cand_row, limit: int = 5) -> list[dict]:
     c = store.load(cand_row)
     a = c.assessment
-    role = (a.physician_specialty if a.category == "arzt" else a.nursing_field) or ""
+    role = (a.physician_specialty if a.category == "arzt" else
+            f"{a.traffic_type or ''} lkw fahrer" if a.category == "lkw" else a.nursing_field) or ""
     kws = _keywords(role)
-    group = ["arzt", "ärzt", "medizin"] if a.category == "arzt" else ["pflege", "fage", "fachperson"]
+    group = (["arzt", "ärzt", "medizin"] if a.category == "arzt" else
+             ["fahrer", "lkw", "kraftfahrer", "spedition", "logistik", "ce"] if a.category == "lkw" else
+             ["pflege", "fage", "fachperson"])
     out = []
     for f in conn.execute("SELECT * FROM companies WHERE status NOT IN ('kein_bedarf','nicht_anrufen')").fetchall():
         needs = f"{f['needs'] or ''} {f['name']}".lower()
@@ -64,6 +70,21 @@ def matches(conn, cand_row, limit: int = 5) -> list[dict]:
 def anonymous_profile(cand_row) -> str:
     c = store.load(cand_row)
     a = c.assessment
+    if a.category == "lkw":
+        yn = lambda v: "ja" if v else ("nein" if v is False else "in Klärung")  # noqa: E731
+        lines = [f"Kandidaten-Nr. {cand_row['key'][:6].upper()}", f"Funktion: {role_phrase(a)}",
+                 f"Führerschein: {a.driving_license or 'in Klärung'}", f"Fahrerkarte: {yn(a.driver_card)}",
+                 f"Modul 95: {yn(a.code95)}", f"ADR: {yn(a.adr)}"]
+        if a.traffic_type:
+            lines.append(f"Erfahrung: {a.traffic_type}")
+        if a.years_experience:
+            lines.append(f"Berufserfahrung: ca. {a.years_experience:g} Jahre")
+        if a.current_location:
+            region = "".join(ch for ch in a.current_location if ch.isdigit())[:2]
+            lines.append(f"Region: PLZ {region}xxx" if region else "Region: Deutschland")
+        if a.availability:
+            lines.append(f"Verfügbar: {a.availability}")
+        return "\n".join(lines)
     rec_name = "MEBEKO" if a.category == "arzt" else "SRK"
     rec = {"anerkannt": "liegt vor", "positiver_precheck": "positiver Pre-Check / Zwischenstand",
            "laufend": "Verfahren läuft", "nicht_noetig": "Schweizer Diplom"}.get(a.recognition_status, "in Klärung")

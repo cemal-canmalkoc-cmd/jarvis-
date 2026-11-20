@@ -79,8 +79,8 @@ def t_anrufrunde_kandidaten(anzahl: int = 5) -> list[str]:
         or ["Keine anrufbaren Kandidaten (mit Einwilligung) offen."]
 
 
-def t_firmen_suchen(fokus: str, region: str = "Deutschschweiz") -> dict:
-    return companies.find(fokus, region)
+def t_firmen_suchen(fokus: str, region: str = "Deutschschweiz", branche: str = "") -> dict:
+    return companies.find(fokus, region, branche=branche)
 
 
 def t_firmen_liste(status: str | None = None, anzahl: int = 20) -> list[dict]:
@@ -236,8 +236,10 @@ TOOLS = {
                          {"id": {"type": "string"}}),
     "anrufrunde_kandidaten": (t_anrufrunde_kandidaten, "Ruft die besten noch nicht angerufenen "
                               "Kandidaten mit Einwilligung an.", {"anzahl": {"type": "integer"}}),
-    "firmen_suchen": (t_firmen_suchen, "Sucht Arbeitgeber mit offenen Stellen im Web. Dauert Minuten.",
-                      {"fokus": {"type": "string"}, "region": {"type": "string"}}),
+    "firmen_suchen": (t_firmen_suchen, "Sucht Arbeitgeber mit offenen Stellen im Web (Gesundheit Schweiz oder "
+                      "Speditionen/Logistik Deutschland für LKW-Fahrer). Dauert Minuten.",
+                      {"fokus": {"type": "string"}, "region": {"type": "string"},
+                       "branche": {"type": "string", "enum": ["gesundheit", "lkw"]}}),
     "firmen_liste": (t_firmen_liste, "Gespeicherte Arbeitgeber anzeigen.",
                      {"status": {"type": "string", "enum": list(store.COMPANY_STATUSES)},
                       "anzahl": {"type": "integer"}}),
@@ -358,6 +360,13 @@ Ohne Budget fragst du Cemal-Can per Meldung, statt Geld auszugeben. Was er dir a
   sich per WhatsApp bei Cemal-Can zu melden ({config.CONTACT_WHATSAPP or config.JARVIS_WHATSAPP_NUMBER}). Gesuche ohne E-Mail meldest du ihm mit
   Links und fertigem Text, damit er sie im Portal anschreibt.
 - Sag bei Aufträgen, die Geld kosten, kurz die ungefähren Kosten dazu.
+- ZWEITER BEREICH: LKW-Fahrer (C/CE, Fahrerkarte, Modul 95, ADR) in Deutschland, vermittelt an Speditionen,
+  Logistik-, Bau- und Entsorgungsfirmen. Websuche mit Fokus "LKW: …" findet Fahrer-Stellengesuche;
+  firmen_suchen mit branche "lkw" findet Speditionen mit offenen Fahrerstellen. Profile werden anonym vorgestellt.
+  Fahrer-Formular: {config.PUBLIC_URL}/bewerbung?bereich=lkw
+  Rechtlich: In Deutschland ist private Arbeitsvermittlung erlaubnisfrei (Gewerbeanmeldung genügt); Fahrer
+  zahlen nichts. Firmen nicht per Massen-E-Mail anschreiben (UWG) – Profile nur auf konkrete Stellenanzeigen
+  oder an Firmen, die Interesse gezeigt haben.
 - TAGESMINIMUM (von Cemal-Can erlaubt, unabhängig vom Tagesbudget): Um 9, 13 und 17 Uhr prüfst du, ob heute
   mindestens {config.DAILY_MINIMUM} neue potenzielle Kandidat(en) gefunden wurden; sonst suchst du in Runden mit
   wechselnden Berufen weiter – höchstens bis {config.MINIMUM_MAX_USD:.2f} $ pro Tag. Eine Garantie gibt es nicht,

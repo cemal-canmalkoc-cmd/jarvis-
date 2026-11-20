@@ -59,6 +59,8 @@ def morning(force: bool = False) -> dict:
                 f"Ärzte {', '.join(PHYSICIAN_SPECIALTIES[:4])}"
             try:
                 new_companies += companies.find(focus, region)["neu"]
+                if config.LKW_ENABLED and i == 0:
+                    new_companies += companies.find("LKW-Fahrer CE", "Deutschland", branche="lkw")["neu"]
             except Exception as exc:  # noqa: BLE001
                 log.error("Firmensuche fehlgeschlagen: %s", exc)
 
@@ -177,6 +179,7 @@ MINIMUM_FOCUSES = [
     "Anästhesiepflege", "Psychiatrische Pflege / Fachkrankenpfleger Psychiatrie", "Pflegefachfrau HF Schweiz",
     "Fachfrau Gesundheit FaGe", "Assistenzarzt / Assistenzärztin", "Facharzt Innere Medizin",
     "Facharzt Psychiatrie", "Facharzt Anästhesie", "Pflegefachkraft Geriatrie",
+    "LKW: LKW-Fahrer CE", "LKW: Berufskraftfahrer", "LKW: Kraftfahrer Fernverkehr", "LKW: Fahrer ADR",
 ]
 
 

@@ -39,15 +39,21 @@ def build_email(c: ScoredCandidate) -> tuple[str, str]:
     first = a.full_name.split()[0] if a.full_name and a.full_name.lower() not in ("unbekannt", "") else ""
     greeting = f"Guten Tag {first}" if first else "Guten Tag"
     role = role_phrase(a)
-    hello = f"Hallo, ich habe Ihr Stellengesuch gesehen ({role}). Gerne mehr Infos zur Schweiz."
+    lkw = a.category == "lkw"
+    hello = (f"Hallo, ich habe Ihr Stellengesuch gesehen ({role}). Gerne mehr Infos zu den Fahrerstellen."
+             if lkw else f"Hallo, ich habe Ihr Stellengesuch gesehen ({role}). Gerne mehr Infos zur Schweiz.")
     rec = ("Ihre SRK-Anerkennung" if a.category == "pflege" else "Ihr MEBEKO-Stand") \
         if a.recognition_status in ("anerkannt", "positiver_precheck") else None
-    subject = f"Ihr Stellengesuch als {role} – Stellen in der Schweiz"
+    subject = (f"Ihr Stellengesuch als {role} – passende Fahrerstellen" if lkw
+               else f"Ihr Stellengesuch als {role} – Stellen in der Schweiz")
+    offer = ("wir vermitteln LKW-Fahrer/innen an Speditionen und Logistikunternehmen in ganz Deutschland\n"
+             "(Nah- und Fernverkehr). Für Sie ist das komplett kostenlos." if lkw else
+             "wir vermitteln Pflegefachpersonen und Ärztinnen/Ärzte an Spitäler, Kliniken\n"
+             "und Heime in der Schweiz. Für Sie ist das komplett kostenlos.")
     body = f"""{greeting}
 
 ich bin auf Ihr Stellengesuch als {role} aufmerksam geworden. Ich bin {config.RECRUITER_NAME} von
-{config.AGENCY_NAME} – wir vermitteln Pflegefachpersonen und Ärztinnen/Ärzte an Spitäler, Kliniken
-und Heime in der Schweiz. Für Sie ist das komplett kostenlos.
+{config.AGENCY_NAME} – {offer}
 {f"{rec} ist dabei ein grosser Vorteil." if rec else ""}
 Wenn Sie Interesse haben, schreiben Sie mir einfach kurz per WhatsApp:
 {wa_link(hello)}
@@ -88,6 +94,11 @@ def reach_out(c: ScoredCandidate) -> str:
 def portal_message(c: ScoredCandidate) -> str:
     """Kurze Nachricht zum Einfügen im Portal (kleinanzeigen, quoka, anibis …)."""
     role = role_phrase(c.assessment)
+    if c.assessment.category == "lkw":
+        return (f"Hallo, ich habe Ihr Stellengesuch als {role} gesehen. Ich bin {config.RECRUITER_NAME} von "
+                f"{config.AGENCY_NAME} – wir vermitteln Fahrer kostenlos an Speditionen in ganz Deutschland "
+                f"(Nah- und Fernverkehr). Interesse? Schreiben Sie mir gern per WhatsApp: {contact_number()} "
+                f"– oder bewerben Sie sich hier: {config.PUBLIC_URL}/bewerbung?bereich=lkw")
     return (f"Hallo, ich habe Ihr Stellengesuch als {role} gesehen. Ich bin {config.RECRUITER_NAME} von "
             f"{config.AGENCY_NAME} – wir vermitteln Pflegekräfte kostenlos an Kliniken und Heime in der Schweiz "
             f"(deutlich höherer Lohn, wir helfen bei der Anerkennung). Interesse? Schreiben Sie mir gern per "

@@ -12,6 +12,8 @@ from . import config, store
 def area_for(category: str, role: str | None) -> str:
     if category == "arzt":
         return "Arzt"
+    if category == "lkw":
+        return "LKW"
     r = (role or "").lower()
     if "fage" in r or "fachperson gesundheit" in r or "fachfrau gesundheit" in r or "fachmann gesundheit" in r:
         return "FaGe"

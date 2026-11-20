@@ -6,7 +6,7 @@ import re
 
 import anthropic
 
-from .config import EFFORT, MODEL, REQUIREMENTS_TEXT, WEB_SEARCHES_PER_FOCUS
+from .config import EFFORT, LKW_REQUIREMENTS_TEXT, MODEL, REQUIREMENTS_TEXT, WEB_SEARCHES_PER_FOCUS
 from .models import Assessment
 
 _client: anthropic.Anthropic | None = None
@@ -61,7 +61,12 @@ ASSESSMENT_SCHEMA = {
         "email": _nullable("string"),
         "current_location": _nullable("string"),
         "currently_in_switzerland": _nullable("boolean"),
-        "category": {"type": "string", "enum": ["pflege", "arzt", "andere"]},
+        "category": {"type": "string", "enum": ["pflege", "arzt", "lkw", "andere"]},
+        "driving_license": _nullable("string"),
+        "driver_card": _nullable("boolean"),
+        "code95": _nullable("boolean"),
+        "adr": _nullable("boolean"),
+        "traffic_type": _nullable("string"),
         "nursing_field": _nullable("string"),
         "physician_specialty": _nullable("string"),
         "has_diploma_certificate": _nullable("boolean"),
@@ -84,13 +89,17 @@ ASSESSMENT_SCHEMA = {
         "category", "nursing_field", "physician_specialty", "has_diploma_certificate",
         "diploma_country", "german_level", "recognition_status", "years_experience",
         "availability", "summary", "evidence",
+        "driving_license", "driver_card", "code95", "adr", "traffic_type",
     ],
 }
 
-EXTRACT_SYSTEM = f"""Du bist Jarvis, ein erfahrener Personalvermittler für Gesundheitsberufe in der Schweiz.
-Du liest Lebensläufe, Bewerbungen und Profile und extrahierst nur Fakten, die im Text belegt sind.
+EXTRACT_SYSTEM = f"""Du bist Jarvis, ein erfahrener Personalvermittler (Gesundheitsberufe Schweiz und
+LKW-Fahrer Deutschland). Du liest Lebensläufe, Bewerbungen und Profile und extrahierst nur Fakten,
+die im Text belegt sind.
 
 {REQUIREMENTS_TEXT}
+
+{LKW_REQUIREMENTS_TEXT}
 
 Regeln für die Extraktion:
 - Erfinde nichts. Wenn etwas nicht im Text steht, setze null bzw. "unbekannt".
@@ -99,6 +108,11 @@ Regeln für die Extraktion:
   oder positivem Zwischenstand bei der MEBEKO. "fehlt" bei ausländischem Diplom ohne Verfahren.
 - german_level: höchstes nachgewiesenes oder klar angegebenes Niveau; Muttersprache Deutsch = "muttersprache".
 - FaGe zählt als Pflege (category "pflege", nursing_field "FaGe").
+- LKW-/Berufskraftfahrer → category "lkw". driving_license: höchste LKW-Klasse ("CE", "C", "C1E", "C1").
+  "Fahrerkarte" → driver_card true. "Modul 95", "Schlüsselzahl 95", "Code 95", "BKrFQG", "Weiterbildung
+  Berufskraftfahrer" → code95 true. "ADR"/"Gefahrgut" → adr true. traffic_type: Fernverkehr/Nahverkehr/
+  Baustelle/Kipper/Tank/Kühl … has_diploma_certificate und recognition_status sind bei LKW nicht relevant
+  (null bzw. "unbekannt"). currently_in_switzerland bei Fahrern in Deutschland: false.
 - Abschluss-Begriffe wie "examiniert", "gelernt", "staatlich anerkannt", "Diplom", "HF", "FH", "B.Sc. Nursing",
   "Gesundheits- und Krankenpfleger/in", "Pflegefachfrau/-mann" bedeuten has_diploma_certificate = true.
   "Pflegehelfer/in", "Pflegeassistenz", "Betreuungskraft", "Auszubildende/r" bedeuten false.
@@ -176,20 +190,51 @@ Pensum, Verfügbarkeit, Datum des Gesuchs, Kontaktweg (Portal/E-Mail):
 Leeres Array, wenn nichts Passendes gefunden wurde."""
 
 
+LKW_SOURCING_SYSTEM = f"""Du bist Jarvis, Sourcing-Spezialist für LKW-Fahrer in Deutschland.
+
+{LKW_REQUIREMENTS_TEXT}
+
+Finde im öffentlichen Web Personen, die SELBST eine Stelle als LKW-Fahrer/Berufskraftfahrer suchen.
+So gehst du vor (genau so suchen, Begriff passend zum Fokus):
+- "kleinanzeigen.de Stellengesuche LKW Fahrer CE sucht Arbeit"
+- "kleinanzeigen.de Berufskraftfahrer sucht Stelle"
+- "quoka.de Stellengesuche Kraftfahrer"
+- "markt.de Stellengesuch LKW Fahrer"
+- "Kraftfahrer CE sucht neue Herausforderung Fernverkehr"
+- "Berufskraftfahrer sucht Job Nahverkehr <Region>"
+Sammelseiten in einzelne Personen zerlegen. Stellenangebote von Speditionen/Personaldienstleistern und
+Gesuche älter als 12 Monate weglassen. Kontakt über das Portal reicht (Inserats-URL als Kontaktweg).
+Keine Login-Profile, keine erratenen Kontaktdaten.
+
+Antworte am Ende ausschliesslich mit einem JSON-Codeblock. profile_text muss ALLE Angaben enthalten:
+Führerscheinklasse, Fahrerkarte, Modul 95, ADR, Erfahrung, Verkehrsart, Ort mit PLZ, Datum, Kontaktweg:
+```json
+[{{"source_url": "...", "profile_text": "..."}}]
+```
+Leeres Array, wenn nichts Passendes gefunden wurde."""
+
+
+def is_lkw_focus(focus: str) -> bool:
+    return focus.strip().lower().startswith("lkw:")
+
+
 def find_public_leads(focus: str, max_searches: int | None = None) -> list[dict]:
     """Sucht öffentliche Stellengesuche zu einem Fokus (z.B. 'Pflegefachfrau Psychiatrie Zürich')."""
     messages: list[dict] = [{
         "role": "user",
-        "content": f"Suche aktuell öffentliche Stellengesuche für: {focus}. "
-                   "Region: Schweiz (Deutschschweiz bevorzugt).",
+        "content": (f"Suche aktuell öffentliche Stellengesuche für: {focus[4:].strip()}. Region: Deutschland."
+                    if is_lkw_focus(focus) else
+                    f"Suche aktuell öffentliche Stellengesuche für: {focus}. "
+                    "Region: Schweiz (Deutschschweiz bevorzugt)."),
     }]
+    system_prompt = LKW_SOURCING_SYSTEM if is_lkw_focus(focus) else SOURCING_SYSTEM
     tools = [web_search_tool(MODEL, max_searches or WEB_SEARCHES_PER_FOCUS)]
 
     for _ in range(5):  # pause_turn kann mehrmals vorkommen
         response = create(
             model=MODEL,
             max_tokens=16000,
-            system=SOURCING_SYSTEM,
+            system=system_prompt,
             output_config={"effort": EFFORT},
             tools=tools,
             messages=messages,

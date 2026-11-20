@@ -35,6 +35,8 @@ def role_phrase(a: Assessment) -> str:
     """Natürliche Berufsbezeichnung, z.B. 'Pflegefachperson (Psychiatrie)' oder 'Ärztin/Arzt (Radiologie)'."""
     if a.category == "arzt":
         return f"Ärztin/Arzt ({a.physician_specialty})" if a.physician_specialty else "Ärztin/Arzt"
+    if a.category == "lkw":
+        return f"Berufskraftfahrer/in ({a.driving_license})" if a.driving_license else "LKW-Fahrer/in"
     field = (a.nursing_field or "").strip()
     if "fage" in field.lower() or "fachfrau gesundheit" in field.lower() or "fachmann gesundheit" in field.lower():
         return "Fachperson Gesundheit (FaGe)"

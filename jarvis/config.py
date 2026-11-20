@@ -166,3 +166,14 @@ DAILY_BUDGET_USD = float(os.environ.get("JARVIS_DAILY_BUDGET_USD", "0"))
 # MINIMUM_MAX_USD pro Tag. Zeiten: 9, 13 und 17 Uhr.
 DAILY_MINIMUM = int(os.environ.get("JARVIS_DAILY_MINIMUM", "1"))
 MINIMUM_MAX_USD = float(os.environ.get("JARVIS_MINIMUM_MAX_USD", "0.30"))
+
+# ---------------------------------------------------------------------------
+# Zweiter Bereich: LKW-Fahrer in Deutschland (an Speditionen/Logistik vermitteln)
+# ---------------------------------------------------------------------------
+LKW_ENABLED = os.environ.get("JARVIS_LKW", "1").strip().lower() not in ("0", "false", "nein")
+LKW_REQUIREMENTS_TEXT = """BEDARF DEUTSCHLAND: Berufskraftfahrer/innen (LKW)
+- Pflicht: Führerschein Klasse C oder CE (CE bevorzugt), gültige Fahrerkarte,
+  Schlüsselzahl 95 / Modul 95 (Berufskraftfahrerqualifikation, BKrFQG).
+- Von Vorteil: ADR-Schein (Gefahrgut), Erfahrung im Nah- oder Fernverkehr, Kran/Stapler,
+  Deutsch mind. B1 (für Kundenkontakt), Wohnort in Deutschland oder EU.
+- Für Fahrer ist die Vermittlung kostenlos."""

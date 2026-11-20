@@ -28,6 +28,9 @@ def evaluate(raw: sources.RawProfile) -> ScoredCandidate:
 def default_web_focuses() -> list[str]:
     focuses = [f"Pflegefachperson {f}" for f in NURSING_FIELDS]
     focuses += [f"Arzt / Ärztin {s}" for s in PHYSICIAN_SPECIALTIES]
+    from . import config
+    if config.LKW_ENABLED:
+        focuses += ["LKW: Berufskraftfahrer CE Fernverkehr", "LKW: LKW-Fahrer CE Nahverkehr"]
     return focuses
 
 

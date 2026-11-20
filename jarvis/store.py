@@ -393,7 +393,7 @@ def record_presentation(conn: sqlite3.Connection, cand_key: str, company_id: int
 
 
 # --------------------------------------------------------------------------- Preise
-PRICE_AREAS = ("Pflege", "FaGe", "Arzt")
+PRICE_AREAS = ("Pflege", "FaGe", "Arzt", "LKW")
 PRICE_MODELS = ("prozent_jahreslohn", "pauschal_chf")
 
 
