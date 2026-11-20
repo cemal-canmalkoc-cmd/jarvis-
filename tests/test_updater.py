@@ -45,3 +45,16 @@ def test_update_flow(monkeypatch, tmp_path):
     r = updater.update(restart=False)
     assert r["status"] == "aktualisiert" and updater.installed_sha() == "a" * 40
     assert updater.update(restart=False)["status"] == "aktuell"
+
+
+def test_day_round_rotates_and_runs(monkeypatch):
+    from datetime import datetime
+    from jarvis import autopilot, config
+    calls = []
+    monkeypatch.setattr(autopilot.pipeline, "run", lambda **kw: calls.append(kw["web_focuses"]) or {"A": 0, "B": 0})
+    a = autopilot.day_round(datetime(2026, 11, 20, 10))["fokus"]
+    b = autopilot.day_round(datetime(2026, 11, 20, 12))["fokus"]
+    assert len(a) == 4 and a != b and calls[0] == a
+    assert "Autopilot" not in config.__name__  # sanity
+    from jarvis import agent
+    assert "alle 2 Stunden" in agent.OWNER_SYSTEM and "cron" in agent.OWNER_SYSTEM

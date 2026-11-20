@@ -139,3 +139,8 @@ CALL_IN_NUMBER = os.environ.get("JARVIS_CALL_IN_NUMBER", "")
 
 # Falls deine WhatsApp-Nummer gleichzeitig Jarvis' Nummer ist, kommen Meldungen per E-Mail + App.
 OWNER_EMAIL = os.environ.get("JARVIS_OWNER_EMAIL", "")
+
+# Suche über den Tag: alle N Stunden (zwischen 8 und 21 Uhr) eine kleine Suchrunde mit
+# wechselnden Bereichen und Regionen. 0 = nur morgens. Kosten: ca. 0.20–0.30 $ pro Runde.
+SEARCH_EVERY_HOURS = int(os.environ.get("JARVIS_SEARCH_EVERY_HOURS", "2"))
+SEARCH_HOURS = (8, 21)

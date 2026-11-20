@@ -143,6 +143,21 @@ def call_round() -> dict:
     return out
 
 
+def day_round(now: datetime | None = None) -> dict:
+    """Kleine Suchrunde tagsüber: 4 wechselnde Suchfokusse (Bereich × Region)."""
+    now = now or _now()
+    focuses = [f"Pflegefachperson {f}" for f in NURSING_FIELDS] + \
+              [f"Arzt / Ärztin {s}" for s in PHYSICIAN_SPECIALTIES]
+    n = now.toordinal() * 24 + now.hour
+    picked = [f"{focuses[(n + i) % len(focuses)]} {REGIONS[(n + i) % len(REGIONS)]}" for i in range(4)]
+    result = pipeline.run(use_folder=True, use_email=True, use_web=True, web_focuses=picked)
+    result["fokus"] = picked
+    if result.get("A") or result.get("B"):
+        messaging.notify_owner(f"🔍 Suchrunde {now:%H:%M}: {result.get('A', 0)} A- und "
+                               f"{result.get('B', 0)} B-Kandidaten neu gefunden. Details in der App.")
+    return result
+
+
 def tick() -> None:
     """Wird vom Server alle paar Minuten aufgerufen."""
     now = _now()
@@ -160,6 +175,17 @@ def tick() -> None:
             log.info("Auto-Update: %s", updater.update())
         except Exception as exc:  # noqa: BLE001
             log.error("Auto-Update fehlgeschlagen: %s", exc)
+    every = config.SEARCH_EVERY_HOURS
+    if (every > 0 and config.SEARCH_HOURS[0] <= now.hour < config.SEARCH_HOURS[1]
+            and store.get_state(conn, "morning") == date.today().isoformat()):
+        last = store.get_state(conn, "day_round")
+        due = not last or (now - datetime.fromisoformat(last)).total_seconds() >= every * 3600 - 300
+        if due:
+            store.set_state(conn, "day_round", now.isoformat(timespec="minutes"))
+            try:
+                log.info("Suchrunde: %s", day_round(now))
+            except Exception:  # noqa: BLE001
+                log.exception("Suchrunde fehlgeschlagen")
     slot = now.strftime("%Y-%m-%d %H")
     if voice.within_call_hours(now) and store.get_state(conn, "call_slot") != slot:
         store.set_state(conn, "call_slot", slot)
