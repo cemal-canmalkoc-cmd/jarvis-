@@ -478,8 +478,9 @@ main{{display:flex;flex-direction:column;height:calc(100dvh - 32px)}}
 #log{{flex:1;overflow-y:auto;padding:4px 0}}
 .m{{max-width:85%;padding:10px 14px;border-radius:16px;margin:6px 0;white-space:pre-wrap;word-wrap:break-word}}
 .b{{background:var(--card);border:1px solid var(--line)}} .u{{background:var(--accent);color:var(--accent-text);margin-left:auto}}
-#f{{display:flex;gap:8px;padding-top:8px}} #t{{flex:1;padding:12px;border-radius:12px;border:1px solid var(--line);
-background:var(--card);color:var(--text);font:inherit}} #f button{{padding:0 18px;border:0;border-radius:12px;
+#f{{display:flex;gap:8px;padding:8px 0 0;margin:0;background:none;border:0;box-shadow:none;max-width:100%}}
+#t{{flex:1;min-width:0;padding:12px;border-radius:12px;border:1px solid var(--line);
+background:var(--card);color:var(--text);font:inherit}} #f button{{flex-shrink:0;width:auto;margin:0;padding:0 18px;border:0;border-radius:12px;
 background:var(--accent);color:var(--accent-text);font:inherit;font-weight:600}}
 .hint{{font-size:13px;color:var(--muted);text-align:center;margin:4px 0}}
 </style></head><body><main>
