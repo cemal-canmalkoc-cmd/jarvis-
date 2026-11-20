@@ -24,6 +24,16 @@ def contact_number() -> str:
     return config.CONTACT_WHATSAPP or config.JARVIS_WHATSAPP_NUMBER
 
 
+def readable_number(national: bool = True) -> str:
+    """Deine WhatsApp-Nummer als Klartext, z. B. '0176 …' (Deutschland) oder '+49 176 …' (Schweiz)."""
+    d = "".join(ch for ch in contact_number() if ch.isdigit())
+    if not d:
+        return ""
+    if d.startswith("49") and len(d) > 6:
+        return (f"0{d[2:5]} {d[5:]}" if national else f"+49 {d[2:5]} {d[5:]}")
+    return "+" + d
+
+
 def wa_link(text: str = "") -> str:
     num = "".join(ch for ch in contact_number() if ch.isdigit())
     return f"https://wa.me/{num}" + (f"?text={quote(text)}" if text else "")
@@ -117,15 +127,19 @@ def portal_message(c: ScoredCandidate) -> str:
     if c.assessment.category == "lkw":
         return (f"Hallo, ich habe Ihr Stellengesuch als {role} gesehen. Ich bin {config.RECRUITER_NAME} von "
                 f"{config.AGENCY_NAME} – wir vermitteln Fahrer kostenlos an Speditionen in ganz Deutschland "
-                f"(Nah- und Fernverkehr). Interesse? Schreiben Sie mir direkt per WhatsApp (Lebenslauf gern als Foto mitschicken): {wa_short('lkw', 'portal')} "
-                f"– oder bewerben Sie sich hier: {config.PUBLIC_URL}/bewerbung?bereich=lkw")
+                f"(Nah- und Fernverkehr). Interesse? Schreiben Sie mir einfach per WhatsApp"
+                + (f" an {readable_number()}" if readable_number() else "")
+                + f" (Lebenslauf oder Führerschein gern als Foto mitschicken): {wa_short('lkw', 'portal')} "
+                f"– oder online bewerben: {config.PUBLIC_URL}/bewerbung?bereich=lkw")
     arzt = c.assessment.category == "arzt"
     who = "Ärztinnen und Ärzte" if arzt else "Pflegefachkräfte"
     help_ = "wir begleiten das MEBEKO-Verfahren" if arzt else "wir helfen bei der SRK-Anerkennung"
     return (f"Hallo, ich habe Ihr Stellengesuch als {role} gesehen. Ich bin {config.RECRUITER_NAME} von "
             f"{config.AGENCY_NAME} – wir vermitteln {who} kostenlos an Kliniken in der Schweiz ({help_}). "
-            f"Interesse? Schreiben Sie mir gern per WhatsApp (Lebenslauf als PDF/Foto genügt): "
-            f"{wa_short('arzt' if arzt else 'pflege', 'portal')} – oder online: {config.PUBLIC_URL}/bewerbung")
+            f"Interesse? Schreiben Sie mir gern per WhatsApp"
+            + (f" an {readable_number(national=False)}" if readable_number() else "")
+            + f" (Lebenslauf als PDF/Foto genügt): {wa_short('arzt' if arzt else 'pflege', 'portal')} "
+            f"– oder online: {config.PUBLIC_URL}/bewerbung")
 
 
 def portal_digest(cands: list[ScoredCandidate]) -> str | None:
