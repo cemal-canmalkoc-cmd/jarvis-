@@ -124,8 +124,9 @@ def test_morning_report_without_telephony(tw, monkeypatch):  # noqa: F811
     monkeypatch.setattr(autopilot.pipeline, "run", lambda **kw: {"geprueft": 0})
     monkeypatch.setattr(autopilot.companies, "find", lambda *a, **k: {"neu": 0})
     add_candidate(phone="+41 79 444 00 05", full_name="Ida Liste")
+    n0 = len(tw.msgs)
     autopilot.morning(force=True)
-    report = tw.msgs[-1]["body"]
+    report = "\n".join(m["body"] for m in tw.msgs[n0:])   # lange Berichte kommen in Teilen
     assert "Morgenbericht" in report and "Deine Anrufliste heute" in report and "/app" in report
     assert autopilot.call_round()["info"] == "keine Telefonie eingerichtet"
 
