@@ -59,3 +59,10 @@ def test_driver_form(monkeypatch):
                                    "bereich": "LKW-Fahrer Fernverkehr", "fuehrerschein": "CE", "fahrerkarte": "ja",
                                    "modul95": "ja", "adr": "nein", "consent_data": "1"})
     assert r.status_code == 200 and "Führerscheinklasse: CE" in seen["text"]
+
+
+def test_lkw_default_price():
+    from jarvis import pricing
+    txt = pricing.for_candidate("lkw", None)
+    assert txt.startswith("2.000 € netto pauschal (zzgl. MwSt.)") and "Erfolgshonorar" in txt
+    assert pricing.overview()["LKW"] == txt

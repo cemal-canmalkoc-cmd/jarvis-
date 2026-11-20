@@ -23,6 +23,8 @@ def area_for(category: str, role: str | None) -> str:
 def describe(row) -> str:
     if row["modell"] == "prozent_jahreslohn":
         price = f"{row['wert']:g} % des vereinbarten Bruttojahreslohns"
+    elif row["modell"] == "pauschal_eur_netto":
+        price = f"{row['wert']:,.0f}".replace(",", ".") + " € netto pauschal (zzgl. MwSt.)"
     else:
         price = f"CHF {row['wert']:,.0f}".replace(",", "'") + " pauschal"
     text = f"{price}, fällig erst bei erfolgreicher Anstellung (Erfolgshonorar)"

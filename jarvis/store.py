@@ -394,7 +394,7 @@ def record_presentation(conn: sqlite3.Connection, cand_key: str, company_id: int
 
 # --------------------------------------------------------------------------- Preise
 PRICE_AREAS = ("Pflege", "FaGe", "Arzt", "LKW")
-PRICE_MODELS = ("prozent_jahreslohn", "pauschal_chf")
+PRICE_MODELS = ("prozent_jahreslohn", "pauschal_chf", "pauschal_eur_netto")
 
 
 def set_price(conn: sqlite3.Connection, bereich: str, modell: str, wert: float,
@@ -411,8 +411,16 @@ def set_price(conn: sqlite3.Connection, bereich: str, modell: str, wert: float,
         conn.commit()
 
 
-def get_prices(conn: sqlite3.Connection) -> dict[str, sqlite3.Row]:
-    return {r["bereich"]: r for r in conn.execute("SELECT * FROM prices")}
+# Von Cemal-Can festgelegte Standardpreise (gelten, solange nichts anderes gespeichert ist)
+DEFAULT_PRICES = {
+    "LKW": {"bereich": "LKW", "modell": "pauschal_eur_netto", "wert": 2000.0, "garantie_monate": 0, "notiz": ""},
+}
+
+
+def get_prices(conn: sqlite3.Connection) -> dict:
+    prices = dict(DEFAULT_PRICES)
+    prices.update({r["bereich"]: r for r in conn.execute("SELECT * FROM prices").fetchall()})
+    return prices
 
 
 def add_notification(conn: sqlite3.Connection, text: str) -> None:
