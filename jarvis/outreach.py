@@ -82,3 +82,26 @@ def reach_out(c: ScoredCandidate) -> str:
     store.set_state(conn, key, "1")
     store.set_status(conn, store.candidate_key(c), "kontaktiert", f"E-Mail mit WhatsApp-Link an {email}")
     return "gesendet"
+
+
+
+def portal_message(c: ScoredCandidate) -> str:
+    """Kurze Nachricht zum Einfügen im Portal (kleinanzeigen, quoka, anibis …)."""
+    role = role_phrase(c.assessment)
+    return (f"Hallo, ich habe Ihr Stellengesuch als {role} gesehen. Ich bin {config.RECRUITER_NAME} von "
+            f"{config.AGENCY_NAME} – wir vermitteln Pflegekräfte kostenlos an Kliniken und Heime in der Schweiz "
+            f"(deutlich höherer Lohn, wir helfen bei der Anerkennung). Interesse? Schreiben Sie mir gern per "
+            f"WhatsApp: {contact_number()} – oder bewerben Sie sich hier: {config.PUBLIC_URL}/bewerbung")
+
+
+def portal_digest(cands: list[ScoredCandidate]) -> str | None:
+    """Eine Meldung mit allen neuen Gesuchen, die nur über das Portal erreichbar sind."""
+    rows = [c for c in cands if c.tier != "X"]
+    if not rows:
+        return None
+    lines = [f"📋 {len(rows)} neue Stellengesuche gefunden – bitte im Portal anschreiben (Text unten kopieren):", ""]
+    for c in rows[:10]:
+        a = c.assessment
+        lines.append(f"• {role_phrase(a)}, {a.current_location or '?'} – Tier {c.tier}\n  {c.source}")
+    lines += ["", "Nachricht zum Kopieren:", portal_message(rows[0])]
+    return "\n".join(lines)

@@ -82,3 +82,11 @@ def test_smtp_autodetect_and_outlook_hint(monkeypatch):
         assert "App-Kennwort" in str(exc)
     else:
         raise AssertionError("kein Fehler")
+
+
+def test_collection_page_people_stay_separate_and_digest():
+    a1 = _cand(email=None, full_name="unbekannt", current_location="Wuppertal", summary="Krankenschwester Wuppertal")
+    a2 = _cand(email=None, full_name="unbekannt", current_location="Hamburg", summary="Krankenschwester Hamburg")
+    assert store.candidate_key(a1) != store.candidate_key(a2)
+    d = outreach.portal_digest([a1, a2])
+    assert "2 neue Stellengesuche" in d and "https://tutti.ch/x" in d and "/bewerbung" in d

@@ -54,6 +54,7 @@ def run(use_folder: bool = True, use_email: bool = True, use_web: bool = False,
 
     stats = {"geprueft": 0, "neu": 0, "A": 0, "B": 0, "C": 0, "X": 0, "fehler": 0, "angeschrieben": 0}
     from . import outreach
+    portal_leads = []
     for raw in raws:
         try:
             c = evaluate(raw)
@@ -67,13 +68,21 @@ def run(use_folder: bool = True, use_email: bool = True, use_web: bool = False,
             stats["neu"] += 1
             if raw.source.startswith("http"):  # öffentliches Stellengesuch → Headhunter-Ansprache
                 try:
-                    if outreach.reach_out(c) == "gesendet":
+                    status = outreach.reach_out(c)
+                    if status == "gesendet":
                         stats["angeschrieben"] += 1
+                    elif status in ("keine_email", "email_nicht_eingerichtet"):
+                        portal_leads.append(c)
                 except Exception as exc:  # noqa: BLE001
                     log.error("Ansprache %s fehlgeschlagen: %s", raw.source, exc)
         sources.archive(raw)
         log.info("%s → %s (%d)", c.assessment.full_name, c.tier, c.score)
 
+    digest = outreach.portal_digest(portal_leads)
+    if digest:
+        from . import messaging
+        messaging.notify_owner(digest)
+    stats["portal_kontakte"] = len([c for c in portal_leads if c.tier != "X"])
     shortlist = store.todays_shortlist(conn, DAILY_SHORTLIST_SIZE)
     html_path, csv_path = report.write(shortlist)
     stats["shortlist"] = len(shortlist)

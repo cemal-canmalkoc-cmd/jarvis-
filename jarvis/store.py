@@ -119,7 +119,9 @@ def digits(phone: str | None) -> str:
 # --------------------------------------------------------------------------- Kandidaten
 def candidate_key(c: ScoredCandidate) -> str:
     a = c.assessment
-    ident = (a.phone or a.email or f"{a.full_name}|{c.source}").lower().replace(" ", "")
+    ident = (a.phone or a.email or
+             f"{a.full_name}|{c.source}|{a.current_location}|{a.nursing_field or a.physician_specialty}|{a.summary[:80]}"
+             ).lower().replace(" ", "")
     return hashlib.sha256(ident.encode()).hexdigest()[:16]
 
 

@@ -95,6 +95,11 @@ Regeln für die Extraktion:
   oder positivem Zwischenstand bei der MEBEKO. "fehlt" bei ausländischem Diplom ohne Verfahren.
 - german_level: höchstes nachgewiesenes oder klar angegebenes Niveau; Muttersprache Deutsch = "muttersprache".
 - FaGe zählt als Pflege (category "pflege", nursing_field "FaGe").
+- Abschluss-Begriffe wie "examiniert", "gelernt", "staatlich anerkannt", "Diplom", "HF", "FH", "B.Sc. Nursing",
+  "Gesundheits- und Krankenpfleger/in", "Pflegefachfrau/-mann" bedeuten has_diploma_certificate = true.
+  "Pflegehelfer/in", "Pflegeassistenz", "Betreuungskraft", "Auszubildende/r" bedeuten false.
+- Altenpfleger/in → category "pflege", nursing_field "Geriatrie / Langzeitpflege".
+- Deutsches Diplom ohne Hinweis auf ein Anerkennungsverfahren → recognition_status "fehlt".
 - currently_in_switzerland: true nur, wenn Wohnort/aktuelle Stelle klar in der Schweiz liegt.
 - evidence: 2-5 kurze wörtliche Zitate, die die wichtigsten Angaben belegen.
 - summary: 1-2 Sätze auf Deutsch für den Recruiter."""
@@ -134,14 +139,22 @@ Deine Aufgabe: Finde im öffentlichen Web Personen, die SELBST aktiv nach einer 
 (z.B. öffentliche Stellengesuche, Inserate "suche Stelle als Pflegefachfrau", öffentlich
 gestellte Kandidatenprofile auf Jobportalen, die zur Kontaktaufnahme freigegeben sind).
 
-Wo es solche Gesuche tatsächlich gibt – dort gezielt suchen (z.B. mit site:):
-- Kleinanzeigen-Rubriken "Stellengesuche": kleinanzeigen.de (Stellengesuche → Pflege/Medizin),
-  markt.de, quoka.de, tutti.ch, anibis.ch, ricardo-ähnliche CH-Portale
-- Suchbegriffe: "Stellengesuch", "suche Stelle", "suche Arbeit", "suche neue Herausforderung",
-  "Pflegefachkraft sucht", "Krankenschwester sucht", "Arzt sucht Stelle", jeweils mit "Schweiz"
-  oder "Umzug Schweiz" – auch Personen in Deutschland/Österreich, die in die Schweiz wollen, passen.
-- Stellenangebote von Arbeitgebern oder Personalfirmen sind KEINE Treffer.
-- Kontakt über das Portal (Nachricht an Inserent) reicht: dann ist die Inserats-URL der Kontaktweg.
+So gehst du vor (bewährt – genau so suchen):
+1. Führe diese Suchen aus (Beruf jeweils passend zum Fokus einsetzen, z.B. Krankenschwester,
+   Pflegefachkraft, Altenpflegerin, Gesundheits- und Krankenpflegerin, Pflegefachfrau HF, Arzt):
+   - "kleinanzeigen.de Stellengesuche <Beruf> sucht Stelle"
+   - "quoka.de Stellengesuche <Beruf> sucht Stelle"
+   - "anibis.ch Gesundheitswesen Stellengesuch <Beruf>"
+   - "tutti.ch Stellengesuch <Beruf>"
+   - "medi-jobs.de Stellengesuche <Bereich>"
+   - "<Beruf> sucht neue Stelle Schweiz"
+2. Diese Treffer sind oft SAMMELSEITEN mit mehreren Gesuchen. Lies den Inhalt und nimm JEDE einzelne
+   Person als eigenen Eintrag auf (Beruf, Ort, Erfahrung, Wunsch, Kontaktweg).
+3. Stellenangebote von Arbeitgebern, 24h-Betreuungs-Vermittler und Gesuche, die erkennbar älter als
+   12 Monate sind, weglassen. Auszubildende/Hilfskräfte nur aufnehmen, wenn sonst nichts da ist.
+4. Kontakt über das Portal (Nachricht an Inserent) reicht: dann ist die Inserats- oder Sammelseiten-URL
+   der Kontaktweg. E-Mail-Adressen nur übernehmen, wenn sie öffentlich in der Anzeige stehen.
+5. Auch Personen aus Deutschland/Österreich passen (Umzug in die Schweiz ist unser Angebot).
 
 Strikte Regeln:
 - Nur Personen, die öffentlich und freiwillig ihre Jobsuche inklusive Kontaktmöglichkeit gepostet haben.
@@ -150,9 +163,11 @@ Strikte Regeln:
 - Bevorzuge Personen, die aktuell in der Schweiz sind.
 - Gib für jede Person die exakte Quell-URL an.
 
-Antworte am Ende ausschliesslich mit einem JSON-Codeblock:
+Antworte am Ende ausschliesslich mit einem JSON-Codeblock. profile_text muss ALLE Angaben aus der Anzeige
+enthalten: Berufsbezeichnung/Abschluss wörtlich, Ort mit PLZ und Land, Erfahrung, Alter/Jahrgang, gewünschtes
+Pensum, Verfügbarkeit, Datum des Gesuchs, Kontaktweg (Portal/E-Mail):
 ```json
-[{{"source_url": "...", "profile_text": "alle relevanten Angaben wörtlich bzw. sinngemäss aus der Quelle"}}]
+[{{"source_url": "...", "profile_text": "..."}}]
 ```
 Leeres Array, wenn nichts Passendes gefunden wurde."""
 
