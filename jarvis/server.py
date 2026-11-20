@@ -56,6 +56,7 @@ async def lifespan(_: FastAPI):
         from . import budget
         budget.ensure_defaults()
         budget.ensure_defaults_v3()
+        budget.ensure_defaults_v4()
     except Exception:  # noqa: BLE001
         logging.getLogger("jarvis").exception("Standardwerte nicht gesetzt")
     task = None

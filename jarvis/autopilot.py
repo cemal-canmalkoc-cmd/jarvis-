@@ -230,6 +230,7 @@ def tick() -> None:
     if (now.hour >= config.MORNING_HOUR and store.get_state(conn, "morning") != date.today().isoformat()
             and not budget.auto_allowed(morning_cost)):
         store.set_state(conn, "morning", date.today().isoformat())
+        store.set_state(conn, f"morning_skipped:{date.today()}", "1")
         budget.ask_once("heute nach Kandidaten suchen", morning_cost)
     if now.hour >= config.MORNING_HOUR and store.get_state(conn, "morning") != date.today().isoformat():
         try:
@@ -269,7 +270,8 @@ def tick() -> None:
         except Exception as exc:  # noqa: BLE001
             log.error("Postfach fehlgeschlagen: %s", exc)
     if not budget.autonomy_active():
-        budget.remind_autonomy()
+        if now.hour >= config.MORNING_HOUR:
+            budget.remind_autonomy()
     elif config.DAILY_MINIMUM > 0 and now.hour in (9, 13, 17):
         key = f"minimum:{date.today()}:{now.hour}"
         if not store.get_state(conn, key):

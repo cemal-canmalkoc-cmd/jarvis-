@@ -179,7 +179,8 @@ async def uebersicht(request: Request):
     stats["minimum"] = config.DAILY_MINIMUM
     from . import inbox
     until = budget.autonomy_until()
-    stats["autonomie"] = {"aktiv": budget.autonomy_active(), "bis": f"{until:%d.%m.%Y}", "tage": config.AUTO_DAYS,
+    stats["autonomie"] = {"aktiv": budget.autonomy_active(), "taeglich": config.ASK_DAILY,
+                          "budget": config.DAILY_BUDGET_USD, "bis": f"{until:%d.%m.%Y}", "tage": config.AUTO_DAYS,
                           "bald": (until - date.today()).days <= 1, "chat_heute": budget.chat_spend_today(),
                           "chat_max": config.CHAT_MAX_USD, "postfach": inbox.status_text(),
                           "gespraeche": conn.execute("SELECT COUNT(*) FROM convos").fetchone()[0]}

@@ -91,11 +91,31 @@ def autonomy_until() -> date:
     return date.fromisoformat(v)
 
 
+def approved_today() -> bool:
+    return store.get_state(store.connect(), f"approved:{date.today()}") == "1"
+
+
 def autonomy_active() -> bool:
+    """Darf Jarvis heute von sich aus Geld ausgeben?
+    ASK_DAILY (Standard): nur, wenn du heute in der App „Ja“ getippt hast. Sonst: 5-Tage-Freigabe."""
+    if config.ASK_DAILY:
+        return approved_today()
     return date.today() <= autonomy_until()
 
 
+def approve_today() -> str:
+    conn = store.connect()
+    store.set_state(conn, f"approved:{date.today()}", "1")
+    if store.get_state(conn, f"morning_skipped:{date.today()}"):   # Morgensuche jetzt nachholen
+        store.set_state(conn, "morning", "")
+        store.set_state(conn, f"morning_skipped:{date.today()}", "")
+    return (f"✅ Danke! Jarvis arbeitet heute selbstständig – höchstens {config.DAILY_BUDGET_USD:.2f} $. "
+            f"Morgen früh fragt er dich wieder.")
+
+
 def autonomy_continue() -> str:
+    if config.ASK_DAILY:
+        return approve_today()
     until = date.today() + timedelta(days=max(1, config.AUTO_DAYS) - 1)
     store.set_state(store.connect(), "auto_until", until.isoformat())
     return f"✅ Jarvis arbeitet selbstständig weiter bis {until:%d.%m.%Y} (max. {config.CHAT_MAX_USD:.2f} $ pro Tag für Gespräche)."
@@ -133,6 +153,15 @@ def ensure_defaults() -> None:
     store.set_state(conn, "autonomy_version", AUTONOMY_VERSION)
 
 
+def ensure_defaults_v4() -> None:
+    """Einmalig: täglich fragen statt automatisch ausgeben (Wunsch des Inhabers)."""
+    conn = store.connect()
+    if store.get_state(conn, "defaults_v4"):
+        return
+    store.save_setting(conn, "ASK_DAILY", "1")
+    store.set_state(conn, "defaults_v4", "1")
+
+
 def ensure_defaults_v3() -> None:
     """Einmalig: Bewerber direkt ins WhatsApp, häufiger suchen (innerhalb 1 $/Tag). Freigabe bleibt wie sie ist."""
     conn = store.connect()
@@ -151,7 +180,11 @@ def remind_autonomy() -> None:
     if store.get_state(conn, key):
         return
     store.set_state(conn, key, "1")
-    if not autonomy_active():
+    if config.ASK_DAILY and not autonomy_active():
+        messaging.notify_owner(f"☀️ Guten Morgen! Darf ich heute nach Leuten suchen und Inserate schreiben – höchstens "
+                               f"{config.DAILY_BUDGET_USD:.2f} $? Ohne dein Ja gebe ich nichts aus.\n"
+                               f"👉 App öffnen → „✅ Ja, heute arbeiten“ tippen (oder Jarvis „ja“ schreiben).")
+    elif not autonomy_active():
         messaging.notify_owner(f"⏸️ Die {config.AUTO_DAYS}-Tage-Freigabe ist abgelaufen. Jarvis gibt kein Geld mehr aus "
                                f"(keine Suche, keine Inserate, Antworten ohne KI) und wartet auf dich: In der App auf "
                                f"„▶️ Weiter ({config.AUTO_DAYS} Tage)“ tippen oder Jarvis „weiter“ sagen.")

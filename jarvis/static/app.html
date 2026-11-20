@@ -227,12 +227,15 @@ async function load() {
   $("#rev-sum").textContent = `${fmt(u.umsatz)} / ${fmt(s.umsatz_ziel || 25000)}`;
   $("#rev-txt").textContent = `${u.vermittlungen} Vermittlungen · davon bezahlt ${fmt(u.bezahlt)}`;
   const au = s.autonomie || {};
-  $("#auto-txt").textContent = au.aktiv
+  $("#auto-txt").textContent = au.taeglich
+    ? (au.aktiv ? `✅ Heute freigegeben (max. ${(au.budget || 1).toFixed(2)} $) · Kosten heute ${s.kosten_heute.toFixed(2)} $`
+                : `⏸️ Wartet auf dein Ja – ohne Ja gibt Jarvis heute nichts aus.`)
+    : au.aktiv
     ? `Freigegeben bis ${au.bis} · Gespräche heute ${(au.chat_heute || 0).toFixed(3)} / ${(au.chat_max || 0).toFixed(2)} $`
       + ` · ${au.gespraeche || 0} KI-Gespräche gesamt` + " · " + (au.postfach || "")
     : `⏸️ Pausiert seit ${au.bis} – Jarvis antwortet nur ohne KI.`;
-  $("#auto-go").textContent = `▶️ Weiter (${au.tage || 5} Tage)`;
-  $("#auto-go").style.display = au.aktiv && !au.bald ? "none" : "";
+  $("#auto-go").textContent = au.taeglich ? `✅ Ja, heute arbeiten (max. ${(au.budget || 1).toFixed(2)} $)` : `▶️ Weiter (${au.tage || 5} Tage)`;
+  $("#auto-go").style.display = au.aktiv && (au.taeglich || !au.bald) ? "none" : "";
   renderCalls(); renderCands(); renderFirms(); renderNews(); loadSales(); renderTodo();
 }
 

@@ -174,3 +174,20 @@ def test_outlook_uses_microsoft_login_instead_of_password(monkeypatch):
     assert "user=hansa.personal@outlook.de" in s and "Bearer at-xyz" in s
     assert ("sent", "x@example.org") in calls
     store.set_state(store.connect(), "ms_refresh_token", "")
+
+
+def test_daily_approval_asks_first_and_catches_up_morning(monkeypatch):
+    from jarvis import budget as b
+    monkeypatch.setattr(config, "ASK_DAILY", True)
+    monkeypatch.setattr(config, "DAILY_BUDGET_USD", 1.0)
+    conn = store.connect()
+    store.set_state(conn, f"approved:{date.today()}", "")
+    store.set_state(conn, f"spend:{date.today()}", "0")
+    store.set_state(conn, f"chat_spend:{date.today()}", "0")
+    assert not b.auto_allowed(0.01) and not b.chat_allowed(0.001)      # ohne Ja: nichts ausgeben
+    store.set_state(conn, "morning", date.today().isoformat())
+    store.set_state(conn, f"morning_skipped:{date.today()}", "1")
+    assert "heute selbstständig" in b.autonomy_continue()               # Ja in der App
+    assert b.auto_allowed(0.01) and b.chat_allowed(0.001)
+    assert store.get_state(conn, "morning") == ""                        # Morgensuche wird nachgeholt
+    store.set_state(conn, f"approved:{date.today()}", "")

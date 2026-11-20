@@ -345,8 +345,8 @@ TOOLS = {
                              "schritt": {"type": "string", "enum": ["gespraech", "eingestellt", "unterlagen_senden", "dokumente_anfordern"]},
                              "firma_id": {"type": "integer"}, "datum": {"type": "string"}, "honorar": {"type": "number"}}),
     "umsatz": (t_umsatz, "Umsatz des Monats, offene Rechnungen, Ziel.", {}),
-    "freigabe_weiter": (t_weiter, "Selbstständigen Betrieb (KI-Gespräche, Suche) für weitere 5 Tage freigeben – "
-                        "wenn der Inhaber 'weiter' sagt.", {}),
+    "freigabe_weiter": (t_weiter, "Selbstständige Arbeit (Suche, Inserate, KI-Gespräche) für HEUTE freigeben – "
+                        "wenn der Inhaber 'ja', 'weiter' oder 'leg los' auf die Morgenfrage antwortet.", {}),
     "rechnung_senden": (t_rechnung_senden, "PDF-Rechnung für eine Vermittlung erstellen und an die Firma senden. "
                         "NUR wenn der Inhaber es ausdrücklich verlangt.",
                         {"vermittlung_id": {"type": "integer"}, "adresse": {"type": "string",

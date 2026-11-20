@@ -202,6 +202,8 @@ AUTO_INVOICE = os.environ.get("JARVIS_AUTO_INVOICE", "0").strip().lower() in ("1
 # solange die Freigabe läuft (AUTO_DAYS Tage; danach in der App auf „Weiter" tippen).
 CHAT_MAX_USD = float(os.environ.get("JARVIS_CHAT_MAX_USD", "0.20"))
 AUTO_DAYS = int(os.environ.get("JARVIS_AUTO_DAYS", "5"))
+# Jeden Tag fragen: ohne dein „Ja“ in der App gibt Jarvis an dem Tag nichts automatisch aus
+ASK_DAILY = os.environ.get("JARVIS_ASK_DAILY", "1").strip().lower() in ("1", "true", "ja")
 # Postfach lesen und beantworten (gleiche Zugangsdaten wie der E-Mail-Versand)
 AUTO_INBOX = os.environ.get("JARVIS_AUTO_INBOX", "1").strip().lower() in ("1", "true", "ja")
 IMAP_HOST = os.environ.get("JARVIS_IMAP_HOST", "")
