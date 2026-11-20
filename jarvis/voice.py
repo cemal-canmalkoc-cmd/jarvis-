@@ -584,3 +584,36 @@ def finalize_call(call_id: int, transcript: list[dict]) -> None:
             f"Nächster Schritt: {result['next_step']}"
             + (f"\nKontakt: {result.get('contact_name') or ''} {result['contact_email']}"
                if result.get("contact_email") else ""))
+
+
+
+# --------------------------------------------------------------------------- Anruf an dich (Owner)
+def owner_call_ready() -> bool:
+    return bool(config.OWNER_PHONE and config.TWILIO_ACCOUNT_SID and config.TWILIO_AUTH_TOKEN
+                and config.TWILIO_VOICE_FROM)
+
+
+def call_owner(text: str, force: bool = False) -> str:
+    """Ruft dich an und liest eine kurze Nachricht vor (zweimal)."""
+    from datetime import date
+    from xml.sax.saxutils import escape
+    if not owner_call_ready():
+        return ("Anruf nicht möglich: Telefonie ist noch nicht eingerichtet "
+                "(Twilio-Konto + deine Nummer unter ⚙️ Verbindungen).")
+    conn = store.connect()
+    key = f"ownercalls:{date.today()}"
+    n = int(store.get_state(conn, key) or 0)
+    if not force:
+        now = datetime.now(ZoneInfo(config.TIMEZONE))
+        if not (9 <= now.hour < 20):
+            return "Kein Anruf: ausserhalb 9–20 Uhr."
+        if n >= config.OWNER_CALLS_PER_DAY:
+            return "Kein Anruf: Tageslimit erreicht."
+    say = escape(text)
+    twiml = (f'<Response><Pause length="1"/><Say language="de-DE">{say}</Say><Pause length="1"/>'
+             f'<Say language="de-DE">Ich wiederhole. {say} Alle Details findest du in der Jarvis App. '
+             f'Tschüss.</Say></Response>')
+    number = e164(config.OWNER_PHONE)
+    messaging.twilio().calls.create(to=number, from_=config.TWILIO_VOICE_FROM, twiml=twiml, time_limit=120)
+    store.set_state(conn, key, str(n + 1))
+    return f"📞 Rufe dich an ({number})."

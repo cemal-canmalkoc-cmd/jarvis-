@@ -152,3 +152,7 @@ META_PAGE_TOKEN = os.environ.get("META_PAGE_TOKEN", "")  # dauerhaftes Seiten-To
 
 # Deine WhatsApp-Nummer, über die sich Kandidaten bei dir melden (Inserate, E-Mails, Formular).
 CONTACT_WHATSAPP = os.environ.get("JARVIS_CONTACT_WHATSAPP", "")
+
+# Jarvis ruft DICH an, wenn er gute Kandidaten gefunden hat (Twilio nötig). Max. Anrufe pro Tag.
+OWNER_PHONE = os.environ.get("JARVIS_OWNER_PHONE", "")
+OWNER_CALLS_PER_DAY = int(os.environ.get("JARVIS_OWNER_CALLS_PER_DAY", "3"))

@@ -63,6 +63,8 @@ def morning(force: bool = False) -> dict:
                 log.error("Firmensuche fehlgeschlagen: %s", exc)
 
     stats = store.stats_today(conn)
+    if result.get("A") or result.get("B"):
+        _maybe_call_owner(result.get("A", 0), result.get("B", 0))
     top = store.todays_shortlist(conn, 10)
     lines = [f"📋 *Jarvis Morgenbericht {date.today():%d.%m.}*",
              f"Vermittelbar heute: *{stats['vermittelbar_heute']}* / Ziel {config.DAILY_TARGET}",
@@ -143,6 +145,15 @@ def call_round() -> dict:
     return out
 
 
+def _maybe_call_owner(a: int, b: int) -> None:
+    try:
+        text = (f"Hallo Cemal-Can, hier ist Jarvis. Ich habe gerade {a} sehr gute und {b} gute "
+                f"Kandidaten gefunden.")
+        log.info(voice.call_owner(text))
+    except Exception as exc:  # noqa: BLE001
+        log.error("Anruf an Owner fehlgeschlagen: %s", exc)
+
+
 def day_round(now: datetime | None = None) -> dict:
     """Kleine Suchrunde tagsüber: 4 wechselnde Suchfokusse (Bereich × Region)."""
     now = now or _now()
@@ -153,6 +164,7 @@ def day_round(now: datetime | None = None) -> dict:
     result = pipeline.run(use_folder=True, use_email=True, use_web=True, web_focuses=picked)
     result["fokus"] = picked
     if result.get("A") or result.get("B"):
+        _maybe_call_owner(result.get("A", 0), result.get("B", 0))
         messaging.notify_owner(f"🔍 Suchrunde {now:%H:%M}: {result.get('A', 0)} A- und "
                                f"{result.get('B', 0)} B-Kandidaten neu gefunden. Details in der App.")
     return result

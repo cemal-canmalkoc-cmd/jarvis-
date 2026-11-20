@@ -42,3 +42,18 @@ def test_contact_in_ads_and_agent(monkeypatch):
     assert "Headhunter" in agent.OWNER_SYSTEM
     keys = {s["key"] for s in store.settings_overview()}
     assert "META_TOKEN" not in keys and "SMTP_PASSWORD" in keys and "CONTACT_WHATSAPP" in keys
+
+
+def test_owner_call(monkeypatch):
+    from types import SimpleNamespace
+    from jarvis import messaging, voice
+    calls = []
+    monkeypatch.setattr(messaging, "_twilio", SimpleNamespace(calls=SimpleNamespace(create=lambda **kw: calls.append(kw))))
+    monkeypatch.setattr(config, "OWNER_PHONE", "")
+    assert "nicht eingerichtet" in voice.call_owner("x", force=True)
+    monkeypatch.setattr(config, "OWNER_PHONE", "+49 151 00000000")
+    monkeypatch.setattr(config, "TWILIO_ACCOUNT_SID", "AC")
+    monkeypatch.setattr(config, "TWILIO_AUTH_TOKEN", "t")
+    monkeypatch.setattr(config, "TWILIO_VOICE_FROM", "+4930000000")
+    assert agent.t_mich_anrufen().startswith("📞")
+    assert calls[0]["to"] == "+4915100000000" and "Testanruf" in calls[0]["twiml"] and 'de-DE' in calls[0]["twiml"]

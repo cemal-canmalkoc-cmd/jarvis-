@@ -203,6 +203,11 @@ def t_inserat_posten(text: str = "", zielgruppe: str = "") -> str:
     return f"✅ Auf der Facebook-Seite gepostet (ID {ads.post_facebook_page(text)})."
 
 
+def t_mich_anrufen(nachricht: str = "") -> str:
+    return voice.call_owner(nachricht or "Hallo Cemal-Can, hier ist Jarvis. Das ist ein Testanruf. "
+                                       "Die Verbindung funktioniert.", force=True)
+
+
 def t_update() -> dict:
     from . import updater
     return updater.update(force=True)
@@ -277,6 +282,8 @@ TOOLS = {
     "inserat_posten": (t_inserat_posten, "Inserat sofort auf der Facebook-Seite von Hansa Personal veröffentlichen.",
                        {"text": {"type": "string", "description": "leer = Jarvis schreibt selbst"},
                         "zielgruppe": {"type": "string"}}),
+    "mich_anrufen": (t_mich_anrufen, "Cemal-Can sofort anrufen und eine Nachricht vorlesen (z.B. Testanruf).",
+                     {"nachricht": {"type": "string"}}),
     "jarvis_aktualisieren": (t_update, "Neueste Jarvis-Version von GitHub installieren und neu starten.", {}),
     "autopilot_jetzt": (t_autopilot_jetzt, "Kompletten Tagesablauf sofort ausführen.", {}),
 }

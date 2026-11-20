@@ -296,6 +296,16 @@ async def einstellungen_setzen(request: Request, daten: dict = Body(...)):
     return {"meldung": "Gespeichert ✅"}
 
 
+@router.post("/api/testanruf")
+async def testanruf(request: Request):
+    authed(request)
+    try:
+        msg = await asyncio.to_thread(agent.t_mich_anrufen)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(502, f"Anruf fehlgeschlagen: {exc}") from exc
+    return {"meldung": msg}
+
+
 @router.post("/api/update")
 async def update_now(request: Request):
     """Neueste Jarvis-Version von GitHub holen und neu starten."""

@@ -433,10 +433,14 @@ EDITABLE_SETTINGS = {
     "SMTP_USER": "Dein GMX-Login (E-Mail-Adresse) – damit Jarvis Kandidaten anschreibt",
     "SMTP_PASSWORD": "Dein GMX-Passwort",
     "CONTACT_WHATSAPP": "Deine WhatsApp-Nummer für Kandidaten",
+    "OWNER_PHONE": "Deine Handynummer für Jarvis-Anrufe",
+    "TWILIO_ACCOUNT_SID": "Twilio Account SID",
+    "TWILIO_AUTH_TOKEN": "Twilio Auth Token",
+    "TWILIO_VOICE_FROM": "Twilio-Telefonnummer (Absender)",
     "SEARCH_EVERY_HOURS": "Suche alle X Stunden",
     "ADS_PER_DAY": "Inserate pro Tag",
 }
-SECRET_SETTINGS = {"META_PAGE_TOKEN", "SMTP_PASSWORD"}
+SECRET_SETTINGS = {"META_PAGE_TOKEN", "SMTP_PASSWORD", "TWILIO_AUTH_TOKEN"}
 
 
 def apply_settings(conn: sqlite3.Connection | None = None) -> None:
@@ -449,6 +453,8 @@ def apply_settings(conn: sqlite3.Connection | None = None) -> None:
             continue
         cur = getattr(config, key, "")
         setattr(config, key, int(val) if isinstance(cur, int) and val.strip().lstrip("-").isdigit() else val)
+    from . import messaging
+    messaging._twilio = None  # neue Zugangsdaten sofort verwenden
 
 
 def save_setting(conn: sqlite3.Connection, key: str, value: str) -> None:

@@ -110,6 +110,7 @@ nav button.on{color:var(--accent)}
   <h2>Schnellbefehle</h2>
   <div class="chips" id="quick"></div>
   <button class="btn sec" id="update-btn">⬇️ Jarvis aktualisieren</button>
+  <button class="btn sec" id="call-btn">📞 Testanruf an mich</button>
   <button class="btn sec" id="settings-btn">⚙️ Verbindungen &amp; Einstellungen</button>
   <h2>Meldungen</h2>
   <div id="news"></div>
@@ -399,6 +400,9 @@ $("#update-btn").onclick = async () => {
   } catch (e) { toast("Fehler: " + e.message); }
 };
 
+$("#call-btn").onclick = async () => {
+  try { toast((await api("/api/testanruf", {method: "POST"})).meldung); } catch (e) { toast(e.message); }
+};
 $("#settings-btn").onclick = async () => {
   let list; try { list = await api("/api/einstellungen"); } catch (e) { return toast(e.message); }
   const inputs = {};
