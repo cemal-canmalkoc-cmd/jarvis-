@@ -72,6 +72,30 @@ CREATE TABLE IF NOT EXISTS notifications (
     created TEXT,
     text TEXT
 );
+CREATE TABLE IF NOT EXISTS documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cand_key TEXT,
+    typ TEXT,
+    path TEXT,
+    uploaded TEXT
+);
+CREATE TABLE IF NOT EXISTS placements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cand_key TEXT,
+    company_id INTEGER,
+    start_date TEXT,
+    fee REAL,
+    currency TEXT,
+    status TEXT DEFAULT 'offen',      -- offen | rechnung | bezahlt | storniert
+    created TEXT
+);
+CREATE TABLE IF NOT EXISTS sales_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    company_id INTEGER,
+    result TEXT,                       -- interesse | kein_bedarf | nicht_erreicht | rueckruf
+    note TEXT,
+    created TEXT
+);
 CREATE TABLE IF NOT EXISTS optout (
     phone TEXT PRIMARY KEY,
     added TEXT
@@ -88,9 +112,11 @@ CANDIDATE_EXTRA_COLUMNS = {
 COMPANY_EXTRA_COLUMNS = {
     "email": "TEXT",          # Ansprechperson HR (aus Telefonat oder manuell)
     "contact_name": "TEXT",
+    "agreement": "TEXT",      # Datum, an dem die Vermittlungsvereinbarung verschickt/bestätigt wurde
+    "branche": "TEXT",        # gesundheit | lkw
 }
 
-STATUSES = ("neu", "kontaktiert", "interessiert", "kein_interesse", "vermittelt")
+STATUSES = ("neu", "kontaktiert", "interessiert", "vorgestellt", "gespraech", "kein_interesse", "vermittelt")
 COMPANY_STATUSES = ("neu", "angerufen", "interessiert", "kunde", "kein_bedarf", "nicht_anrufen")
 
 _lock = threading.Lock()
@@ -512,3 +538,75 @@ def delete_candidate(conn: sqlite3.Connection, key: str) -> bool:
         conn.execute("DELETE FROM candidates WHERE key=?", (row["key"],))
         conn.commit()
     return True
+
+
+# --------------------------------------------------------------------------- Dokumente
+DOC_TYPES = {
+    "lkw": {"lebenslauf": "Lebenslauf", "fuehrerschein": "Führerschein (Vorder- und Rückseite)",
+            "fahrerkarte": "Fahrerkarte", "modul95": "Nachweis Modul 95 / Schlüsselzahl 95",
+            "adr": "ADR-Schein (falls vorhanden)"},
+    "pflege": {"lebenslauf": "Lebenslauf", "diplom": "Diplom / Berufsurkunde",
+               "deutsch": "Deutsch-Zertifikat (B2 oder höher)", "anerkennung": "SRK-Anerkennung / Pre-Check (falls vorhanden)"},
+    "arzt": {"lebenslauf": "Lebenslauf", "diplom": "Approbation / Facharzturkunde",
+             "deutsch": "Deutsch-Zertifikat (C1)", "anerkennung": "MEBEKO-Anerkennung (falls vorhanden)"},
+}
+REQUIRED_DOCS = {"lkw": ("lebenslauf", "fuehrerschein", "fahrerkarte", "modul95"),
+                 "pflege": ("lebenslauf", "diplom", "deutsch"), "arzt": ("lebenslauf", "diplom", "deutsch")}
+
+
+def add_document(conn: sqlite3.Connection, cand_key: str, typ: str, path: str) -> None:
+    with _lock:
+        conn.execute("INSERT INTO documents (cand_key, typ, path, uploaded) VALUES (?,?,?,?)",
+                     (cand_key, typ, path, datetime.now().isoformat(timespec="minutes")))
+        conn.commit()
+
+
+def documents(conn: sqlite3.Connection, cand_key: str) -> list[dict]:
+    return [dict(r) for r in conn.execute("SELECT * FROM documents WHERE cand_key=? ORDER BY id",
+                                          (cand_key,)).fetchall()]
+
+
+def doc_status(conn: sqlite3.Connection, cand_key: str, category: str) -> dict:
+    cat = category if category in REQUIRED_DOCS else "pflege"
+    have = {d["typ"] for d in documents(conn, cand_key)}
+    if get_state(conn, f"cv:{cand_key}"):
+        have.add("lebenslauf")
+    missing = [DOC_TYPES[cat][t] for t in REQUIRED_DOCS[cat] if t not in have]
+    return {"vorhanden": sorted(have), "fehlt": missing, "komplett": not missing}
+
+
+# --------------------------------------------------------------------------- Vermittlungen & Umsatz
+def add_placement(conn: sqlite3.Connection, cand_key: str, company_id: int | None, start_date: str,
+                  fee: float, currency: str = "EUR") -> int:
+    with _lock:
+        cur = conn.execute("INSERT INTO placements (cand_key, company_id, start_date, fee, currency, created) "
+                           "VALUES (?,?,?,?,?,?)", (cand_key, company_id, start_date, fee, currency,
+                                                    datetime.now().isoformat(timespec="minutes")))
+        conn.commit()
+    return cur.lastrowid
+
+
+def placements(conn: sqlite3.Connection, status: str | None = None) -> list[dict]:
+    q = "SELECT * FROM placements" + (" WHERE status=?" if status else "") + " ORDER BY start_date"
+    return [dict(r) for r in conn.execute(q, (status,) if status else ()).fetchall()]
+
+
+def set_placement_status(conn: sqlite3.Connection, pid: int, status: str) -> None:
+    with _lock:
+        conn.execute("UPDATE placements SET status=? WHERE id=?", (status, pid))
+        conn.commit()
+
+
+def revenue_month(conn: sqlite3.Connection, month: str | None = None) -> dict:
+    month = month or date.today().strftime("%Y-%m")
+    rows = conn.execute("SELECT fee, status FROM placements WHERE substr(start_date,1,7)=? AND status!='storniert'",
+                        (month,)).fetchall()
+    return {"monat": month, "vermittlungen": len(rows), "umsatz": sum(r["fee"] or 0 for r in rows),
+            "bezahlt": sum(r["fee"] or 0 for r in rows if r["status"] == "bezahlt")}
+
+
+def log_sale(conn: sqlite3.Connection, company_id: int, result: str, note: str = "") -> None:
+    with _lock:
+        conn.execute("INSERT INTO sales_log (company_id, result, note, created) VALUES (?,?,?,?)",
+                     (company_id, result, note, datetime.now().isoformat(timespec="minutes")))
+        conn.commit()

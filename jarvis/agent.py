@@ -11,7 +11,7 @@ import json
 import logging
 import re
 import threading
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 import anthropic
 import requests
@@ -208,6 +208,37 @@ def t_mich_anrufen(nachricht: str = "") -> str:
                                        "Die Verbindung funktioniert.", force=True)
 
 
+def t_vertriebsplan() -> list[dict]:
+    from . import deals
+    return [{k: v for k, v in p.items() if k != "skript"} for p in deals.sales_plan()] or \
+        [{"info": "Keine Firma zum Anrufen – zuerst braucht es interessierte Bewerber oder gespeicherte Firmen."}]
+
+
+def t_anruf_ergebnis(firma_id: int, ergebnis: str, email: str = "", ansprechperson: str = "", notiz: str = "") -> str:
+    from . import deals
+    return deals.record_call(firma_id, ergebnis, email, ansprechperson, notiz)
+
+
+def t_vermittlungsschritt(id: str, schritt: str, firma_id: int = 0, datum: str = "", honorar: float = 0) -> str:
+    from . import deals
+    if schritt == "gespraech":
+        return deals.mark_interview(id, datum, firma_id or None)
+    if schritt == "eingestellt":
+        return deals.mark_hired(id, firma_id or None, datum or date.today().isoformat(), honorar or None)
+    if schritt == "unterlagen_senden":
+        return deals.send_documents(id, firma_id)
+    if schritt == "dokumente_anfordern":
+        row = store.get_candidate(store.connect(), id)
+        return deals.doc_request_text(row) if row else "Kandidat nicht gefunden."
+    return "Unbekannter Schritt."
+
+
+def t_umsatz() -> dict:
+    conn = store.connect()
+    return {"monat": store.revenue_month(conn), "ziel": config.REVENUE_GOAL,
+            "offen": store.placements(conn, "offen"), "rechnung": store.placements(conn, "rechnung")}
+
+
 def t_update() -> dict:
     from . import updater
     return updater.update(force=True)
@@ -286,11 +317,24 @@ TOOLS = {
                         "zielgruppe": {"type": "string"}}),
     "mich_anrufen": (t_mich_anrufen, "Cemal-Can sofort anrufen und eine Nachricht vorlesen (z.B. Testanruf).",
                      {"nachricht": {"type": "string"}}),
+    "vertriebsplan": (t_vertriebsplan, "Firmen, die heute angerufen werden sollen (mit passendem Kandidaten).", {}),
+    "anruf_ergebnis": (t_anruf_ergebnis, "Ergebnis eines Firmenanrufs speichern. Bei 'interesse' + E-Mail schickt Jarvis "
+                       "Vereinbarung und anonyme Profile.",
+                       {"firma_id": {"type": "integer"},
+                        "ergebnis": {"type": "string", "enum": ["interesse", "nicht_erreicht", "rueckruf", "kein_bedarf", "nicht_anrufen"]},
+                        "email": {"type": "string"}, "ansprechperson": {"type": "string"}, "notiz": {"type": "string"}}),
+    "vermittlungsschritt": (t_vermittlungsschritt, "Kandidaten im Ablauf weiterschieben: gespraech (datum), eingestellt "
+                            "(firma_id, datum=Startdatum), unterlagen_senden (firma_id), dokumente_anfordern.",
+                            {"id": {"type": "string"},
+                             "schritt": {"type": "string", "enum": ["gespraech", "eingestellt", "unterlagen_senden", "dokumente_anfordern"]},
+                             "firma_id": {"type": "integer"}, "datum": {"type": "string"}, "honorar": {"type": "number"}}),
+    "umsatz": (t_umsatz, "Umsatz des Monats, offene Rechnungen, Ziel.", {}),
     "jarvis_aktualisieren": (t_update, "Neueste Jarvis-Version von GitHub installieren und neu starten.", {}),
     "autopilot_jetzt": (t_autopilot_jetzt, "Kompletten Tagesablauf sofort ausführen.", {}),
 }
 
-REQUIRED = {"kandidat_hinzufuegen": ["angaben"], "kunde_anlegen": ["name"], "preis_setzen": ["bereich", "modell", "wert"],
+REQUIRED = {"anruf_ergebnis": ["firma_id", "ergebnis"], "vermittlungsschritt": ["id", "schritt"],
+            "kandidat_hinzufuegen": ["angaben"], "kunde_anlegen": ["name"], "preis_setzen": ["bereich", "modell", "wert"],
             "passende_firmen": ["id"], "kandidat_vorstellen": ["id", "firma_id"],
             "firma_kontakt": ["id", "email"], "kandidat": ["id"], "status_setzen": ["id", "status"], "kandidat_anrufen": ["id"],
             "firmen_suchen": ["fokus"], "firma_anrufen": ["id"], "firma_status": ["id", "status"],
@@ -360,6 +404,11 @@ Ohne Budget fragst du Cemal-Can per Meldung, statt Geld auszugeben. Was er dir a
   sich per WhatsApp bei Cemal-Can zu melden ({config.CONTACT_WHATSAPP or config.JARVIS_WHATSAPP_NUMBER}). Gesuche ohne E-Mail meldest du ihm mit
   Links und fertigem Text, damit er sie im Portal anschreibt.
 - Sag bei Aufträgen, die Geld kosten, kurz die ungefähren Kosten dazu.
+- DU BIST DER KOPF DER VERMITTLUNG. Ziel: {config.REVENUE_GOAL:,.0f} € Umsatz pro Monat; vom Bewerber bis zum
+  Vorstellungsgespräch 1–2 Wochen, bis zum Geld 3–4 Wochen. Treibe jeden interessierten Kandidaten weiter:
+  Dokumente komplett → Firma mit Interesse (Anruf durch Cemal-Can, Liste via vertriebsplan) → Vereinbarung +
+  Profil → Unterlagen → Gespräch → eingestellt → Rechnung. Fokus auf schnell erreichbare Kandidaten
+  (Telefon/WhatsApp vorhanden) und schnell einstellbare (LKW-Fahrer mit CE + Modul 95; Pflege mit Anerkennung).
 - ZWEITER BEREICH: LKW-Fahrer (C/CE, Fahrerkarte, Modul 95, ADR) in Deutschland, vermittelt an Speditionen,
   Logistik-, Bau- und Entsorgungsfirmen. Websuche mit Fokus "LKW: …" findet Fahrer-Stellengesuche;
   firmen_suchen mit branche "lkw" findet Speditionen mit offenen Fahrerstellen. Profile werden anonym vorgestellt.

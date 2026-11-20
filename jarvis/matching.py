@@ -54,7 +54,10 @@ def matches(conn, cand_row, limit: int = 5) -> list[dict]:
     out = []
     for f in conn.execute("SELECT * FROM companies WHERE status NOT IN ('kein_bedarf','nicht_anrufen')").fetchall():
         needs = f"{f['needs'] or ''} {f['name']}".lower()
-        score = sum(2 for k in kws if k in needs) + sum(1 for g in group if g in needs)
+        fit = sum(2 for k in kws if k in needs) + sum(1 for g in group if g in needs)
+        if fit < 2:
+            continue  # fachlich passt es nicht – egal ob Kunde oder nicht
+        score = fit
         if a.current_location and f["city"] and f["city"].lower() in a.current_location.lower():
             score += 1
         if f["status"] == "interessiert":
@@ -118,7 +121,7 @@ def smtp_host() -> str:
     return next((h for k, h in SMTP_BY_DOMAIN.items() if domain.startswith(k) or domain == k), "")
 
 
-def send_email(to: str, subject: str, body: str) -> None:
+def send_email(to: str, subject: str, body: str, attachments: list[str] | None = None) -> None:
     host = smtp_host()
     if not (host and config.SMTP_USER and config.SMTP_PASSWORD):
         raise RuntimeError("E-Mail-Versand nicht eingerichtet (E-Mail-Login und Passwort unter ⚙️ Verbindungen)")
@@ -127,6 +130,16 @@ def send_email(to: str, subject: str, body: str) -> None:
     msg["To"] = to
     msg["Subject"] = subject
     msg.set_content(body)
+    import mimetypes
+    from pathlib import Path
+    for path in attachments or []:
+        p = Path(path)
+        if not p.exists():
+            continue
+        ctype = mimetypes.guess_type(p.name)[0] or "application/octet-stream"
+        maintype, subtype = ctype.split("/", 1)
+        msg.add_attachment(p.read_bytes(), maintype=maintype, subtype=subtype,
+                           filename=p.name.split("-", 2)[-1] if p.name[:8].isdigit() else p.name)
     try:
         with smtplib.SMTP(host, config.SMTP_PORT, timeout=30) as s:
             s.starttls()

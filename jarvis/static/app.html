@@ -101,6 +101,9 @@ nav button.on{color:var(--accent)}
     <div class="ring" id="ring"><div><span id="goal-n">–</span><small id="goal-z">von 20</small></div></div>
     <div><b>Vermittelbar heute</b><div class="muted small" id="goal-txt">Lade …</div></div>
   </div>
+  <div class="card" id="revenue-card"><b>💶 Umsatz diesen Monat</b>
+    <div style="font-size:28px;font-weight:700;margin-top:4px" id="rev-sum">–</div>
+    <div class="muted small" id="rev-txt"></div></div>
   <div class="grid">
     <div class="stat"><b id="st-a">–</b><span>A-Kandidaten offen</span></div>
     <div class="stat"><b id="st-i">–</b><span>Interessiert</span></div>
@@ -134,7 +137,8 @@ nav button.on{color:var(--accent)}
   <div id="cands"></div>
 </section>
 
-<section id="s-firmen"><div id="firms"></div></section>
+<section id="s-firmen"><h2>📞 Heute anrufen</h2><div id="sales"></div>
+<h2>🧾 Vermittlungen</h2><div id="placements"></div><h2>Alle Firmen</h2><div id="firms"></div></section>
 
 <section id="s-jarvis"><div id="chat"></div></section>
 
@@ -180,7 +184,7 @@ function toast(t) { const el = $("#toast"); el.textContent = t; el.style.display
   clearTimeout(toast.t); toast.t = setTimeout(() => el.style.display = "none", 3500); }
 
 const STATUS_DE = {neu: "Neu", kontaktiert: "Kontaktiert", interessiert: "Interessiert", kein_interesse: "Kein Interesse",
-  vermittelt: "Vermittelt", kunde: "Partner ⭐", angerufen: "Angerufen", kein_bedarf: "Kein Bedarf", nicht_anrufen: "Nicht anrufen"};
+  vermittelt: "Vermittelt 🎉", vorgestellt: "Vorgestellt", gespraech: "Gespräch 📅", kunde: "Partner ⭐", angerufen: "Angerufen", kein_bedarf: "Kein Bedarf", nicht_anrufen: "Nicht anrufen"};
 const REC_DE = {anerkannt: "anerkannt ⭐", positiver_precheck: "positiver Pre-Check ⭐", laufend: "läuft",
   nicht_noetig: "CH-Diplom", fehlt: "fehlt", unbekannt: "unbekannt"};
 let DATA = null, filter = "alle";
@@ -208,7 +212,11 @@ async function load() {
     + ` · Kosten heute: ${s.kosten_heute.toFixed(2)} $` + (s.budget > 0 ? ` (Auto-Budget ${s.budget} $)` : " (nur auf Befehl)");
   $("#st-a").textContent = s.A_gesamt_offen; $("#st-i").textContent = s.interessiert;
   $("#st-c").textContent = s.anrufe_heute; $("#st-f").textContent = s.firmen_interessiert;
-  renderCalls(); renderCands(); renderFirms(); renderNews();
+  const u = s.umsatz || {umsatz: 0, vermittlungen: 0, bezahlt: 0};
+  const fmt = x => Math.round(x).toLocaleString("de-DE") + " €";
+  $("#rev-sum").textContent = `${fmt(u.umsatz)} / ${fmt(s.umsatz_ziel || 25000)}`;
+  $("#rev-txt").textContent = `${u.vermittlungen} Vermittlungen · davon bezahlt ${fmt(u.bezahlt)}`;
+  renderCalls(); renderCands(); renderFirms(); renderNews(); loadSales();
 }
 
 function renderNews() {
@@ -242,6 +250,43 @@ function renderCands() {
 document.querySelectorAll("#filter .chip").forEach(b => b.onclick = () => {
   filter = b.dataset.f; document.querySelectorAll("#filter .chip").forEach(x => x.classList.toggle("on", x === b)); renderCands();
 });
+
+async function loadSales() {
+  let v; try { v = await api("/api/vertrieb"); } catch (e) { return; }
+  const box = $("#sales"); box.replaceChildren();
+  if (!v.plan.length) box.append(h("div", {class: "empty"},
+    "Gerade keine Firma zum Anrufen. Sobald ein Bewerber interessiert ist, stellt Jarvis dir hier die passenden Firmen zusammen."));
+  for (const p of v.plan) {
+    const res = async (ergebnis) => {
+      let body = {ergebnis};
+      if (ergebnis === "interesse") {
+        body.email = prompt("E-Mail der Ansprechperson (für Vereinbarung + Profile):", "") || "";
+        body.kontakt = prompt("Name der Ansprechperson (optional):", "") || "";
+      }
+      try { toast((await api(`/api/vertrieb/${p.firma_id}`, {method: "POST", body: JSON.stringify(body)})).meldung); loadSales(); load(); }
+      catch (e) { toast(e.message); }
+    };
+    box.append(h("div", {class: "card"},
+      h("b", {}, p.firma), h("div", {class: "muted small"}, [p.ort, p.bedarf].filter(Boolean).join(" · ")),
+      h("div", {class: "small", style: "margin:6px 0"}, `Für: ${p.profil} #${p.kandidat}`),
+      h("a", {class: "btn", href: "tel:" + (p.telefon || "").replace(/[^+\d]/g, "")}, "📞 " + p.telefon),
+      h("details", {class: "small"}, h("summary", {}, "📝 Leitfaden"), h("ol", {style: "padding-left:20px"}, p.skript.map(x => h("li", {}, x)))),
+      h("div", {class: "chips", style: "flex-wrap:wrap"},
+        h("button", {class: "chip on", onclick: () => res("interesse")}, "✅ Interesse"),
+        h("button", {class: "chip", onclick: () => res("nicht_erreicht")}, "📵 Nicht erreicht"),
+        h("button", {class: "chip", onclick: () => res("rueckruf")}, "🔁 Rückruf"),
+        h("button", {class: "chip", onclick: () => res("kein_bedarf")}, "❌ Kein Bedarf"),
+        h("button", {class: "chip", onclick: () => res("nicht_anrufen")}, "🚫 Nie wieder"))));
+  }
+  const pb = $("#placements"); pb.replaceChildren();
+  if (!v.vermittlungen.length) pb.append(h("div", {class: "empty"}, "Noch keine Vermittlung – die erste kommt! 💪"));
+  for (const p of v.vermittlungen) pb.append(h("div", {class: "card small"},
+    h("div", {class: "row"}, h("span", {}, `Start ${p.start_date}`), h("span", {}, Math.round(p.fee).toLocaleString("de-DE") + " €")),
+    h("div", {class: "row"}, h("span", {}, "Status"), h("span", {}, p.status)),
+    p.status !== "bezahlt" ? h("button", {class: "chip on", onclick: async () => {
+      try { toast((await api(`/api/vermittlung/${p.id}/bezahlt`, {method: "POST"})).meldung); loadSales(); load(); } catch (e) { toast(e.message); }
+    }}, "💶 Bezahlt") : null));
+}
 
 function renderFirms() {
   const box = $("#firms"); box.replaceChildren();
@@ -307,6 +352,12 @@ async function openCand(id) {
     h("div", {class: "chips"}, ["kontaktiert", "interessiert", "kein_interesse", "vermittelt"].map(s =>
       h("button", {class: "chip" + (d.status === s ? " on" : ""), onclick: () => act(`/api/kandidat/${id}/status`, {status: s})}, STATUS_DE[s]))),
     d.lebenslauf ? h("a", {class: "btn sec", href: `/api/kandidat/${id}/lebenslauf`, target: "_blank"}, "📄 Lebenslauf öffnen / weiterleiten") : null,
+    h("div", {class: "card small"},
+      h("b", {}, d.dokumente.komplett ? "✅ Unterlagen komplett" : "📄 Unterlagen fehlen noch:"),
+      d.dokumente.komplett ? null : h("div", {}, d.dokumente.fehlt.join(" · ")),
+      d.dokumente.komplett ? null : h("div", {class: "btns", style: "margin-top:8px"},
+        d.dokumente_whatsapp ? h("a", {class: "btn sec", href: d.dokumente_whatsapp}, "💬 Per WhatsApp anfordern") : null,
+        h("button", {class: "btn sec", onclick: () => copy(d.dokumente_text)}, "📋 Text kopieren"))),
     h("h2", {}, "🤝 Passende Firmen"),
     !d.passende_firmen.length ? h("button", {class: "btn sec", onclick: async (ev) => {
       ev.target.textContent = "🔍 Suche läuft … (ca. 1 Min.)"; ev.target.disabled = true;
@@ -315,8 +366,12 @@ async function openCand(id) {
     d.passende_firmen.map(f => h("div", {class: "card"},
       h("div", {style: "display:flex;justify-content:space-between;gap:8px;align-items:center"},
         h("div", {}, h("b", {}, f.name), h("div", {class: "muted small"}, [f.ort, f.bedarf].filter(Boolean).join(" · "))),
-        h("button", {class: "chip on", disabled: !["interessiert", "vermittelt"].includes(d.status),
-          onclick: () => presentTo(id, f)}, "Vorstellen")))),
+        h("button", {class: "chip on", disabled: !["interessiert", "vorgestellt", "gespraech", "vermittelt"].includes(d.status),
+          onclick: () => presentTo(id, f)}, "Vorstellen")),
+      h("div", {class: "chips", style: "flex-wrap:wrap;margin-top:6px"},
+        d.dokumente.komplett ? h("button", {class: "chip", onclick: () => step(id, {art: "unterlagen_senden", firma_id: f.id})}, "📎 Unterlagen senden") : null,
+        h("button", {class: "chip", onclick: () => { const w = prompt("Wann ist das Gespräch? (z.B. Mo 25.11. 10 Uhr)"); if (w) step(id, {art: "gespraech", wann: w, firma_id: f.id}); }}, "📅 Gespräch"),
+        h("button", {class: "chip", onclick: () => { const s = prompt("Startdatum (JJJJ-MM-TT):", new Date().toISOString().slice(0, 10)); if (s) step(id, {art: "eingestellt", start: s, firma_id: f.id}); }}, "🎉 Eingestellt")))),
     d.passende_firmen.length && !["interessiert", "vermittelt"].includes(d.status)
       ? h("div", {class: "muted small"}, "Vorstellen geht, sobald der Kandidat Interesse bestätigt hat.") : null,
     h("h2", {}, "📝 Gesprächsleitfaden"),
@@ -326,6 +381,11 @@ async function openCand(id) {
       return h("div", {class: "card small"}, h("b", {}, (k.started || "").replace("T", " ").slice(0, 16) + " · " + k.status),
         s.summary ? h("div", {}, s.summary) : null, s.next_step ? h("div", {class: "muted"}, "→ " + s.next_step) : null); }),
     d.notizen ? h("div", {class: "card small", style: "white-space:pre-wrap"}, d.notizen.trim()) : null);
+}
+
+async function step(id, body) {
+  try { toast((await api(`/api/kandidat/${id}/schritt`, {method: "POST", body: JSON.stringify(body)})).meldung); closeSheet(); load(); }
+  catch (e) { alert(e.message); }
 }
 
 async function presentTo(id, f) {

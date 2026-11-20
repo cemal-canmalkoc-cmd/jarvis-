@@ -301,8 +301,9 @@ Für dich kostenlos. In 2 Minuten bewerben, wir melden uns schnell.{contact}</p>
  </fieldset>
  <fieldset><legend>Einwilligung</legend>
   <label class="check"><input type="checkbox" name="consent_data" value="1" required>
-   <span>Ich bin einverstanden, dass {agency} meine Angaben speichert und mein Profil (anonym, ohne Name und
-   Kontaktdaten) passenden Arbeitgebern vorstellt. Für mich kostenlos. Widerruf jederzeit möglich. *</span></label>
+   <span>Ich bin einverstanden, dass {agency} meine Angaben speichert, mein Profil zunächst anonym passenden
+   Arbeitgebern vorstellt und meine Unterlagen an Arbeitgeber weitergibt, die mich kennenlernen möchten.
+   Für mich kostenlos. Widerruf jederzeit möglich. *</span></label>
   <label class="check"><input type="checkbox" name="consent_whatsapp" value="1" checked><span>Kontakt per WhatsApp ist ok.</span></label>
   <label class="check"><input type="checkbox" name="consent_call" value="1" checked><span>Anruf ist ok.</span></label>
  </fieldset>
@@ -418,11 +419,85 @@ def _evaluate_form(raw: sources.RawProfile, cv_path: str | None = None) -> None:
             lines.append("🤝 Passende Firmen: " + ", ".join(f"{f['name']} ({f['ort'] or '?'})" for f in firms))
         else:
             lines.append("🔍 Noch keine passende Firma gespeichert – in der App 'Passende Firmen suchen' tippen.")
-        lines.append("👉 App → Kandidaten → 🔥 Interessiert → Profil an Firma senden")
+        from . import deals
+        st = store.doc_status(conn, key, a.category)
+        if not st["komplett"]:
+            lines.append("📄 Fehlende Unterlagen: " + ", ".join(st["fehlt"]) + " – Jarvis fordert sie an.")
+            link = deals.whatsapp_to_candidate(row, deals.doc_request_text(row)) if row["consent_whatsapp"] else None
+            if link:
+                lines.append("Sofort per WhatsApp anfordern: " + link)
+        lines.append("👉 App → Kandidaten → 🔥 Interessiert")
         messaging.notify_owner("\n".join(lines))
         if c.consent_call and voice.within_call_hours():
             # Heisse Bewerber sofort anrufen, solange das Interesse frisch ist
             log.info(voice.place_call("kandidat", store.candidate_key(c)))
+
+
+# --------------------------------------------------------------------------- Dokumente hochladen (Kandidat)
+@app.get("/dokumente", response_class=HTMLResponse)
+async def dokumente_form(k: str = "", t: str = ""):
+    from . import deals
+    conn = store.connect()
+    row = store.get_candidate(conn, k)
+    if not row or not deals.check_token(row["key"], t):
+        raise HTTPException(404, "Link ungültig")
+    a = store.load(row).assessment
+    cat = a.category if a.category in store.DOC_TYPES else "pflege"
+    st = store.doc_status(conn, row["key"], a.category)
+    fields = "".join(
+        f'<label for="{typ}">{"✅ " if typ in st["vorhanden"] else ""}{html.escape(label)}</label>'
+        f'<input id="{typ}" name="{typ}" type="file" accept="image/*,.pdf,.docx" multiple>'
+        for typ, label in store.DOC_TYPES[cat].items())
+    first = html.escape(a.full_name.split()[0]) if a.full_name and a.full_name.lower() != "unbekannt" else ""
+    body = f"""<div class="brand">{html.escape(config.AGENCY_NAME)}</div>
+<h1>Ihre Unterlagen{', ' + first if first else ''}</h1>
+<p class="lead">Fotos mit dem Handy reichen völlig. Danach stelle ich Sie sofort passenden Arbeitgebern vor.</p>
+<form method="post" action="/dokumente?k={html.escape(row['key'])}&t={html.escape(t)}" enctype="multipart/form-data">
+<fieldset>{fields}</fieldset>
+<label class="check"><input type="checkbox" name="consent" value="1" required>
+<span>Ich bin einverstanden, dass {html.escape(config.AGENCY_NAME)} meine Unterlagen an Arbeitgeber weitergibt,
+die mich kennenlernen möchten. *</span></label>
+<button type="submit">Hochladen</button></form>"""
+    return _page("Unterlagen hochladen", body)
+
+
+@app.post("/dokumente", response_class=HTMLResponse)
+async def dokumente_upload(request: Request, k: str = "", t: str = ""):
+    from . import deals
+    conn = store.connect()
+    row = store.get_candidate(conn, k)
+    if not row or not deals.check_token(row["key"], t):
+        raise HTTPException(404, "Link ungültig")
+    ip = request.client.host if request.client else "?"
+    if not _rate_ok("doc:" + ip, limit=20):
+        raise HTTPException(429, "Zu viele Anfragen")
+    form = await request.form()
+    if form.get("consent") != "1":
+        raise HTTPException(400, "Einwilligung erforderlich")
+    a = store.load(row).assessment
+    cat = a.category if a.category in store.DOC_TYPES else "pflege"
+    saved = 0
+    folder = UPLOAD_DIR / row["key"]
+    folder.mkdir(parents=True, exist_ok=True)
+    for typ in store.DOC_TYPES[cat]:
+        for f in form.getlist(typ):
+            if not getattr(f, "filename", None):
+                continue
+            data = await f.read(MAX_UPLOAD + 1)
+            if len(data) > MAX_UPLOAD:
+                continue
+            safe = "".join(ch for ch in Path(f.filename).name if ch.isalnum() or ch in "._-")[:60] or "datei"
+            path = folder / f"{datetime.now():%Y%m%d-%H%M%S}-{typ}-{safe}"
+            path.write_bytes(data)
+            store.add_document(conn, row["key"], typ, str(path))
+            saved += 1
+    st = store.doc_status(conn, row["key"], a.category)
+    messaging.notify_owner(f"📄 {a.full_name}: {saved} Dokument(e) hochgeladen – "
+                           + ("✅ Unterlagen KOMPLETT, bereit zum Vorstellen!" if st["komplett"]
+                              else "fehlt noch: " + ", ".join(st["fehlt"])))
+    msg = ("Vielen Dank! Ihre Unterlagen sind komplett – ich melde mich in Kürze mit passenden Stellen."
+           if st["komplett"] else "Danke! Es fehlt noch: " + ", ".join(st["fehlt"]) + ". Sie können diesen Link jederzeit wieder öffnen.")
+    return _page("Danke", f'<div class="card"><h1>Danke!</h1><p>{html.escape(msg)}</p></div>')
 
 
 @app.post("/bewerbung", response_class=HTMLResponse)

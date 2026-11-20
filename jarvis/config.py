@@ -180,3 +180,6 @@ LKW_REQUIREMENTS_TEXT = """BEDARF DEUTSCHLAND: Berufskraftfahrer/innen (LKW)
 
 # Umsatzsteuer-Status deines Einzelunternehmens: "unklar" | "kleinunternehmer" | "regel"
 UST_STATUS = os.environ.get("JARVIS_UST_STATUS", "unklar")
+
+# Monatsziel Umsatz in €
+REVENUE_GOAL = float(os.environ.get("JARVIS_REVENUE_GOAL", "25000"))

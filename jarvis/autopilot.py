@@ -212,6 +212,13 @@ def tick() -> None:
     """Wird vom Server alle paar Minuten aufgerufen."""
     now = _now()
     conn = store.connect()
+    if now.hour >= 8 and store.get_state(conn, "drive") != date.today().isoformat():
+        store.set_state(conn, "drive", date.today().isoformat())
+        try:
+            from . import deals
+            log.info("Tagesantrieb: %s", deals.daily_drive())
+        except Exception:  # noqa: BLE001
+            log.exception("Tagesantrieb fehlgeschlagen")
     from . import budget
     morning_cost = budget.EST_SEARCH_FOCUS_USD * (len(NURSING_FIELDS) + len(PHYSICIAN_SPECIALTIES))
     if (now.hour >= config.MORNING_HOUR and store.get_state(conn, "morning") != date.today().isoformat()

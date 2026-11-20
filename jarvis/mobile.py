@@ -14,6 +14,7 @@ import json
 import threading
 import time
 import uuid
+from datetime import date
 from pathlib import Path
 
 from fastapi import APIRouter, Body, Form, HTTPException, Request
@@ -139,6 +140,8 @@ async def uebersicht(request: Request):
     stats["kosten_heute"] = round(budget.today_spend(), 2)
     stats["budget"] = config.DAILY_BUDGET_USD
     stats["potenzielle_heute"] = store.potentials_today(conn)
+    stats["umsatz"] = store.revenue_month(conn)
+    stats["umsatz_ziel"] = config.REVENUE_GOAL
     stats["minimum"] = config.DAILY_MINIMUM
     rows = conn.execute(
         "SELECT * FROM candidates WHERE tier IN ('A','B','C') AND status IN ('neu','kontaktiert','interessiert') "
@@ -214,6 +217,10 @@ async def kandidat(request: Request, key: str):
     out["whatsapp_kontakt"] = outreach.wa_link()
     cvp = store.get_state(conn, f"cv:{row['key']}")
     out["lebenslauf"] = bool(cvp and Path(cvp).exists())
+    from . import deals
+    out["dokumente"] = store.doc_status(conn, row["key"], c.assessment.category)
+    out["dokumente_text"] = deals.doc_request_text(row)
+    out["dokumente_whatsapp"] = deals.whatsapp_to_candidate(row, out["dokumente_text"])
     return out
 
 
@@ -244,6 +251,54 @@ async def firmen_fuer_kandidat(request: Request, key: str):
     await asyncio.to_thread(companies.find, role_phrase(a), region, None, "lkw" if lkw else "")
     found = matching.matches(conn, store.get_candidate(conn, key))
     return {"meldung": f"{len(found)} passende Firmen gefunden", "firmen": found}
+
+
+@router.post("/api/kandidat/{key}/schritt")
+async def kandidat_schritt(request: Request, key: str, daten: dict = Body(...)):
+    """Vermittlungs-Schritte: gespraech | eingestellt | unterlagen_senden"""
+    authed(request)
+    from . import deals
+    art = daten.get("art")
+    firma = int(daten["firma_id"]) if daten.get("firma_id") else None
+    try:
+        if art == "gespraech":
+            msg = deals.mark_interview(key, daten.get("wann", ""), firma)
+        elif art == "eingestellt":
+            msg = deals.mark_hired(key, firma, daten.get("start") or date.today().isoformat(), daten.get("honorar"))
+        elif art == "unterlagen_senden" and firma:
+            msg = await asyncio.to_thread(deals.send_documents, key, firma)
+        else:
+            raise HTTPException(400, "Unbekannter Schritt")
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(502, str(exc)) from exc
+    return {"meldung": msg}
+
+
+@router.get("/api/vertrieb")
+async def vertrieb(request: Request):
+    authed(request)
+    from . import deals
+    conn = store.connect()
+    return {"plan": deals.sales_plan(), "umsatz": store.revenue_month(conn), "ziel": config.REVENUE_GOAL,
+            "vermittlungen": store.placements(conn)}
+
+
+@router.post("/api/vertrieb/{cid}")
+async def vertrieb_ergebnis(request: Request, cid: int, daten: dict = Body(...)):
+    authed(request)
+    from . import deals
+    msg = await asyncio.to_thread(deals.record_call, cid, daten.get("ergebnis", ""), daten.get("email", ""),
+                                  daten.get("kontakt", ""), daten.get("notiz", ""))
+    return {"meldung": msg}
+
+
+@router.post("/api/vermittlung/{pid}/bezahlt")
+async def vermittlung_bezahlt(request: Request, pid: int):
+    authed(request)
+    store.set_placement_status(store.connect(), pid, "bezahlt")
+    return {"meldung": "Als bezahlt markiert 💶"}
 
 
 @router.post("/api/kandidat/{key}/loeschen")
