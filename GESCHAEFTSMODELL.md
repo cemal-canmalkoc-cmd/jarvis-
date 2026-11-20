@@ -76,3 +76,16 @@ Ohne Mitarbeiter (ca. 5–10 Std.):
 - [ ] Seite in der Google Search Console anmelden und `sitemap.xml` einreichen (kostenlos)
 - [ ] Provisionsvereinbarung als Vorlage erstellen (von einem Anwalt prüfen lassen, ggf. über die IHK)
 - [ ] Erste 20 Posts in Pflege-Facebook-Gruppen / TikTok
+
+## Ausbau zu 1 Mio. $ Jahresumsatz (ca. 870.000 €)
+Interaktiver Rechner und Übersicht: https://claude.ai/artifact/6BaiJV1rYaoLdHn5QfrhDn
+
+| Standbein | Annahme | Umsatz/Jahr |
+|---|---|---|
+| Vermittlung Deutschland | 5 Einstellungen/Monat × 7.000 € | 420.000 € |
+| Vermittlung Schweiz (Bewilligung bzw. lizenzierter Partner) | 1,25/Monat × 18.000 € | 270.000 € |
+| Digitaler Mitarbeiter als Software-Abo für andere Vermittler | 65 Kunden × 249 €/Monat | 194.000 € |
+| **Summe** | | **≈ 884.000 € ≈ 1,0 Mio. $** |
+
+Phasen: **0–6 Monate** allein beweisen (1–3 Einstellungen/Monat) → **6–18 Monate** GmbH, 1–2 Recruiter auf Provision, weitere Städte, Schweiz-Partner → **18–36 Monate** eigene Schweizer Firma, Software-Verkauf, Team von 4–6.
+Ab Phase 2 kostet es Geld und braucht Vollzeit. Umsatz ist nicht Gewinn: realistisch bleiben 20–35 % übrig.
