@@ -546,6 +546,7 @@ EDITABLE_SETTINGS = {
     "BANK": "Bank (optional)",
     "AUTO_INVOICE": "Rechnung automatisch senden (0 = nur nach deiner Genehmigung – empfohlen)",
     "AUTO_APPLY": "Bewerbungen auf Stellenanzeigen automatisch senden (1 = ja, 0 = nur mit Freigabe)",
+    "CHAT_FIRST": "Bewerber-Links: 0 = direkt in dein WhatsApp, 1 = erst zum KI-Chat",
     "CHAT_MAX_USD": "Höchstens $ pro Tag für KI-Gespräche mit Bewerbern und Firmen",
     "AUTO_DAYS": "Freigabe gilt X Tage, danach fragt Jarvis nach „Weiter“",
     "AUTO_INBOX": "E-Mail-Postfach selbst lesen und beantworten (1 = ja)",

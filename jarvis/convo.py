@@ -164,6 +164,10 @@ def candidate_turn(convo_id: str, text: str, channel: str, contact: str = "") ->
             store.set_state(conn, f"convo_done:{convo_id}", date.today().isoformat())
             reply += ("\n\nDamit wir Sie direkt vorstellen können, laden Sie bitte hier Ihren Lebenslauf und Ihre "
                       f"Zeugnisse hoch: {deals.upload_link(cand_key)}")
+            from .outreach import contact_number, wa_link
+            if contact_number():
+                reply += (f"\n\nOder direkt per WhatsApp an {config.RECRUITER_NAME} (Lebenslauf als Foto genügt): "
+                          + wa_link(f"Hallo, ich komme aus dem Jarvis-Chat.\n{out['profil'][:600]}"))
     msgs.append({"role": "assistant", "content": reply})
     store.save_convo(conn, convo_id, "kandidat", msgs, cand_key)
     return reply

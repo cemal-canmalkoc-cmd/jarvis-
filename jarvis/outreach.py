@@ -31,11 +31,11 @@ def wa_link(text: str = "") -> str:
 
 WA_TEXTS = {
     "lkw": "Hallo Hansa Personal, ich bin LKW-Fahrer und suche einen neuen Job.\nFührerschein (C/CE): \n"
-           "Modul 95 / Fahrerkarte: \nWohnort (PLZ): \nAb wann: ",
+           "Modul 95 / Fahrerkarte: \nWohnort (PLZ): \nAb wann: \n(Lebenslauf/Führerschein schicke ich als Foto mit)",
     "pflege": "Hallo Hansa Personal, ich interessiere mich für eine Stelle in der Schweiz.\nBeruf: \n"
-              "Deutschniveau: \nSRK-Anerkennung (ja/nein/läuft): \nWohnort: ",
+              "Deutschniveau: \nSRK-Anerkennung (ja/nein/läuft): \nWohnort: \n(Lebenslauf schicke ich als PDF/Foto mit)",
     "arzt": "Hallo Hansa Personal, ich interessiere mich als Ärztin/Arzt für eine Stelle in der Schweiz.\n"
-            "Fachrichtung: \nDeutschniveau: \nMEBEKO (ja/nein/läuft): ",
+            "Fachrichtung: \nDeutschniveau: \nMEBEKO (ja/nein/läuft): \n(Lebenslauf schicke ich mit)",
     "firma": "Hallo Hansa Personal, wir suchen Personal.\nFirma: \nOrt: \nGesucht (z.B. CE-Fahrer, Pflegefachkraft): \nAnzahl: ",
 }
 
@@ -71,8 +71,7 @@ def build_email(c: ScoredCandidate) -> tuple[str, str]:
 ich bin auf Ihr Stellengesuch als {role} aufmerksam geworden. Ich bin {config.RECRUITER_NAME} von
 {config.AGENCY_NAME} – {offer}
 {f"{rec} ist dabei ein grosser Vorteil." if rec else ""}
-Wenn Sie Interesse haben, antworten Sie einfach auf diese E-Mail – oder schreiben Sie im
-Direkt-Chat (Antwort sofort, rund um die Uhr):
+Wenn Sie Interesse haben, schreiben Sie mir einfach per WhatsApp (Lebenslauf gern als Foto mitschicken):
 {wa_short('lkw' if lkw else ('arzt' if a.category == 'arzt' else 'pflege'), 'mail')}
 
 Oder bewerben Sie sich in 2 Minuten online: {config.PUBLIC_URL}/bewerbung
@@ -118,7 +117,7 @@ def portal_message(c: ScoredCandidate) -> str:
     if c.assessment.category == "lkw":
         return (f"Hallo, ich habe Ihr Stellengesuch als {role} gesehen. Ich bin {config.RECRUITER_NAME} von "
                 f"{config.AGENCY_NAME} – wir vermitteln Fahrer kostenlos an Speditionen in ganz Deutschland "
-                f"(Nah- und Fernverkehr). Interesse? Schreiben Sie uns im Direkt-Chat (Antwort sofort): {wa_short('lkw', 'portal')} "
+                f"(Nah- und Fernverkehr). Interesse? Schreiben Sie mir direkt per WhatsApp (Lebenslauf gern als Foto mitschicken): {wa_short('lkw', 'portal')} "
                 f"– oder bewerben Sie sich hier: {config.PUBLIC_URL}/bewerbung?bereich=lkw")
     return (f"Hallo, ich habe Ihr Stellengesuch als {role} gesehen. Ich bin {config.RECRUITER_NAME} von "
             f"{config.AGENCY_NAME} – wir vermitteln Pflegekräfte kostenlos an Kliniken und Heime in der Schweiz "

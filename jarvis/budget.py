@@ -133,6 +133,16 @@ def ensure_defaults() -> None:
     store.set_state(conn, "autonomy_version", AUTONOMY_VERSION)
 
 
+def ensure_defaults_v3() -> None:
+    """Einmalig: Bewerber direkt ins WhatsApp, häufiger suchen (innerhalb 1 $/Tag). Freigabe bleibt wie sie ist."""
+    conn = store.connect()
+    if store.get_state(conn, "defaults_v3"):
+        return
+    for key, val in (("CHAT_FIRST", "0"), ("SEARCH_EVERY_HOURS", "2"), ("ADS_PER_DAY", "2")):
+        store.save_setting(conn, key, val)
+    store.set_state(conn, "defaults_v3", "1")
+
+
 def remind_autonomy() -> None:
     """Einmal pro Tag melden, wenn die Freigabe abgelaufen oder das Tagesbudget aufgebraucht ist."""
     from . import messaging
