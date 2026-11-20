@@ -348,6 +348,11 @@ def daily_drive() -> dict:
     sent_apps = send_applications(queue) if (config.AUTO_APPLY and queue) else []
     plan = sales_plan()
     lines = [f"🚀 Jarvis-Tagesplan {today:%d.%m.}"]
+    try:
+        from . import team
+        lines += [team.summary_text(), ""]
+    except Exception as exc:  # noqa: BLE001
+        log.error("Team-Status fehlgeschlagen: %s", exc)
     clicks = sum(int(store.get_state(conn, f"clicks:{today - timedelta(days=1)}:{b}") or 0)
                  for b in ("lkw", "pflege", "arzt", "firma"))
     if clicks:

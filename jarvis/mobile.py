@@ -77,6 +77,13 @@ async def app_page(request: Request):
     return FileResponse(STATIC / "app.html", media_type="text/html")
 
 
+@router.get("/api/team")
+async def team_status(request: Request):
+    authed(request)
+    from . import team
+    return {"team": await asyncio.to_thread(team.status)}
+
+
 @router.get("/api/stellen")
 async def stellen(request: Request):
     authed(request)

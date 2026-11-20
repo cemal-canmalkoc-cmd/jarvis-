@@ -273,6 +273,11 @@ def t_stellen_auto() -> dict:
     return jobboard.sync()
 
 
+def t_team() -> str:
+    from . import team
+    return team.summary_text()
+
+
 def t_weiter() -> str:
     from . import budget
     return budget.autonomy_continue()
@@ -372,6 +377,8 @@ TOOLS = {
     "stellen": (t_stellen, "Alle Stellen der Stellenbörse mit Anzahl passender Kandidaten aus dem Talentpool.", {}),
     "stellen_automatisch": (t_stellen_auto, "Stellenbörse aus den gefundenen Arbeitgebern mit offenen Stellen "
                             "aktualisieren (anonym, je Bereich und Region).", {}),
+    "team": (t_team, "Status aller Abteilungen (Sourcing, Recruiting, Vertrieb, Disposition, Marketing, Backoffice) "
+                     "mit dem, was heute geschafft wurde und woran es hängt.", {}),
     "freigabe_weiter": (t_weiter, "Selbstständige Arbeit (Suche, Inserate, KI-Gespräche) für HEUTE freigeben – "
                         "wenn der Inhaber 'ja', 'weiter' oder 'leg los' auf die Morgenfrage antwortet.", {}),
     "rechnung_senden": (t_rechnung_senden, "PDF-Rechnung für eine Vermittlung erstellen und an die Firma senden. "

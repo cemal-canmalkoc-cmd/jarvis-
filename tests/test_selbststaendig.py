@@ -191,3 +191,12 @@ def test_daily_approval_asks_first_and_catches_up_morning(monkeypatch):
     assert b.auto_allowed(0.01) and b.chat_allowed(0.001)
     assert store.get_state(conn, "morning") == ""                        # Morgensuche wird nachgeholt
     store.set_state(conn, f"approved:{date.today()}", "")
+
+
+def test_team_shows_departments_and_blockers(monkeypatch):
+    from jarvis import team
+    monkeypatch.setattr(config, "SMTP_USER", "")
+    t = {m["rolle"].split(" ")[0]: m for m in team.status()}
+    assert {"Sourcing", "Recruiting", "Vertrieb", "Disposition", "Marketing", "Backoffice"} <= set(t)
+    assert not t["Vertrieb"]["ok"] and "E-Mail" in t["Vertrieb"]["problem"]
+    assert "Dein Jarvis-Team" in team.summary_text()

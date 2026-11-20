@@ -97,6 +97,8 @@ table{display:none}
   </section>
 
   <section class="panel">
+    <h2>Team</h2>
+    <div id="team" style="margin-bottom:18px"></div>
     <h2>Live-Meldungen</h2>
     <div id="feed"></div>
   </section>
@@ -222,7 +224,21 @@ $("#cmd").onsubmit = e => { e.preventDefault(); const t = $("#t").value.trim(); 
 document.querySelectorAll("[data-q]").forEach(b => b.onclick = () => command(b.dataset.q));
 $("#approve").onclick = async () => { try { await api("/api/autonomie/weiter", {method: "POST"}); load(); } catch (e) { alert(e.message); } };
 setInterval(() => { $("#clock").textContent = new Date().toLocaleString("de-DE"); }, 1000);
-load(); setInterval(load, 30000);
+async function loadTeam() {
+  let v; try { v = await api("/api/team"); } catch (e) { return; }
+  $("#team").innerHTML = "";
+  for (const m of v.team) {
+    const d = document.createElement("div"); d.style.cssText = "padding:6px 0;border-bottom:1px solid var(--line)";
+    const head = document.createElement("div");
+    head.innerHTML = `<b>${m.emoji} ${m.name}</b> <span style="color:var(--muted)">· ${m.rolle}</span> ` +
+      (m.ok ? '<span style="color:var(--good)">● aktiv</span>' : '<span style="color:var(--warn)">● blockiert</span>');
+    const sub = document.createElement("div"); sub.style.cssText = "font-size:12px;color:var(--ink2)"; sub.textContent = m.heute;
+    d.append(head, sub);
+    if (!m.ok) { const p = document.createElement("div"); p.style.cssText = "font-size:12px;color:var(--warn)"; p.textContent = m.problem; d.append(p); }
+    $("#team").append(d);
+  }
+}
+load(); loadTeam(); setInterval(() => { load(); loadTeam(); }, 30000);
 addEventListener("resize", () => D && chart(D.serie));
 </script>
 </body>

@@ -101,6 +101,9 @@ nav button.on{color:var(--accent)}
     <div class="ring" id="ring"><div><span id="goal-n">–</span><small id="goal-z">von 20</small></div></div>
     <div><b>Vermittelbar heute</b><div class="muted small" id="goal-txt">Lade …</div></div>
   </div>
+  <div class="card" id="team-card"><b>👥 Dein Team</b>
+    <div class="muted small">Jarvis arbeitet wie eine Agentur mit Abteilungen. ⛔ = hier hängt es gerade.</div>
+    <div id="team"></div></div>
   <div class="card" id="todo-card"><b>🎯 Jetzt anschreiben</b>
     <div class="muted small">Nur Leute mit öffentlicher Nummer: 1 Tipp öffnet direkt ihr WhatsApp mit fertiger
       Nachricht – nur noch senden. Antworten + Lebensläufe kommen in dein WhatsApp.</div>
@@ -248,7 +251,7 @@ async function load() {
     : `⏸️ Pausiert seit ${au.bis} – Jarvis antwortet nur ohne KI.`;
   $("#auto-go").textContent = au.taeglich ? `✅ Ja, heute arbeiten (max. ${(au.budget || 1).toFixed(2)} $)` : `▶️ Weiter (${au.tage || 5} Tage)`;
   $("#auto-go").style.display = au.aktiv && (au.taeglich || !au.bald) ? "none" : "";
-  renderCalls(); renderCands(); renderFirms(); renderNews(); loadSales(); renderTodo();
+  renderCalls(); renderCands(); renderFirms(); renderNews(); loadSales(); renderTodo(); loadTeam();
 }
 
 // Ein Tipp: Text kopieren + Anzeige/WhatsApp öffnen + als „kontaktiert“ markieren
@@ -259,6 +262,15 @@ function reachOut(c) {
   api(`/api/kandidat/${c.id}/status`, {method: "POST", body: JSON.stringify({status: "kontaktiert"})})
     .then(() => { c.status = "kontaktiert"; renderTodo(); }).catch(() => {});
   toast(c.whatsapp_link ? "WhatsApp geöffnet – nur noch senden" : "Text kopiert 📋 – in der Anzeige einfügen und senden");
+}
+
+async function loadTeam() {
+  let v; try { v = await api("/api/team"); } catch (e) { return; }
+  const box = $("#team"); box.replaceChildren();
+  for (const m of v.team) box.append(h("div", {style: "margin-top:10px"},
+    h("div", {}, h("b", {}, `${m.emoji} ${m.name} · ${m.rolle} `), m.ok ? "✅" : "⛔"),
+    h("div", {class: "muted small"}, m.heute),
+    m.ok ? null : h("div", {class: "small", style: "color:var(--hot)"}, m.problem)));
 }
 
 function renderTodo() {
