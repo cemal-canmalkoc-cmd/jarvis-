@@ -82,18 +82,40 @@ def anonymous_profile(cand_row) -> str:
     return "\n".join(lines)
 
 
+SMTP_BY_DOMAIN = {
+    "outlook.": "smtp-mail.outlook.com", "hotmail.": "smtp-mail.outlook.com", "live.": "smtp-mail.outlook.com",
+    "msn.": "smtp-mail.outlook.com", "gmx.": "mail.gmx.net", "web.de": "smtp.web.de",
+    "gmail.": "smtp.gmail.com", "googlemail.": "smtp.gmail.com", "t-online.": "securesmtp.t-online.de",
+    "icloud.": "smtp.mail.me.com", "me.com": "smtp.mail.me.com", "yahoo.": "smtp.mail.yahoo.com",
+}
+
+
+def smtp_host() -> str:
+    if config.SMTP_HOST:
+        return config.SMTP_HOST
+    domain = (config.SMTP_USER or "").split("@")[-1].lower()
+    return next((h for k, h in SMTP_BY_DOMAIN.items() if domain.startswith(k) or domain == k), "")
+
+
 def send_email(to: str, subject: str, body: str) -> None:
-    if not (config.SMTP_HOST and config.SMTP_USER):
-        raise RuntimeError("E-Mail-Versand nicht eingerichtet (JARVIS_SMTP_*)")
+    host = smtp_host()
+    if not (host and config.SMTP_USER and config.SMTP_PASSWORD):
+        raise RuntimeError("E-Mail-Versand nicht eingerichtet (E-Mail-Login und Passwort unter ⚙️ Verbindungen)")
     msg = EmailMessage()
-    msg["From"] = config.SMTP_FROM or config.SMTP_USER
+    msg["From"] = f"{config.RECRUITER_NAME} – {config.AGENCY_NAME} <{config.SMTP_FROM or config.SMTP_USER}>"
     msg["To"] = to
     msg["Subject"] = subject
     msg.set_content(body)
-    with smtplib.SMTP(config.SMTP_HOST, config.SMTP_PORT, timeout=30) as s:
-        s.starttls()
-        s.login(config.SMTP_USER, config.SMTP_PASSWORD)
-        s.send_message(msg)
+    try:
+        with smtplib.SMTP(host, config.SMTP_PORT, timeout=30) as s:
+            s.starttls()
+            s.login(config.SMTP_USER, config.SMTP_PASSWORD)
+            s.send_message(msg)
+    except smtplib.SMTPAuthenticationError as exc:
+        hint = (" Outlook/Hotmail: Microsoft lässt das normale Passwort oft nicht mehr zu – erstelle unter "
+                "account.microsoft.com → Sicherheit ein App-Kennwort (2-Schritt-Prüfung nötig) und trage das ein."
+                if "outlook" in host else " Prüfe Login/Passwort bzw. ob SMTP-Zugriff erlaubt ist.")
+        raise RuntimeError(f"Anmeldung beim Mailserver abgelehnt ({host}).{hint}") from exc
 
 
 def present(cand_key: str, company_id: int) -> str:

@@ -57,3 +57,28 @@ def test_owner_call(monkeypatch):
     monkeypatch.setattr(config, "TWILIO_VOICE_FROM", "+4930000000")
     assert agent.t_mich_anrufen().startswith("📞")
     assert calls[0]["to"] == "+4915100000000" and "Testanruf" in calls[0]["twiml"] and 'de-DE' in calls[0]["twiml"]
+
+
+def test_smtp_autodetect_and_outlook_hint(monkeypatch):
+    import smtplib
+    monkeypatch.setattr(config, "SMTP_HOST", "")
+    monkeypatch.setattr(config, "SMTP_USER", "hansa.personal@outlook.de")
+    monkeypatch.setattr(config, "SMTP_PASSWORD", "pw")
+    assert matching.smtp_host() == "smtp-mail.outlook.com"
+    monkeypatch.setattr(config, "SMTP_USER", "x@gmx.de")
+    assert matching.smtp_host() == "mail.gmx.net"
+
+    class FakeSMTP:
+        def __init__(self, *a, **k): pass
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def starttls(self): pass
+        def login(self, u, p): raise smtplib.SMTPAuthenticationError(535, b"basic auth disabled")
+    monkeypatch.setattr(matching.smtplib, "SMTP", FakeSMTP)
+    monkeypatch.setattr(config, "SMTP_USER", "hansa.personal@outlook.de")
+    try:
+        matching.send_email("a@b.c", "s", "b")
+    except RuntimeError as exc:
+        assert "App-Kennwort" in str(exc)
+    else:
+        raise AssertionError("kein Fehler")

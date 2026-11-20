@@ -30,7 +30,8 @@ def wa_link(text: str = "") -> str:
 
 
 def can_email() -> bool:
-    return bool(config.SMTP_HOST and config.SMTP_USER and config.SMTP_PASSWORD)
+    from .matching import smtp_host
+    return bool(smtp_host() and config.SMTP_USER and config.SMTP_PASSWORD)
 
 
 def build_email(c: ScoredCandidate) -> tuple[str, str]:

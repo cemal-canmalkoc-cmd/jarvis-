@@ -296,6 +296,19 @@ async def einstellungen_setzen(request: Request, daten: dict = Body(...)):
     return {"meldung": "Gespeichert ✅"}
 
 
+@router.post("/api/testmail")
+async def testmail(request: Request):
+    authed(request)
+    from .matching import send_email
+    to = config.OWNER_EMAIL or config.SMTP_USER
+    try:
+        await asyncio.to_thread(send_email, to, "Jarvis Testmail ✅",
+                                "Hallo Cemal-Can,\n\ndas Senden von E-Mails funktioniert.\n\nJarvis")
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(502, str(exc)) from exc
+    return {"meldung": f"Testmail an {to} gesendet ✅"}
+
+
 @router.post("/api/testanruf")
 async def testanruf(request: Request):
     authed(request)

@@ -123,7 +123,7 @@ JARVIS_WHATSAPP_NUMBER = os.environ.get("JARVIS_WHATSAPP_NUMBER", "")  # Jarvis'
 # ---------------------------------------------------------------------------
 # E-Mail (kostenlos über dein bestehendes Postfach): Kandidatenprofile an Kliniken senden
 # ---------------------------------------------------------------------------
-SMTP_HOST = os.environ.get("JARVIS_SMTP_HOST", "mail.gmx.net")
+SMTP_HOST = os.environ.get("JARVIS_SMTP_HOST", "")  # leer = automatisch aus dem Login erkennen
 SMTP_PORT = int(os.environ.get("JARVIS_SMTP_PORT", "587"))
 SMTP_USER = os.environ.get("JARVIS_SMTP_USER", "")
 SMTP_PASSWORD = os.environ.get("JARVIS_SMTP_PASSWORD", "")
