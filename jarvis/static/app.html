@@ -137,7 +137,8 @@ nav button.on{color:var(--accent)}
   <div id="cands"></div>
 </section>
 
-<section id="s-firmen"><h2>📞 Heute anrufen</h2><div id="sales"></div>
+<section id="s-firmen"><h2>📨 Bewerbungen auf Stellenanzeigen</h2><div id="apps"></div>
+<h2>📞 Heute anrufen</h2><div id="sales"></div>
 <h2>🧾 Vermittlungen</h2><div id="placements"></div><h2>Alle Firmen</h2><div id="firms"></div></section>
 
 <section id="s-jarvis"><div id="chat"></div></section>
@@ -251,7 +252,22 @@ document.querySelectorAll("#filter .chip").forEach(b => b.onclick = () => {
   filter = b.dataset.f; document.querySelectorAll("#filter .chip").forEach(x => x.classList.toggle("on", x === b)); renderCands();
 });
 
+async function loadApps() {
+  let b; try { b = await api("/api/bewerbungen"); } catch (e) { return; }
+  const box = $("#apps"); box.replaceChildren();
+  if (!b.liste.length) return box.append(h("div", {class: "empty"},
+    "Keine bereit. Jarvis braucht interessierte A/B-Kandidaten und Firmen mit Bewerbungs-E-Mail aus Stellenanzeigen."));
+  for (const x of b.liste) box.append(h("div", {class: "card small"}, h("b", {}, `${x.profil} #${x.kandidat}`),
+    h("div", {class: "muted"}, `→ ${x.firma} (${x.ort || "?"}) · ${x.email}`)));
+  box.append(h("button", {class: "btn", onclick: async (ev) => {
+    if (!confirm(`${b.liste.length} anonyme Profile an die Firmen schicken?`)) return;
+    ev.target.disabled = true; ev.target.textContent = "Sende …";
+    try { const r = await api("/api/bewerbungen/senden", {method: "POST"}); toast(r.meldung); loadApps(); load(); }
+    catch (e) { alert(e.message); ev.target.disabled = false; } }}, `📨 Alle ${b.liste.length} senden`));
+}
+
 async function loadSales() {
+  loadApps();
   let v; try { v = await api("/api/vertrieb"); } catch (e) { return; }
   const box = $("#sales"); box.replaceChildren();
   if (!v.plan.length) box.append(h("div", {class: "empty"},

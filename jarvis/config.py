@@ -183,3 +183,7 @@ UST_STATUS = os.environ.get("JARVIS_UST_STATUS", "unklar")
 
 # Monatsziel Umsatz in €
 REVENUE_GOAL = float(os.environ.get("JARVIS_REVENUE_GOAL", "25000"))
+
+# Bewerbungen auf Stellenanzeigen: 0 = nur mit deiner Freigabe in der App (empfohlen), 1 = automatisch
+AUTO_APPLY = os.environ.get("JARVIS_AUTO_APPLY", "0").strip().lower() in ("1", "true", "ja")
+AUTO_APPLY_PER_DAY = int(os.environ.get("JARVIS_AUTO_APPLY_PER_DAY", "10"))

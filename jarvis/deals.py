@@ -321,8 +321,19 @@ def daily_drive() -> dict:
         if p["start_date"] <= (today - timedelta(days=21)).isoformat():
             out["erinnerungen"].append(f"💶 Zahlung prüfen: Vermittlung mit Start {p['start_date']} "
                                        f"({p['fee']:,.0f} €) – bezahlt? App → Umsatz".replace(",", "."))
+    queue = application_queue(config.AUTO_APPLY_PER_DAY)
+    sent_apps = send_applications(queue) if (config.AUTO_APPLY and queue) else []
     plan = sales_plan()
     lines = [f"🚀 Jarvis-Tagesplan {today:%d.%m.}"]
+    clicks = sum(int(store.get_state(conn, f"clicks:{today - timedelta(days=1)}:{b}") or 0)
+                 for b in ("lkw", "pflege", "arzt", "firma"))
+    if clicks:
+        lines.append(f"💬 Gestern {clicks} Klicks auf deinen WhatsApp-Link")
+    if sent_apps:
+        lines.append(f"\n📨 {len(sent_apps)} Bewerbungen auf Stellenanzeigen verschickt:")
+        lines += sent_apps
+    elif queue:
+        lines.append(f"\n📨 {len(queue)} Bewerbungen auf Stellenanzeigen bereit – App → Firmen → „Alle senden“")
     rev = store.revenue_month(conn)
     lines.append(f"💶 Umsatz {rev['monat']}: {rev['umsatz']:,.0f} € / Ziel {config.REVENUE_GOAL:,.0f} €".replace(",", "."))
     if plan:
@@ -336,4 +347,82 @@ def daily_drive() -> dict:
     lines += [""] + out["erinnerungen"] if out["erinnerungen"] else []
     messaging.notify_owner("\n".join(lines))
     out["plan"] = len(plan)
+    return out
+
+
+
+# --------------------------------------------------------------------------- Bewerbungen auf Stellenanzeigen
+def application_queue(limit: int = 10) -> list[dict]:
+    """Passende Kandidaten für Firmen mit öffentlicher Bewerbungs-E-Mail (aus einer Stellenanzeige)."""
+    from . import matching
+    conn = store.connect()
+    week_ago = (date.today() - timedelta(days=7)).isoformat()
+    queue, used_firms = [], set()
+    for cand in conn.execute("SELECT * FROM candidates WHERE status IN ('interessiert','vorgestellt') "
+                             "AND tier IN ('A','B') ORDER BY score DESC").fetchall():
+        for m in matching.matches(conn, cand, 5):
+            firm = store.get_company(conn, m["id"])
+            if (not firm or not firm["email"] or firm["id"] in used_firms or firm["agreement"]
+                    or firm["status"] in ("kein_bedarf", "nicht_anrufen", "kunde")
+                    or store.was_presented(conn, cand["key"], firm["id"])):
+                continue
+            last = store.get_state(conn, f"applied_firm:{firm['id']}")
+            if last and last > week_ago:
+                continue
+            used_firms.add(firm["id"])
+            a = store.load(cand).assessment
+            queue.append({"kandidat_id": cand["key"], "kandidat": cand["key"][:6].upper(), "profil": role_phrase(a),
+                          "firma_id": firm["id"], "firma": firm["name"], "ort": firm["city"], "email": firm["email"],
+                          "bedarf": firm["needs"]})
+            break
+        if len(queue) >= limit:
+            break
+    return queue
+
+
+def send_application(cand_key: str, company_id: int) -> str:
+    """Anonymes Kandidatenprofil als Antwort auf die Stellenanzeige der Firma senden."""
+    from . import matching
+    conn = store.connect()
+    row = store.get_candidate(conn, cand_key)
+    firm = store.get_company(conn, company_id)
+    if not row or not firm or not firm["email"]:
+        return "Kandidat, Firma oder E-Mail fehlt."
+    a = store.load(row).assessment
+    price = pricing.for_candidate(a.category, a.nursing_field, a.adr) or "nach Vereinbarung"
+    body = f"""Guten Tag,
+
+bezugnehmend auf Ihre Stellenanzeige ({firm['needs'] or 'offene Stelle'}) stelle ich Ihnen eine passende
+Fachkraft vor, die sich aktiv bei uns beworben hat und kurzfristig verfügbar ist:
+
+{matching.anonymous_profile(row)}
+
+Wenn Sie die Person kennenlernen möchten, antworten Sie kurz – Sie erhalten dann sofort die vollständigen
+Unterlagen und wir vereinbaren einen Vorstellungstermin.
+
+Konditionen: {price}. Ohne Einstellung entstehen Ihnen keine Kosten.
+
+Freundliche Grüsse
+{config.RECRUITER_NAME}
+{config.AGENCY_NAME}
+WhatsApp: {config.PUBLIC_URL}/wa?b=firma
+
+Sie möchten keine weiteren Vorschläge? Eine kurze Antwort „Kein Interesse" genügt."""
+    matching.send_email(firm["email"], f"Bewerbung über {config.AGENCY_NAME}: {role_phrase(a)} – kurzfristig verfügbar", body)
+    store.record_presentation(conn, row["key"], company_id, "bewerbung-anzeige")
+    store.set_state(conn, f"applied_firm:{company_id}", date.today().isoformat())
+    if firm["status"] == "neu":
+        store.set_company_status(conn, company_id, "angeschrieben", f"Profil {row['key'][:6].upper()} auf Anzeige geschickt")
+    if row["status"] == "interessiert":
+        store.set_status(conn, row["key"], "vorgestellt", f"auf Anzeige von {firm['name']} vorgestellt")
+    return f"✅ {role_phrase(a)} #{row['key'][:6].upper()} an {firm['name']} gesendet."
+
+
+def send_applications(items: list[dict] | None = None, limit: int = 10) -> list[str]:
+    out = []
+    for it in (items or application_queue(limit))[:limit]:
+        try:
+            out.append(send_application(it["kandidat_id"], it["firma_id"]))
+        except Exception as exc:  # noqa: BLE001
+            out.append(f"⚠️ {it['firma']}: {exc}")
     return out

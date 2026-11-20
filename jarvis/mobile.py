@@ -285,6 +285,21 @@ async def vertrieb(request: Request):
             "vermittlungen": store.placements(conn)}
 
 
+@router.get("/api/bewerbungen")
+async def bewerbungen(request: Request):
+    authed(request)
+    from . import deals
+    return {"liste": deals.application_queue(), "automatisch": config.AUTO_APPLY}
+
+
+@router.post("/api/bewerbungen/senden")
+async def bewerbungen_senden(request: Request):
+    authed(request)
+    from . import deals
+    res = await asyncio.to_thread(deals.send_applications)
+    return {"meldung": f"{len([r for r in res if r.startswith('✅')])} Bewerbungen gesendet", "details": res}
+
+
 @router.post("/api/vertrieb/{cid}")
 async def vertrieb_ergebnis(request: Request, cid: int, daten: dict = Body(...)):
     authed(request)

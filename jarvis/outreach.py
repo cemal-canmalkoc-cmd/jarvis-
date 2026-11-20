@@ -29,6 +29,22 @@ def wa_link(text: str = "") -> str:
     return f"https://wa.me/{num}" + (f"?text={quote(text)}" if text else "")
 
 
+WA_TEXTS = {
+    "lkw": "Hallo Hansa Personal, ich bin LKW-Fahrer und suche einen neuen Job.\nFührerschein (C/CE): \n"
+           "Modul 95 / Fahrerkarte: \nWohnort (PLZ): \nAb wann: ",
+    "pflege": "Hallo Hansa Personal, ich interessiere mich für eine Stelle in der Schweiz.\nBeruf: \n"
+              "Deutschniveau: \nSRK-Anerkennung (ja/nein/läuft): \nWohnort: ",
+    "arzt": "Hallo Hansa Personal, ich interessiere mich als Ärztin/Arzt für eine Stelle in der Schweiz.\n"
+            "Fachrichtung: \nDeutschniveau: \nMEBEKO (ja/nein/läuft): ",
+    "firma": "Hallo Hansa Personal, wir suchen Personal.\nFirma: \nOrt: \nGesucht (z.B. CE-Fahrer, Pflegefachkraft): \nAnzahl: ",
+}
+
+
+def wa_short(bereich: str = "lkw", quelle: str = "") -> str:
+    """Kurzer, zählbarer Link, der direkt in deinen WhatsApp-Chat führt (mit vorausgefülltem Text)."""
+    return f"{config.PUBLIC_URL}/wa?b={bereich}" + (f"&q={quelle}" if quelle else "")
+
+
 def can_email() -> bool:
     from .matching import smtp_host
     return bool(smtp_host() and config.SMTP_USER and config.SMTP_PASSWORD)
@@ -56,7 +72,7 @@ ich bin auf Ihr Stellengesuch als {role} aufmerksam geworden. Ich bin {config.RE
 {config.AGENCY_NAME} – {offer}
 {f"{rec} ist dabei ein grosser Vorteil." if rec else ""}
 Wenn Sie Interesse haben, schreiben Sie mir einfach kurz per WhatsApp:
-{wa_link(hello)}
+{wa_short('lkw' if lkw else ('arzt' if a.category == 'arzt' else 'pflege'), 'mail')}
 ({contact_number()})
 
 Oder bewerben Sie sich in 2 Minuten online: {config.PUBLIC_URL}/bewerbung
@@ -97,12 +113,12 @@ def portal_message(c: ScoredCandidate) -> str:
     if c.assessment.category == "lkw":
         return (f"Hallo, ich habe Ihr Stellengesuch als {role} gesehen. Ich bin {config.RECRUITER_NAME} von "
                 f"{config.AGENCY_NAME} – wir vermitteln Fahrer kostenlos an Speditionen in ganz Deutschland "
-                f"(Nah- und Fernverkehr). Interesse? Schreiben Sie mir gern per WhatsApp: {contact_number()} "
+                f"(Nah- und Fernverkehr). Interesse? Schreiben Sie mir direkt per WhatsApp: {wa_short('lkw', 'portal')} "
                 f"– oder bewerben Sie sich hier: {config.PUBLIC_URL}/bewerbung?bereich=lkw")
     return (f"Hallo, ich habe Ihr Stellengesuch als {role} gesehen. Ich bin {config.RECRUITER_NAME} von "
             f"{config.AGENCY_NAME} – wir vermitteln Pflegekräfte kostenlos an Kliniken und Heime in der Schweiz "
             f"(deutlich höherer Lohn, wir helfen bei der Anerkennung). Interesse? Schreiben Sie mir gern per "
-            f"WhatsApp: {contact_number()} – oder bewerben Sie sich hier: {config.PUBLIC_URL}/bewerbung")
+            f"WhatsApp: {wa_short('arzt' if c.assessment.category == 'arzt' else 'pflege', 'portal')} – oder online: {config.PUBLIC_URL}/bewerbung")
 
 
 def portal_digest(cands: list[ScoredCandidate]) -> str | None:

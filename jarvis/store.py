@@ -117,7 +117,7 @@ COMPANY_EXTRA_COLUMNS = {
 }
 
 STATUSES = ("neu", "kontaktiert", "interessiert", "vorgestellt", "gespraech", "kein_interesse", "vermittelt")
-COMPANY_STATUSES = ("neu", "angerufen", "interessiert", "kunde", "kein_bedarf", "nicht_anrufen")
+COMPANY_STATUSES = ("neu", "angerufen", "angeschrieben", "interessiert", "kunde", "kein_bedarf", "nicht_anrufen")
 
 _lock = threading.Lock()
 
@@ -258,10 +258,10 @@ def stats_today(conn: sqlite3.Connection) -> dict:
 def add_company(conn: sqlite3.Connection, **f) -> bool:
     with _lock:
         cur = conn.execute(
-            """INSERT OR IGNORE INTO companies (name, city, phone, website, needs, source_url, found_on)
-               VALUES (?,?,?,?,?,?,?)""",
+            """INSERT OR IGNORE INTO companies (name, city, phone, website, needs, source_url, found_on, email, branche)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
             (f.get("name"), f.get("city"), f.get("phone"), f.get("website"), f.get("needs"),
-             f.get("source_url"), date.today().isoformat()),
+             f.get("source_url"), date.today().isoformat(), f.get("email") or None, f.get("branche") or None),
         )
         conn.commit()
     return cur.rowcount > 0
@@ -477,6 +477,7 @@ EDITABLE_SETTINGS = {
     "TWILIO_AUTH_TOKEN": "Twilio Auth Token",
     "TWILIO_VOICE_FROM": "Twilio-Telefonnummer (Absender)",
     "UST_STATUS": "Umsatzsteuer: unklar / kleinunternehmer / regel",
+    "AUTO_APPLY": "Bewerbungen auf Stellenanzeigen automatisch senden (1 = ja, 0 = nur mit Freigabe)",
     "DAILY_BUDGET_USD": "Automatisches Tagesbudget in $ (0 = Jarvis fragt immer vorher)",
     "DAILY_MINIMUM": "Mindestens X neue Kandidaten pro Tag",
     "MINIMUM_MAX_USD": "Höchstens $ pro Tag für das Tagesminimum",
@@ -495,7 +496,9 @@ def apply_settings(conn: sqlite3.Connection | None = None) -> None:
         if val is None:
             continue
         cur = getattr(config, key, "")
-        if isinstance(cur, float):
+        if isinstance(cur, bool):
+            val = val.strip().lower() in ("1", "true", "ja", "yes")
+        elif isinstance(cur, float):
             try:
                 val = float(val.replace(",", "."))
             except ValueError:

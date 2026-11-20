@@ -18,13 +18,14 @@ Für jeden Arbeitgeber:
 - name, city (Ort), website
 - phone: die öffentlich angegebene Telefonnummer der Personalabteilung/HR oder der Zentrale,
   so wie sie auf der offiziellen Website steht. Niemals raten. Ohne Nummer: null.
+- email: die in der Stellenanzeige angegebene Bewerbungs-E-Mail (nur wenn sie dort öffentlich steht, sonst null)
 - needs: welche Stellen konkret offen sind
 - source_url: URL der Stellenanzeige oder Karriereseite
 - no_cold_calls: true, wenn die Firma/Anzeige ausdrücklich keine Vermittler / keine Personaldienstleister wünscht
 
 Antworte am Ende ausschliesslich mit einem JSON-Codeblock:
 ```json
-[{{"name": "...", "city": "...", "website": "...", "phone": "...", "needs": "...", "source_url": "...", "no_cold_calls": false}}]
+[{{"name": "...", "city": "...", "website": "...", "phone": "...", "email": "...", "needs": "...", "source_url": "...", "no_cold_calls": false}}]
 ```"""
 
 
@@ -39,13 +40,14 @@ Arbeitsagentur, kleinanzeigen).
 Für jedes Unternehmen:
 - name, city (Ort mit PLZ wenn möglich), website
 - phone: öffentlich angegebene Telefonnummer der Personalabteilung oder Zentrale. Niemals raten.
+- email: die in der Stellenanzeige angegebene Bewerbungs-E-Mail (nur wenn öffentlich angegeben, sonst null)
 - needs: welche Fahrerstellen konkret offen sind (Klasse, Nah-/Fernverkehr, ADR …)
 - source_url: URL der Stellenanzeige
 - no_cold_calls: true, wenn die Anzeige ausdrücklich keine Vermittler/Personaldienstleister wünscht
 
 Antworte am Ende ausschliesslich mit einem JSON-Codeblock:
 ```json
-[{{"name": "...", "city": "...", "website": "...", "phone": "...", "needs": "...", "source_url": "...", "no_cold_calls": false}}]
+[{{"name": "...", "city": "...", "website": "...", "phone": "...", "email": "...", "needs": "...", "source_url": "...", "no_cold_calls": false}}]
 ```"""
 
 
@@ -82,6 +84,8 @@ def find(focus: str, region: str = "Deutschschweiz", max_searches: int | None = 
     for it in items:
         if not isinstance(it, dict) or not it.get("name"):
             continue
+        if lkw:
+            it["branche"] = "lkw"
         added = store.add_company(conn, **it)
         if added:
             new += 1

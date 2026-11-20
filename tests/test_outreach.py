@@ -25,7 +25,7 @@ def test_email_once_with_whatsapp_link(monkeypatch):
     assert outreach.reach_out(c) == "gesendet"
     to, subj, body = mails[0]
     assert to == "lea@example.org" and "Psychiatrie" in subj
-    assert "https://wa.me/4917600000000?text=" in body and "STOP" in body and "Hansa Personal" in body
+    assert "/wa?b=pflege&q=mail" in body and "STOP" in body and "Hansa Personal" in body
     assert outreach.reach_out(c) == "schon_kontaktiert" and len(mails) == 1
 
 
@@ -38,7 +38,7 @@ def test_no_mail_without_email_or_unsuitable(monkeypatch):
 
 def test_contact_in_ads_and_agent(monkeypatch):
     monkeypatch.setattr(config, "CONTACT_WHATSAPP", "+49 176 00000000")
-    assert "+49 176 00000000" in ads._system()
+    assert "/wa?b=pflege" in ads._system() and "/wa?b=lkw" in ads._system(True) and "/firmen" in ads._system(employer=True)
     assert "Headhunter" in agent.OWNER_SYSTEM
     keys = {s["key"] for s in store.settings_overview()}
     assert "META_TOKEN" not in keys and "SMTP_PASSWORD" in keys and "CONTACT_WHATSAPP" in keys

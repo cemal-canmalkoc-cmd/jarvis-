@@ -1,0 +1,55 @@
+"""Eigener Vertrieb: WhatsApp-Links, Firmen-Seite, Bewerbungen auf Stellenanzeigen."""
+from fastapi.testclient import TestClient
+
+from jarvis import config, deals, matching, server, store
+from tests.test_deals import _driver
+
+
+def test_whatsapp_redirect_counts(monkeypatch):
+    monkeypatch.setattr(config, "CONTACT_WHATSAPP", "+49 176 00000000")
+    c = TestClient(server.app)
+    r = c.get("/wa?b=lkw&q=test", follow_redirects=False)
+    assert r.status_code == 302 and r.headers["location"].startswith("https://wa.me/4917600000000?text=")
+    assert "LKW-Fahrer" in __import__("urllib.parse").parse.unquote(r.headers["location"])
+    from datetime import date
+    assert int(store.get_state(store.connect(), f"clicks:{date.today()}:lkw")) >= 1
+    assert "direkt per WhatsApp" in c.get("/bewerbung?bereich=lkw").text
+    assert "direkt per WhatsApp" in c.get("/bewerbung").text
+
+
+def test_employer_page_creates_hot_lead_and_sends_offer(monkeypatch):
+    mails = []
+    monkeypatch.setattr(matching, "send_email", lambda to, s, b, attachments=None: mails.append((to, b)))
+    _driver("Lead Fahrer", "+49 170 9990001", None)
+    c = TestClient(server.app)
+    assert "Sie zahlen nur bei Einstellung" in c.get("/firmen").text
+    r = c.post("/firmen", data={"firma": "Trans Lead GmbH", "ort": "Dortmund", "email": "chef@translead.example",
+                                "bereich": "lkw", "bedarf": "2 CE-Fahrer Fernverkehr", "consent": "1"})
+    assert r.status_code == 200 and "Vielen Dank" in r.text
+    firm = store.connect().execute("SELECT * FROM companies WHERE name='Trans Lead GmbH'").fetchone()
+    assert firm["status"] == "interessiert" and firm["agreement"]
+    assert mails and mails[-1][0] == "chef@translead.example" and "VERMITTLUNGSVEREINBARUNG" in mails[-1][1]
+    assert "NEUE FIRMENANFRAGE" in store.notifications(store.connect(), 1)[0]["text"]
+
+
+def test_job_ad_applications_need_approval(monkeypatch):
+    mails = []
+    monkeypatch.setattr(matching, "send_email", lambda to, s, b, attachments=None: mails.append((to, s, b)))
+    monkeypatch.setattr(config, "AUTO_APPLY", False)
+    key = _driver("Anzeigen Fahrer", "+49 170 9990002", None)
+    conn = store.connect()
+    store.add_company(conn, name="Spedition Anzeige", city="Dortmund", needs="LKW-Fahrer CE Fernverkehr",
+                      email="bewerbung@anzeige.example", branche="lkw")
+    q = deals.application_queue()
+    item = next(x for x in q if x["firma"] == "Spedition Anzeige")
+    deals.daily_drive()
+    assert not any(m[0] == "bewerbung@anzeige.example" for m in mails)       # ohne Freigabe nichts gesendet
+    assert "Bewerbungen auf Stellenanzeigen bereit" in store.notifications(conn, 1)[0]["text"]
+    msg = deals.send_application(item["kandidat_id"], item["firma_id"])
+    assert msg.startswith("✅")
+    to, subj, body = next(m for m in mails if m[0] == "bewerbung@anzeige.example")
+    assert "bezugnehmend auf Ihre Stellenanzeige" in body and "Anzeigen Fahrer" not in body and "Kein Interesse" in body
+    assert store.get_company(conn, item["firma_id"])["status"] == "angeschrieben"
+    assert all(x["firma_id"] != item["firma_id"] for x in deals.application_queue())   # nicht doppelt
+    assert store.get_candidate(conn, item["kandidat_id"])["status"] == "vorgestellt"
+    assert key

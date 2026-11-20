@@ -26,6 +26,9 @@ TARGETS = [
     "Pflegekräfte, die bereits in der Schweiz leben und wechseln wollen",
     "Pflegefachkräfte mit SRK-Anerkennung",
 ]
+EMPLOYER_TARGETS = [
+    "ARBEITGEBER: Speditionen und Logistikfirmen, die LKW-Fahrer CE suchen",
+]
 LKW_TARGETS = [
     "LKW-Fahrer CE Fernverkehr (Deutschland)",
     "Berufskraftfahrer CE Nahverkehr – abends zu Hause",
@@ -43,7 +46,7 @@ Für Bewerber ist die Vermittlung kostenlos.
 
 Regeln:
 - Keine erfundenen Lohnzahlen, keine konkreten Arbeitgebernamen, keine Garantien.
-- Immer die Kontaktwege nennen: WhatsApp {{wa}} und Formular {config.PUBLIC_URL}/bewerbung{" und Telefon " + config.CALL_IN_NUMBER if config.CALL_IN_NUMBER else ""}.
+- Immer die Kontaktwege nennen: WhatsApp {config.PUBLIC_URL}/wa?b=pflege und Formular {config.PUBLIC_URL}/bewerbung{" und Telefon " + config.CALL_IN_NUMBER if config.CALL_IN_NUMBER else ""}.
 - 3–6 Emojis sparsam, kurze Absätze, maximal ca. 120 Wörter, am Ende 3–5 passende Hashtags.
 - Gib NUR den fertigen Inseratstext aus, ohne Vorbemerkung."""
 
@@ -55,26 +58,36 @@ LKW-Fahrer in Deutschland. Ton: direkt, ehrlich, auf Augenhöhe, Du-Form.
 
 Regeln:
 - Keine erfundenen Löhne, keine Firmennamen, keine Garantien.
-- Kontaktwege: WhatsApp {{wa}} und Formular {config.PUBLIC_URL}/bewerbung?bereich=lkw
+- Kontaktwege: WhatsApp {config.PUBLIC_URL}/wa?b=lkw und Formular {config.PUBLIC_URL}/bewerbung?bereich=lkw
 - 3–5 Emojis, kurze Absätze, max. ca. 100 Wörter, am Ende 3–5 Hashtags.
 - Gib NUR den fertigen Text aus."""
 
 
-def _system(lkw: bool = False) -> str:
+EMPLOYER_AD_SYSTEM = f"""Du schreibst Beiträge für {config.AGENCY_NAME} an ARBEITGEBER (Speditionen, Logistik,
+Kliniken). Botschaft: geprüfte LKW-Fahrer (C/CE, Modul 95, ADR) bzw. Pflegekräfte, kurzfristig verfügbar,
+Bezahlung nur bei Einstellung, keine Vorabkosten. Seriös, kurz (max. 90 Wörter), 2–3 Emojis, Hashtags.
+Kontakt: {config.PUBLIC_URL}/firmen und WhatsApp {config.PUBLIC_URL}/wa?b=firma. Keine erfundenen Zahlen.
+Gib NUR den fertigen Text aus."""
+
+
+def _system(lkw: bool = False, employer: bool = False) -> str:
+    if employer:
+        return EMPLOYER_AD_SYSTEM
     from .outreach import contact_number
     return (LKW_AD_SYSTEM if lkw else AD_SYSTEM).replace("{wa}", contact_number() or "(keine)")
 
 
 def target_for_today(offset: int = 0) -> str:
-    pool = TARGETS + (LKW_TARGETS if config.LKW_ENABLED else [])
+    pool = TARGETS + (LKW_TARGETS + EMPLOYER_TARGETS if config.LKW_ENABLED else [])
     return pool[(date.today().toordinal() * 2 + offset) % len(pool)]
 
 
 def write_ad(target: str | None = None, platform: str = "Facebook") -> str:
     target = target or target_for_today()
     lkw = any(w in target.lower() for w in ("lkw", "fahrer", "kraftfahrer"))
+    employer = target.upper().startswith("ARBEITGEBER")
     resp = brain.create(
-        model=config.MODEL, max_tokens=2000, system=_system(lkw), output_config={"effort": "low"},
+        model=config.MODEL, max_tokens=2000, system=_system(lkw, employer), output_config={"effort": "low"},
         messages=[{"role": "user", "content": f"Plattform: {platform}. Zielgruppe: {target}. "
                                               f"Schreib ein neues, abwechslungsreiches Inserat (Datum {date.today()})."}],
     )

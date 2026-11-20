@@ -21,7 +21,7 @@ import os
 import time
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import quote
 
@@ -261,6 +261,7 @@ LKW_FORM = """
 <h1>LKW-Fahrer gesucht 🚛</h1>
 <p class="lead">Speditionen in ganz Deutschland suchen Fahrer – Nah- und Fernverkehr.
 Für dich kostenlos. In 2 Minuten bewerben, wir melden uns schnell.{contact}</p>
+{wa}
 <form method="post" action="/bewerbung" enctype="multipart/form-data">
  <input type="hidden" name="in_schweiz" value="nein">
  <fieldset><legend>Kontakt</legend>
@@ -319,18 +320,25 @@ async def bewerbung_form(bereich: str = ""):
         num = contact_number()
         contact = (f' Oder direkt per WhatsApp: <a href="https://wa.me/{"".join(ch for ch in num if ch.isdigit())}">'
                    f'{html.escape(num)}</a>') if num else ""
+        from .outreach import wa_short
+        wa = (f'<a class="btn" style="margin:0 0 16px" href="{wa_short("lkw", "formular")}">💬 Schneller: '
+              f'direkt per WhatsApp bewerben</a>' if num else "")
         return _page(f"LKW-Fahrer – {config.AGENCY_NAME}", LKW_FORM.replace("{agency}", agency)
-                     .replace("{contact}", contact))
+                     .replace("{contact}", contact).replace("{wa}", wa))
     call_hint = ""
     if config.CALL_IN_NUMBER:
         tel = "".join(ch for ch in config.CALL_IN_NUMBER if ch.isdigit() or ch == "+")
         call_hint = (f' Oder einfach anrufen: <a href="tel:{html.escape(tel)}">'
                      f'{html.escape(config.CALL_IN_NUMBER)}</a>')
+    from .outreach import contact_number, wa_short
+    wa_btn = (f'<a class="btn" style="margin:0 0 16px" href="{wa_short("pflege", "formular")}">💬 Schneller: '
+              f'direkt per WhatsApp bewerben</a>' if contact_number() else "")
     body = f"""
 <div class="brand">{agency}</div>
 <h1>Ihre Stelle in der Schweiz</h1>
 <p class="lead">Pflege & Ärzteschaft – wir vermitteln Sie kostenlos an Spitäler, Kliniken und Heime.
 In 2 Minuten bewerben, wir melden uns schnell.{call_hint}</p>
+{wa_btn}
 <form method="post" action="/bewerbung" enctype="multipart/form-data">
  <fieldset><legend>Kontakt</legend>
   <label for="name">Vor- und Nachname *</label><input id="name" name="name" type="text" required maxlength="120">
@@ -431,6 +439,99 @@ def _evaluate_form(raw: sources.RawProfile, cv_path: str | None = None) -> None:
         if c.consent_call and voice.within_call_hours():
             # Heisse Bewerber sofort anrufen, solange das Interesse frisch ist
             log.info(voice.place_call("kandidat", store.candidate_key(c)))
+
+
+# --------------------------------------------------------------------------- Direkt in Cemal-Cans WhatsApp
+@app.get("/wa")
+async def wa_redirect(b: str = "lkw", q: str = ""):
+    from .outreach import WA_TEXTS, contact_number, wa_link
+    if not contact_number():
+        return RedirectResponse("/bewerbung" + ("?bereich=lkw" if b == "lkw" else ""))
+    conn = store.connect()
+    key = f"clicks:{date.today()}:{b}"
+    store.set_state(conn, key, str(int(store.get_state(conn, key) or 0) + 1))
+    if q:
+        k2 = f"clicks_src:{date.today()}:{q}"
+        store.set_state(conn, k2, str(int(store.get_state(conn, k2) or 0) + 1))
+    return RedirectResponse(wa_link(WA_TEXTS.get(b, WA_TEXTS["lkw"])), status_code=302)
+
+
+# --------------------------------------------------------------------------- Firmen-Seite (eigener Vertrieb)
+FIRMEN_FORM = """
+<div class="brand">{agency}</div>
+<h1>Personal gesucht? Wir liefern.</h1>
+<p class="lead"><b>LKW-Fahrer (C/CE, Modul 95, ADR)</b> in ganz Deutschland und <b>Pflegefachkräfte & Ärzte</b>
+für die Schweiz – geprüft, mit Unterlagen, kurzfristig verfügbar. <b>Sie zahlen nur bei Einstellung.</b></p>
+{wa}
+<form method="post" action="/firmen">
+ <fieldset><legend>Ihre Anfrage (1 Minute)</legend>
+  <label for="firma">Firma *</label><input id="firma" name="firma" required maxlength="120">
+  <div class="row">
+   <div><label for="ort">Ort *</label><input id="ort" name="ort" required maxlength="80"></div>
+   <div><label for="kontakt">Ansprechperson</label><input id="kontakt" name="kontakt" maxlength="80"></div>
+  </div>
+  <div class="row">
+   <div><label for="email">E-Mail *</label><input id="email" name="email" type="email" required maxlength="120"></div>
+   <div><label for="telefon">Telefon</label><input id="telefon" name="telefon" type="tel" maxlength="30"></div>
+  </div>
+  <label for="bereich">Wen suchen Sie? *</label>
+  <select id="bereich" name="bereich"><option value="lkw">LKW-Fahrer</option><option value="pflege">Pflegefachkräfte (Schweiz)</option>
+   <option value="arzt">Ärztinnen/Ärzte (Schweiz)</option></select>
+  <label for="bedarf">Details (Anzahl, Nah-/Fernverkehr, ADR, Start …)</label><input id="bedarf" name="bedarf" maxlength="300">
+  <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+ </fieldset>
+ <label class="check"><input type="checkbox" name="consent" value="1" required>
+  <span>Bitte senden Sie mir passende Kandidatenprofile und Ihre Konditionen per E-Mail. *</span></label>
+ <button type="submit">Kandidaten anfordern</button>
+ <p class="small">Erfolgshonorar – keine Vorabkosten, keine Abo-Gebühren.</p>
+</form>"""
+
+
+@app.get("/firmen", response_class=HTMLResponse)
+async def firmen_seite():
+    from .outreach import contact_number, wa_short
+    wa = (f'<a class="btn" style="margin:0 0 16px" href="{wa_short("firma", "web")}">💬 Direkt per WhatsApp anfragen</a>'
+          if contact_number() else "")
+    return _page(f"Personal für Ihr Unternehmen – {config.AGENCY_NAME}",
+                 FIRMEN_FORM.replace("{agency}", html.escape(config.AGENCY_NAME)).replace("{wa}", wa))
+
+
+def _handle_firm_lead(cid: int) -> None:
+    from . import deals
+    try:
+        msg = deals.send_agreement_and_profiles(cid)
+    except Exception as exc:  # noqa: BLE001
+        msg = f"E-Mail nicht gesendet: {exc}"
+    firm = store.get_company(store.connect(), cid)
+    messaging.notify_owner(f"🏢🔥 NEUE FIRMENANFRAGE: {firm['name']} ({firm['city']})\nSucht: {firm['needs']}\n"
+                           f"Kontakt: {firm['contact_name'] or '-'} {firm['email']} {firm['phone'] or ''}\n{msg}\n"
+                           f"👉 Jetzt anrufen – heisse Anfrage!")
+
+
+@app.post("/firmen", response_class=HTMLResponse)
+async def firmen_anfrage(request: Request, bg: BackgroundTasks, firma: str = Form(...), ort: str = Form(...),
+                         email: str = Form(...), bereich: str = Form("lkw"), kontakt: str = Form(""),
+                         telefon: str = Form(""), bedarf: str = Form(""), website: str = Form(""),
+                         consent: str = Form("")):
+    if website:
+        return _page("Danke", "<h1>Danke!</h1>")
+    ip = request.client.host if request.client else "?"
+    if not _rate_ok("firm:" + ip):
+        raise HTTPException(429, "Zu viele Anfragen")
+    if consent != "1":
+        raise HTTPException(400, "Einwilligung erforderlich")
+    label = {"lkw": "LKW-Fahrer", "pflege": "Pflegefachkräfte", "arzt": "Ärztinnen/Ärzte"}.get(bereich, bereich)
+    conn = store.connect()
+    store.add_company(conn, name=firma.strip(), city=ort.strip(), phone=telefon or None,
+                      needs=f"{label}: {bedarf}".strip(": "), source_url="Firmen-Seite", email=email,
+                      branche="lkw" if bereich == "lkw" else "gesundheit")
+    cid = conn.execute("SELECT id FROM companies WHERE name=? AND city IS ?", (firma.strip(), ort.strip())).fetchone()[0]
+    store.set_company_contact(conn, cid, email, kontakt or None)
+    store.set_company_status(conn, cid, "interessiert", "Anfrage über die Firmen-Seite")
+    bg.add_task(_handle_firm_lead, cid)
+    return _page("Danke", f'<div class="card"><h1>Vielen Dank!</h1><p>Sie erhalten in Kürze passende Profile und '
+                          f'unsere Konditionen an {html.escape(email)}. {html.escape(config.RECRUITER_NAME)} meldet sich '
+                          f'zusätzlich persönlich.</p></div>')
 
 
 # --------------------------------------------------------------------------- Dokumente hochladen (Kandidat)
