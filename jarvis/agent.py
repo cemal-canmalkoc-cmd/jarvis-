@@ -269,7 +269,8 @@ TOOLS = {
                       "Dauert mehrere Minuten.",
                       {"web": {"type": "boolean"},
                        "fokus": {"type": "array", "items": {"type": "string"},
-                                 "description": "z.B. ['Pflegefachfrau Psychiatrie Zürich']"}}),
+                                 "description": "z.B. ['Pflegefachfrau Psychiatrie Zürich'] – für LKW-Fahrer mit 'LKW:' "
+                                                "beginnen, z.B. ['LKW: Berufskraftfahrer CE NRW']"}}),
     "shortlist": (t_shortlist, "Beste offene Kandidaten (Tier A/B) mit WhatsApp-Links.",
                   {"anzahl": {"type": "integer"}}),
     "kandidat": (t_kandidat, "Alle Details zu einem Kandidaten.", {"id": {"type": "string"}}),

@@ -124,3 +124,11 @@ def test_applicant_becomes_interested_with_cv_and_firms(monkeypatch, tmp_path):
     h = {"Authorization": "Bearer t0k"}
     assert cl.get(f"/api/kandidat/{key}", headers=h).json()["lebenslauf"] is True
     assert cl.get(f"/api/kandidat/{key}/lebenslauf", headers=h).content.startswith(b"%PDF")
+
+
+def test_lkw_focus_detected_without_prefix():
+    from jarvis import brain
+    assert brain.is_lkw_focus("Berufskraftfahrer C/CE, Fahrerkarte, Modul 95, Deutschland")
+    assert brain.is_lkw_focus("LKW: Fahrer ADR")
+    assert not brain.is_lkw_focus("Pflegefachfrau Psychiatrie Zürich")
+    assert not brain.is_lkw_focus("Arzt Anästhesie Bern")

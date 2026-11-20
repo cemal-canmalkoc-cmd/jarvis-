@@ -179,8 +179,9 @@ Strikte Regeln:
 - Keine Profile aus Login-geschützten Netzwerken, keine erratenen Kontaktdaten, keine Telefonnummern
   aus anderen Quellen zusammenführen.
 - Bevorzuge Personen, die aktuell in der Schweiz sind.
-- Gib für jede Person die exakte Quell-URL an – wenn möglich die EINZELNE Anzeige
-  (z.B. kleinanzeigen.de/s-anzeige/…), nicht die Übersichtsseite. Öffne dazu die einzelne Anzeige.
+- Gib für jede Person die exakte Quell-URL an – wenn eine EINZELNE Anzeige in den Suchergebnissen steht
+  (z.B. kleinanzeigen.de/s-anzeige/…), nimm diese statt der Übersichtsseite. Suche dafür auch gezielt
+  nach "kleinanzeigen.de/s-anzeige <Beruf> sucht". Lieber eine Übersichtsseite als gar kein Treffer.
 - Übernimm Anzeigentitel wörtlich und eine Telefon-/WhatsApp-Nummer NUR, wenn sie öffentlich in der Anzeige steht.
 
 Antworte am Ende ausschliesslich mit einem JSON-Codeblock. profile_text muss ALLE Angaben aus der Anzeige
@@ -207,8 +208,9 @@ So gehst du vor (genau so suchen, Begriff passend zum Fokus):
 Sammelseiten in einzelne Personen zerlegen. Stellenangebote von Speditionen/Personaldienstleistern und
 Gesuche älter als 12 Monate weglassen. Kontakt über das Portal reicht (Inserats-URL als Kontaktweg).
 Keine Login-Profile, keine erratenen Kontaktdaten.
-Gib wenn möglich die URL der EINZELNEN Anzeige an (kleinanzeigen.de/s-anzeige/…), nicht die Übersichtsseite,
-dazu den Anzeigentitel wörtlich. Telefon-/WhatsApp-Nummer nur, wenn sie öffentlich in der Anzeige steht.
+Wenn eine EINZELNE Anzeige in den Suchergebnissen steht (kleinanzeigen.de/s-anzeige/…), nimm deren URL statt der
+Übersichtsseite (suche auch gezielt "kleinanzeigen.de/s-anzeige LKW Fahrer sucht"), dazu den Anzeigentitel wörtlich.
+Lieber eine Übersichtsseite als gar kein Treffer. Telefon-/WhatsApp-Nummer nur, wenn sie öffentlich in der Anzeige steht.
 
 Antworte am Ende ausschliesslich mit einem JSON-Codeblock. profile_text muss ALLE Angaben enthalten:
 Führerscheinklasse, Fahrerkarte, Modul 95, ADR, Erfahrung, Verkehrsart, Ort mit PLZ, Datum, Anzeigentitel, Kontaktweg:
@@ -218,15 +220,21 @@ Führerscheinklasse, Fahrerkarte, Modul 95, ADR, Erfahrung, Verkehrsart, Ort mit
 Leeres Array, wenn nichts Passendes gefunden wurde."""
 
 
+LKW_WORDS = ("lkw", "kraftfahrer", "berufskraftfahrer", "fahrer", "c/ce", " ce ", "adr", "spedition",
+             "fernverkehr", "nahverkehr", "kipper", "sattelzug", "trucker")
+
+
 def is_lkw_focus(focus: str) -> bool:
-    return focus.strip().lower().startswith("lkw:")
+    f = f" {focus.strip().lower()} "
+    return f.strip().startswith("lkw:") or any(w in f for w in LKW_WORDS)
 
 
 def find_public_leads(focus: str, max_searches: int | None = None) -> list[dict]:
     """Sucht öffentliche Stellengesuche zu einem Fokus (z.B. 'Pflegefachfrau Psychiatrie Zürich')."""
     messages: list[dict] = [{
         "role": "user",
-        "content": (f"Suche aktuell öffentliche Stellengesuche für: {focus[4:].strip()}. Region: Deutschland."
+        "content": (f"Suche aktuell öffentliche Stellengesuche für: {re.sub(r'^lkw:', '', focus.strip(), flags=re.I).strip()}. "
+                    "Region: Deutschland."
                     if is_lkw_focus(focus) else
                     f"Suche aktuell öffentliche Stellengesuche für: {focus}. "
                     "Region: Schweiz (Deutschschweiz bevorzugt)."),
