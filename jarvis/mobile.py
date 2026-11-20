@@ -127,7 +127,17 @@ def _cand_summary(row) -> dict:
             "deutsch": a.german_level, "anerkennung": a.recognition_status,
             "ort": a.current_location or "", "status": row["status"],
             "darf_anrufen": bool(row["consent_call"]), "whatsapp_link": c.whatsapp_link,
-            "telefon": a.phone or ""}
+            "telefon": a.phone or "",
+            "quelle": row["source"] if (row["source"] or "").startswith("http") else "",
+            "nachricht": _portal_text(c)}
+
+
+def _portal_text(c) -> str:
+    from . import outreach
+    try:
+        return outreach.portal_message(c)
+    except Exception:  # noqa: BLE001
+        return ""
 
 
 @router.post("/api/autonomie/weiter")
@@ -241,6 +251,15 @@ async def kandidat(request: Request, key: str):
     out["quelle"] = row["source"] if (row["source"] or "").startswith("http") else ""
     out["nachricht"] = outreach.portal_message(c)
     out["whatsapp_kontakt"] = outreach.wa_link()
+    from urllib.parse import quote as _q
+    from . import pricing
+    a = c.assessment
+    price = pricing.for_candidate(a.category, a.nursing_field, a.adr) or "nur bei Einstellung"
+    profil = (f"Kandidatenvorschlag von {config.AGENCY_NAME}:\n\n{matching.anonymous_profile(row)}\n\n"
+              f"Konditionen: {price}. Bei Interesse schicke ich sofort Lebenslauf und Unterlagen.\n"
+              f"{config.RECRUITER_NAME}")
+    out["profil_text"] = profil
+    out["profil_whatsapp"] = "https://wa.me/?text=" + _q(profil)
     cvp = store.get_state(conn, f"cv:{row['key']}")
     out["lebenslauf"] = bool(cvp and Path(cvp).exists())
     from . import deals

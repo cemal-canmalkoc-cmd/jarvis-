@@ -101,6 +101,10 @@ nav button.on{color:var(--accent)}
     <div class="ring" id="ring"><div><span id="goal-n">–</span><small id="goal-z">von 20</small></div></div>
     <div><b>Vermittelbar heute</b><div class="muted small" id="goal-txt">Lade …</div></div>
   </div>
+  <div class="card" id="todo-card"><b>🎯 Jetzt anschreiben</b>
+    <div class="muted small">1 Tipp: Nachricht wird kopiert und die Anzeige öffnet sich – dort einfügen und senden.
+      Antworten + Lebensläufe kommen in dein WhatsApp.</div>
+    <div id="todo"></div></div>
   <div class="card" id="auto-card"><b>🤖 Jarvis arbeitet selbstständig</b>
     <div class="muted small" id="auto-txt">Lade …</div>
     <button class="btn" id="auto-go" style="margin-top:8px;display:none">▶️ Weiter (5 Tage)</button></div>
@@ -229,7 +233,28 @@ async function load() {
     : `⏸️ Pausiert seit ${au.bis} – Jarvis antwortet nur ohne KI.`;
   $("#auto-go").textContent = `▶️ Weiter (${au.tage || 5} Tage)`;
   $("#auto-go").style.display = au.aktiv && !au.bald ? "none" : "";
-  renderCalls(); renderCands(); renderFirms(); renderNews(); loadSales();
+  renderCalls(); renderCands(); renderFirms(); renderNews(); loadSales(); renderTodo();
+}
+
+// Ein Tipp: Text kopieren + Anzeige/WhatsApp öffnen + als „kontaktiert“ markieren
+function reachOut(c) {
+  const link = c.whatsapp_link || c.quelle;
+  try { navigator.clipboard.writeText(c.nachricht || ""); } catch (e) {}
+  if (link) window.open(link, "_blank");
+  api(`/api/kandidat/${c.id}/status`, {method: "POST", body: JSON.stringify({status: "kontaktiert"})})
+    .then(() => { c.status = "kontaktiert"; renderTodo(); }).catch(() => {});
+  toast(c.whatsapp_link ? "WhatsApp geöffnet – nur noch senden" : "Text kopiert 📋 – in der Anzeige einfügen und senden");
+}
+
+function renderTodo() {
+  const box = $("#todo"); box.replaceChildren();
+  const list = (DATA.kandidaten || []).filter(c => c.status === "neu" && ["A", "B", "C"].includes(c.tier)
+    && (c.whatsapp_link || c.quelle)).slice(0, 15);
+  if (!list.length) return box.append(h("div", {class: "empty"}, "Alle angeschrieben ✅ – Jarvis sucht weiter."));
+  for (const c of list) box.append(h("div", {class: "row", style: "align-items:center;gap:8px;margin-top:8px"},
+    h("span", {style: "flex:1"}, h("b", {}, `${c.tier} · ${c.name}`), h("div", {class: "muted small"}, c.details)),
+    h("button", {class: "btn", style: "width:auto;margin:0;padding:8px 14px", onclick: () => reachOut(c)},
+      c.whatsapp_link ? "💬 Senden" : "✉️ Anschreiben")));
 }
 $("#auto-go").onclick = async () => {
   try { const r = await api("/api/autonomie/weiter", {method: "POST"}); toast(r.info); load(); }
@@ -377,6 +402,7 @@ async function openCand(id) {
         h("button", {class: "btn sec", onclick: () => copy(d.nachricht)}, "📋 Nachricht kopieren"),
         h("a", {class: "btn sec", href: d.quelle, target: "_blank", rel: "noopener"}, "🔗 Inserat öffnen"))) : null,
     h("div", {class: "card"}, rows.map(([k, v]) => h("div", {class: "row"}, h("span", {}, k), h("span", {}, v)))),
+    h("a", {class: "btn sec", href: d.profil_whatsapp, target: "_blank"}, "📤 Profil per WhatsApp an Arbeitgeber schicken"),
     d.bewertung.missing.length ? h("div", {class: "card small"}, h("b", {}, "Fehlt noch: "), d.bewertung.missing.join(" · ")) : null,
     h("button", {class: "btn", disabled: !d.darf_anrufen || !DATA.anrufzeit, onclick: () => act(`/api/kandidat/${id}/anrufen`)},
       "📞 Jarvis ruft an"),
