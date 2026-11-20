@@ -5,6 +5,7 @@ Hier wird festgelegt, WEN Jarvis sucht. Änderungen am Bedarf nur hier pflegen.
 from __future__ import annotations
 
 import os
+import time
 from pathlib import Path
 
 BASE_DIR = Path(os.environ.get("JARVIS_HOME", Path(__file__).resolve().parent.parent))
@@ -83,6 +84,12 @@ def _flag(name: str, default: str = "0") -> bool:
 
 
 TIMEZONE = os.environ.get("JARVIS_TIMEZONE", "Europe/Zurich")
+# Tagesgrenzen (Budget, „heute“) in deiner Zeitzone statt Server-Zeit (UTC)
+if hasattr(time, "tzset"):
+    # POSIX-Regel funktioniert auch ohne Zeitzonen-Dateien im Container (Mitteleuropa: MEZ/MESZ)
+    os.environ["TZ"] = ("CET-1CEST,M3.5.0,M10.5.0/3"
+                        if TIMEZONE in ("Europe/Zurich", "Europe/Berlin", "Europe/Vienna") else TIMEZONE)
+    time.tzset()
 DAILY_TARGET = int(os.environ.get("JARVIS_DAILY_TARGET", "20"))  # Ziel: vermittelbare Kandidaten/Tag
 MORNING_HOUR = int(os.environ.get("JARVIS_MORNING_HOUR", "7"))
 CALL_HOURS = (9, 18)               # Anrufe nur Mo-Fr in diesem Fenster (lokale Zeit)
