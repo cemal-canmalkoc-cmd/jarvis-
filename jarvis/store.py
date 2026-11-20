@@ -553,7 +553,7 @@ EDITABLE_SETTINGS = {
     "DAILY_MINIMUM": "Mindestens X neue Kandidaten pro Tag",
     "MINIMUM_MAX_USD": "Höchstens $ pro Tag für das Tagesminimum",
     "SEARCH_EVERY_HOURS": "Suche alle X Stunden",
-    "ADS_PER_DAY": "Inserate pro Tag",
+    "ADS_PER_DAY": "Inserate pro Tag (höchstens 2)",
 }
 SECRET_SETTINGS = {"META_PAGE_TOKEN", "SMTP_PASSWORD", "TWILIO_AUTH_TOKEN"}
 
@@ -592,7 +592,8 @@ def settings_overview() -> list[dict]:
     from . import config
     out = []
     for key, label in EDITABLE_SETTINGS.items():
-        val = str(getattr(config, key, "") or "")
+        raw = getattr(config, key, "")
+        val = ("1" if raw else "0") if isinstance(raw, bool) else str(raw or "")
         shown = ("••••" + val[-4:] if len(val) > 4 else "••••") if key in SECRET_SETTINGS and val else val
         out.append({"key": key, "label": label, "wert": shown, "gesetzt": bool(val),
                     "geheim": key in SECRET_SETTINGS})
