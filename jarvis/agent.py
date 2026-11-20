@@ -254,6 +254,20 @@ def t_update() -> dict:
     return updater.update(force=True)
 
 
+def t_stelle_anlegen(titel: str, bereich: str = "lkw", ort: str = "", beschreibung: str = "", gehalt: str = "") -> dict:
+    jid = store.add_job(store.connect(), titel, bereich if bereich in ("lkw", "pflege", "arzt") else "lkw",
+                        ort, beschreibung, gehalt)
+    return {"stelle": jid, "link": f"{config.PUBLIC_URL}/jobs/{jid}",
+            "hinweis": "Link in Facebook-Gruppen/Status teilen; Bewerber landen per WhatsApp beim Inhaber."}
+
+
+def t_stellen() -> list[dict]:
+    conn = store.connect()
+    return [{"id": j["id"], "titel": j["title"], "ort": j["ort"], "aktiv": bool(j["active"]),
+             "passende_kandidaten": len(store.job_matches(conn, j, 50)), "link": f"{config.PUBLIC_URL}/jobs/{j['id']}"}
+            for j in store.jobs(conn, only_active=False)]
+
+
 def t_weiter() -> str:
     from . import budget
     return budget.autonomy_continue()
@@ -345,6 +359,12 @@ TOOLS = {
                              "schritt": {"type": "string", "enum": ["gespraech", "eingestellt", "unterlagen_senden", "dokumente_anfordern"]},
                              "firma_id": {"type": "integer"}, "datum": {"type": "string"}, "honorar": {"type": "number"}}),
     "umsatz": (t_umsatz, "Umsatz des Monats, offene Rechnungen, Ziel.", {}),
+    "stelle_anlegen": (t_stelle_anlegen, "Offene Stelle eines echten Arbeitgebers in der Stellenbörse veröffentlichen "
+                       "(öffentliche Seite + Google). Firmenname NICHT in den Titel. Beschreibung: Aufgaben, "
+                       "Anforderungen, Angebot – nur Angaben des Inhabers, nichts erfinden.",
+                       {"titel": {"type": "string"}, "bereich": {"type": "string", "enum": ["lkw", "pflege", "arzt"]},
+                        "ort": {"type": "string"}, "beschreibung": {"type": "string"}, "gehalt": {"type": "string"}}),
+    "stellen": (t_stellen, "Alle Stellen der Stellenbörse mit Anzahl passender Kandidaten aus dem Talentpool.", {}),
     "freigabe_weiter": (t_weiter, "Selbstständige Arbeit (Suche, Inserate, KI-Gespräche) für HEUTE freigeben – "
                         "wenn der Inhaber 'ja', 'weiter' oder 'leg los' auf die Morgenfrage antwortet.", {}),
     "rechnung_senden": (t_rechnung_senden, "PDF-Rechnung für eine Vermittlung erstellen und an die Firma senden. "
@@ -355,7 +375,7 @@ TOOLS = {
     "autopilot_jetzt": (t_autopilot_jetzt, "Kompletten Tagesablauf sofort ausführen.", {}),
 }
 
-REQUIRED = {"rechnung_senden": ["vermittlung_id"], "anruf_ergebnis": ["firma_id", "ergebnis"], "vermittlungsschritt": ["id", "schritt"],
+REQUIRED = {"stelle_anlegen": ["titel"], "rechnung_senden": ["vermittlung_id"], "anruf_ergebnis": ["firma_id", "ergebnis"], "vermittlungsschritt": ["id", "schritt"],
             "kandidat_hinzufuegen": ["angaben"], "kunde_anlegen": ["name"], "preis_setzen": ["bereich", "modell", "wert"],
             "passende_firmen": ["id"], "kandidat_vorstellen": ["id", "firma_id"],
             "firma_kontakt": ["id", "email"], "kandidat": ["id"], "status_setzen": ["id", "status"], "kandidat_anrufen": ["id"],

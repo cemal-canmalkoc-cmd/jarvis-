@@ -450,7 +450,7 @@ def _evaluate_form(raw: sources.RawProfile, cv_path: str | None = None) -> None:
 
 # --------------------------------------------------------------------------- Direkt in Cemal-Cans WhatsApp
 @app.get("/wa")
-async def wa_redirect(b: str = "lkw", q: str = "", direkt: str = "", ref: str = ""):
+async def wa_redirect(b: str = "lkw", q: str = "", direkt: str = "", ref: str = "", stelle: int = 0):
     from .outreach import WA_TEXTS, contact_number, wa_link
     if config.CHAT_FIRST and not direkt and b in CHAT_GREETINGS:
         # Selbstständiger Betrieb: Bewerber landen beim KI-Chat statt in deinem WhatsApp
@@ -466,12 +466,66 @@ async def wa_redirect(b: str = "lkw", q: str = "", direkt: str = "", ref: str = 
         k2 = f"clicks_src:{date.today()}:{q}"
         store.set_state(conn, k2, str(int(store.get_state(conn, k2) or 0) + 1))
     text = WA_TEXTS.get(b, WA_TEXTS["lkw"])
+    job = store.get_job(conn, stelle) if stelle else None
+    if job:
+        text = f"Bewerbung auf Stelle #{job['id']}: {job['title']} ({job['ort']})\n" + text
     ref = "".join(ch for ch in ref if ch.isalnum() or ch in " .-äöüÄÖÜß")[:40].strip()
     if ref:
         text += f"\n(Empfohlen von: {ref})"
         k3 = f"referrals:{date.today()}"
         store.set_state(conn, k3, str(int(store.get_state(conn, k3) or 0) + 1))
     return RedirectResponse(wa_link(text), status_code=302)
+
+
+# --------------------------------------------------------------------------- Stellenbörse
+BEREICH_DE = {"lkw": "LKW-Fahrer", "pflege": "Pflege", "arzt": "Ärzte"}
+
+
+def _job_card(j: dict) -> str:
+    e = html.escape
+    return (f'<a class="card" style="display:block;text-decoration:none;color:inherit;margin-bottom:12px" '
+            f'href="/jobs/{j["id"]}"><b>{e(j["title"])}</b><div class="lead" style="margin:4px 0 0">📍 {e(j["ort"] or "")}'
+            f'{" · 💶 " + e(j["gehalt"]) if j["gehalt"] else ""} · {BEREICH_DE.get(j["bereich"], "")}</div></a>')
+
+
+@app.get("/jobs", response_class=HTMLResponse)
+async def jobs_list(b: str = ""):
+    conn = store.connect()
+    items = [j for j in store.jobs(conn) if not b or j["bereich"] == b]
+    body = "".join(_job_card(j) for j in items) or "<p class='lead'>Gerade keine offenen Stellen – bewirb dich trotzdem initiativ.</p>"
+    return _page(f"Stellen – {config.AGENCY_NAME}", f"""<div class="brand">{html.escape(config.AGENCY_NAME)}</div>
+<h1>Offene Stellen</h1>
+<p class="lead">Bewerbung in 1 Minute per WhatsApp – für Bewerber kostenlos.</p>
+{body}
+<a class="btn" href="/bewerbung">Initiativ bewerben</a>""")
+
+
+@app.get("/jobs/{jid}", response_class=HTMLResponse)
+async def job_detail(jid: int):
+    e = html.escape
+    j = store.get_job(store.connect(), jid)
+    if not j or not j["active"]:
+        return RedirectResponse("/jobs", status_code=302)
+    b = j["bereich"] if j["bereich"] in BEREICH_DE else "pflege"
+    apply = f"{config.PUBLIC_URL}/wa?b={b}&q=job{j['id']}&stelle={j['id']}&direkt=1"
+    country = "DE" if b == "lkw" else "CH"
+    ld = {"@context": "https://schema.org", "@type": "JobPosting", "title": j["title"],
+          "description": (j["beschreibung"] or j["title"]).replace("\n", "<br>"),
+          "datePosted": j["created"], "employmentType": "FULL_TIME",
+          "hiringOrganization": {"@type": "Organization", "name": config.AGENCY_NAME, "sameAs": config.PUBLIC_URL},
+          "jobLocation": {"@type": "Place", "address": {"@type": "PostalAddress", "addressLocality": j["ort"] or "",
+                                                        "addressCountry": country}},
+          "directApply": True}
+    return _page(f"{j['title']} – {config.AGENCY_NAME}", f"""<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False).replace("</", "<\\/")}</script>
+<div class="brand">{e(config.AGENCY_NAME)}</div>
+<h1>{e(j['title'])}</h1>
+<p class="lead">📍 {e(j['ort'] or '')}{' · 💶 ' + e(j['gehalt']) if j['gehalt'] else ''}</p>
+<div class="card" style="white-space:pre-wrap">{e(j['beschreibung'] or '')}</div>
+<p class="lead">✅ Für dich kostenlos · ✅ Bewerbung in 1 Minute: Lebenslauf oder Führerschein als Foto per WhatsApp</p>
+<a class="btn" href="{e(apply)}">💬 Jetzt per WhatsApp bewerben</a>
+<a class="btn" style="margin-top:8px;background:transparent;color:var(--accent);border:1px solid var(--line)"
+   href="/bewerbung{'?bereich=lkw' if b == 'lkw' else ''}">Oder Online-Formular</a>
+<p style="margin-top:16px"><a href="/jobs">← Alle Stellen</a></p>""")
 
 
 # --------------------------------------------------------------------------- Empfehlungsprogramm

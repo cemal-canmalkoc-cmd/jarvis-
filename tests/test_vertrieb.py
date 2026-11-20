@@ -82,3 +82,30 @@ def test_deep_search_asks_cost_first(monkeypatch):
     c.post("/api/tiefensuche", json={"bereich": "lkw", "bestaetigt": True}, headers=h)
     import time; time.sleep(0.2)
     assert started == ["lkw"]
+
+
+def test_job_board_publish_apply_and_talent_pool(monkeypatch):
+    import json as _j
+    from urllib.parse import unquote
+    from tests.test_deals import _driver
+    monkeypatch.setattr(config, "ADMIN_TOKEN", "t0k")
+    monkeypatch.setattr(config, "CONTACT_WHATSAPP", "+49 176 00000000")
+    monkeypatch.setattr(config, "CHAT_FIRST", False)
+    _driver("Pool Fahrer", "+49 170 3330001", None)
+    c = TestClient(server.app)
+    h = {"Authorization": "Bearer t0k"}
+    r = c.post("/api/stellen", json={"titel": "LKW-Fahrer CE Fernverkehr (m/w/d)", "bereich": "lkw",
+                                     "ort": "44137 Dortmund", "gehalt": "ab 3.200 €", "beschreibung": "Touren DE"},
+               headers=h).json()
+    jid = r["id"]
+    page = c.get(f"/jobs/{jid}").text
+    assert "JobPosting" in page and "LKW-Fahrer CE Fernverkehr" in page and "stelle=" in page
+    ld = _j.loads(page.split('application/ld+json">')[1].split("</script>")[0])
+    assert ld["jobLocation"]["address"]["addressCountry"] == "DE"
+    assert "LKW-Fahrer CE" in c.get("/jobs").text
+    loc = c.get(f"/wa?b=lkw&stelle={jid}&direkt=1", follow_redirects=False).headers["location"]
+    assert f"Bewerbung auf Stelle #{jid}" in unquote(loc)
+    st = c.get("/api/stellen", headers=h).json()["stellen"]
+    assert any(p["name"] == "Pool Fahrer" for s in st if s["id"] == jid for p in s["passend"])
+    c.post(f"/api/stellen/{jid}/aktiv", json={"aktiv": False}, headers=h)
+    assert c.get(f"/jobs/{jid}", follow_redirects=False).status_code == 302

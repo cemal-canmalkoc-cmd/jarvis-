@@ -87,6 +87,17 @@ CREATE TABLE IF NOT EXISTS documents (
     path TEXT,
     uploaded TEXT
 );
+CREATE TABLE IF NOT EXISTS jobs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    bereich TEXT,                 -- lkw | pflege | arzt
+    ort TEXT,
+    beschreibung TEXT DEFAULT '',
+    gehalt TEXT DEFAULT '',
+    company_id INTEGER,
+    active INTEGER DEFAULT 1,
+    created TEXT
+);
 CREATE TABLE IF NOT EXISTS placements (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     cand_key TEXT,
@@ -657,6 +668,48 @@ def doc_status(conn: sqlite3.Connection, cand_key: str, category: str) -> dict:
 
 
 # --------------------------------------------------------------------------- Vermittlungen & Umsatz
+def add_job(conn: sqlite3.Connection, title: str, bereich: str, ort: str, beschreibung: str = "",
+            gehalt: str = "", company_id: int | None = None) -> int:
+    with _lock:
+        cur = conn.execute("INSERT INTO jobs (title, bereich, ort, beschreibung, gehalt, company_id, created) "
+                           "VALUES (?,?,?,?,?,?,?)", (title.strip(), bereich, ort.strip(), beschreibung.strip(),
+                                                      gehalt.strip(), company_id, date.today().isoformat()))
+        conn.commit()
+        return cur.lastrowid
+
+
+def jobs(conn: sqlite3.Connection, only_active: bool = True) -> list[dict]:
+    q = "SELECT * FROM jobs" + (" WHERE active=1" if only_active else "") + " ORDER BY id DESC"
+    return [dict(r) for r in conn.execute(q).fetchall()]
+
+
+def get_job(conn: sqlite3.Connection, jid: int) -> dict | None:
+    r = conn.execute("SELECT * FROM jobs WHERE id=?", (jid,)).fetchone()
+    return dict(r) if r else None
+
+
+def set_job_active(conn: sqlite3.Connection, jid: int, active: bool) -> None:
+    with _lock:
+        conn.execute("UPDATE jobs SET active=? WHERE id=?", (int(active), jid))
+        conn.commit()
+
+
+def job_matches(conn: sqlite3.Connection, job: dict, limit: int = 10) -> list[sqlite3.Row]:
+    """Talentpool: passende Kandidaten aus dem Bestand (gleicher Bereich, bevorzugt gleiche Region/PLZ)."""
+    cat = {"lkw": "lkw", "pflege": "pflege", "arzt": "arzt"}.get(job["bereich"] or "", "pflege")
+    rows = conn.execute("SELECT * FROM candidates WHERE category=? AND tier IN ('A','B','C') "
+                        "AND status NOT IN ('kein_interesse','vermittelt') ORDER BY score DESC LIMIT 200",
+                        (cat,)).fetchall()
+    ort = (job["ort"] or "").lower()
+    plz = "".join(ch for ch in ort if ch.isdigit())[:2]
+
+    def near(r):
+        loc = (load(r).assessment.current_location or "").lower()
+        return (bool(plz) and plz in loc[:8]) or any(w in loc for w in ort.replace(",", " ").split() if len(w) > 3)
+    rows = sorted(rows, key=lambda r: (not near(r), r["status"] != "interessiert", -(r["score"] or 0)))
+    return rows[:limit]
+
+
 def add_placement(conn: sqlite3.Connection, cand_key: str, company_id: int | None, start_date: str,
                   fee: float, currency: str = "EUR") -> int:
     with _lock:

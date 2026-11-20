@@ -152,7 +152,12 @@ nav button.on{color:var(--accent)}
   <div id="cands"></div>
 </section>
 
-<section id="s-firmen"><h2>📨 Bewerbungen auf Stellenanzeigen</h2><div id="apps"></div>
+<section id="s-firmen"><h2>📌 Stellenbörse</h2>
+<div class="card small muted">Offene Stellen deiner Arbeitgeber – öffentlich auf deiner Seite und bei Google.
+  Bewerber landen per WhatsApp bei dir. Nur echte Stellen eintragen.</div>
+<button class="btn" id="job-new">➕ Neue Stelle veröffentlichen</button>
+<div id="jobs"></div>
+<h2>📨 Bewerbungen auf Stellenanzeigen</h2><div id="apps"></div>
 <h2>📞 Heute anrufen</h2><div id="sales"></div>
 <h2>🧾 Vermittlungen</h2><div id="placements"></div><h2>Alle Firmen</h2><div id="firms"></div></section>
 
@@ -329,8 +334,40 @@ async function loadApps() {
     catch (e) { alert(e.message); ev.target.disabled = false; } }}, `📨 Alle ${b.liste.length} senden`));
 }
 
+async function loadJobs() {
+  let v; try { v = await api("/api/stellen"); } catch (e) { return; }
+  const box = $("#jobs"); box.replaceChildren();
+  if (!v.stellen.length) return box.append(h("div", {class: "empty"}, "Noch keine Stellen."));
+  const share = (j) => "https://wa.me/?text=" + encodeURIComponent(`🚀 Neue Stelle: ${j.title} (${j.ort})${j.gehalt ? " – " + j.gehalt : ""}\nBewerbung in 1 Minute per WhatsApp: ${j.link}`);
+  for (const j of v.stellen) box.append(h("div", {class: "card", style: j.active ? "" : "opacity:.5"},
+    h("b", {}, `#${j.id} ${j.title}`), h("div", {class: "muted small"}, `📍 ${j.ort || "?"}${j.gehalt ? " · 💶 " + j.gehalt : ""} · ${j.active ? "online" : "pausiert"}`),
+    h("div", {class: "small", style: "margin-top:6px"}, `👥 Talentpool: ${j.passend.length} passende Kandidaten`),
+    j.passend.slice(0, 5).map(c => h("div", {class: "row small", style: "cursor:pointer", onclick: () => openCand(c.id)},
+      h("span", {}, `${c.tier} · ${c.name}`), h("span", {class: "muted"}, c.status))),
+    h("div", {class: "btns", style: "margin-top:8px"},
+      h("a", {class: "btn sec", href: j.link, target: "_blank"}, "👁 Ansehen"),
+      h("a", {class: "btn sec", href: share(j), target: "_blank"}, "📤 Teilen"),
+      h("button", {class: "btn sec", onclick: async () => {
+        await api(`/api/stellen/${j.id}/aktiv`, {method: "POST", body: JSON.stringify({aktiv: !j.active})}); loadJobs(); }},
+        j.active ? "⏸ Pausieren" : "▶️ Aktivieren"))));
+}
+$("#job-new").onclick = () => {
+  const f = {};
+  const inp = (k, ph, area) => h(area ? "textarea" : "input", {placeholder: ph, rows: 4, style: "width:100%;margin:4px 0;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);font:inherit", oninput: e => f[k] = e.target.value});
+  const sel = h("select", {style: "width:100%;margin:4px 0;padding:10px;border-radius:10px", onchange: e => f.bereich = e.target.value},
+    h("option", {value: "lkw"}, "🚛 LKW-Fahrer"), h("option", {value: "pflege"}, "🏥 Pflege"), h("option", {value: "arzt"}, "🩺 Ärzte"));
+  f.bereich = "lkw";
+  sheet(h("h2", {style: "margin-top:0"}, "Neue Stelle"),
+    inp("titel", "Titel, z. B. LKW-Fahrer CE Fernverkehr (m/w/d)"), sel, inp("ort", "Ort, z. B. 44137 Dortmund"),
+    inp("gehalt", "Gehalt (optional), z. B. ab 3.200 € brutto"),
+    inp("beschreibung", "Aufgaben, Anforderungen, Angebot (ohne Firmennamen)", true),
+    h("button", {class: "btn", onclick: async () => {
+      try { const r = await api("/api/stellen", {method: "POST", body: JSON.stringify(f)}); alert(r.meldung); closeSheet(); loadJobs(); }
+      catch (e) { alert(e.message); } }}, "✅ Veröffentlichen"));
+};
+
 async function loadSales() {
-  loadApps();
+  loadApps(); loadJobs();
   let v; try { v = await api("/api/vertrieb"); } catch (e) { return; }
   const box = $("#sales"); box.replaceChildren();
   if (!v.plan.length) box.append(h("div", {class: "empty"},

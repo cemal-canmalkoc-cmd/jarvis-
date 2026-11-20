@@ -77,6 +77,39 @@ async def app_page(request: Request):
     return FileResponse(STATIC / "app.html", media_type="text/html")
 
 
+@router.get("/api/stellen")
+async def stellen(request: Request):
+    authed(request)
+    conn = store.connect()
+    out = []
+    for j in store.jobs(conn, only_active=False):
+        m = store.job_matches(conn, j, 8)
+        out.append({**j, "link": f"{config.PUBLIC_URL}/jobs/{j['id']}",
+                    "passend": [{"id": r["key"], "name": _display_name(store.load(r).assessment),
+                                 "details": _details(store.load(r).assessment), "tier": r["tier"],
+                                 "status": r["status"]} for r in m]})
+    return {"stellen": out, "seite": f"{config.PUBLIC_URL}/jobs"}
+
+
+@router.post("/api/stellen")
+async def stelle_neu(request: Request, daten: dict = Body(...)):
+    authed(request)
+    title = (daten.get("titel") or "").strip()
+    if not title:
+        raise HTTPException(400, "Titel fehlt")
+    bereich = daten.get("bereich") if daten.get("bereich") in ("lkw", "pflege", "arzt") else "lkw"
+    jid = store.add_job(store.connect(), title, bereich, daten.get("ort", ""), daten.get("beschreibung", ""),
+                        daten.get("gehalt", ""))
+    return {"meldung": f"✅ Stelle #{jid} ist online: {config.PUBLIC_URL}/jobs/{jid}", "id": jid}
+
+
+@router.post("/api/stellen/{jid}/aktiv")
+async def stelle_aktiv(request: Request, jid: int, daten: dict = Body(...)):
+    authed(request)
+    store.set_job_active(store.connect(), jid, bool(daten.get("aktiv")))
+    return {"meldung": "Gespeichert"}
+
+
 @router.post("/api/tiefensuche")
 async def tiefensuche(request: Request, daten: dict = Body(...)):
     """{"bereich": "lkw"|"pflege", "bestaetigt": false} → erst Kosten nennen, mit bestaetigt=true starten."""
