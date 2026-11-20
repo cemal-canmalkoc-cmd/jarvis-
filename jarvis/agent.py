@@ -46,7 +46,8 @@ def t_shortlist(anzahl: int = 20) -> list[dict]:
                     "anerkennung": c.assessment.recognition_status,
                     "ort": c.assessment.current_location,
                     "darf_anrufen": bool(row["consent_call"]) if row else False,
-                    "whatsapp_link": c.whatsapp_link})
+                    "whatsapp_link": c.whatsapp_link, "anzeige": c.source,
+                    "kontakt": "WhatsApp/Telefon" if c.assessment.phone else "nur übers Portal (Anzeige-Link)"})
     return out
 
 

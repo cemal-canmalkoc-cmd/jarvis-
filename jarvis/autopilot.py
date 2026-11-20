@@ -95,7 +95,7 @@ def morning(force: bool = False) -> dict:
         # Ohne Telefonie-Anbieter: Anrufliste für dich (kostenlos über dein Handy)
         lines.append("\n📞 *Deine Anrufliste heute*")
         for c in top[:6]:
-            lines.append(f"{c.assessment.full_name} · {c.assessment.phone} · ID {store.candidate_key(c)[:6]}")
+            lines.append(f"{c.assessment.full_name} · {c.assessment.phone or c.source} · ID {store.candidate_key(c)[:6]}")
     lines.append(f"\nApp: {config.PUBLIC_URL}/app")
     if stats["vermittelbar_heute"] < config.DAILY_TARGET:
         lines.append("⚠️ Ziel noch nicht erreicht. Tipp: schreib mir 'Inserat für Facebook-Gruppen' – "

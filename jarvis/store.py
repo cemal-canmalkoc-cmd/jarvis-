@@ -207,8 +207,8 @@ def load(row: sqlite3.Row) -> ScoredCandidate:
 def todays_shortlist(conn: sqlite3.Connection, limit: int) -> list[ScoredCandidate]:
     rows = conn.execute(
         """SELECT data FROM candidates
-           WHERE status='neu' AND tier IN ('A','B') AND phone IS NOT NULL
-           ORDER BY score DESC LIMIT ?""",
+           WHERE status IN ('neu','kontaktiert') AND tier IN ('A','B')
+           ORDER BY CASE WHEN phone IS NULL OR phone='' THEN 1 ELSE 0 END, score DESC LIMIT ?""",
         (limit,),
     ).fetchall()
     return [ScoredCandidate.model_validate(json.loads(r[0])) for r in rows]
