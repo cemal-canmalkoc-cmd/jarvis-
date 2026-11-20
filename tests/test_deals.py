@@ -82,7 +82,8 @@ def test_sales_plan_call_agreement_documents_hire_invoice(monkeypatch):
     monkeypatch.setattr(config, "UST_STATUS", "regel")
     out = deals.daily_drive()
     note = store.notifications(store.connect(), 1)[0]["text"]
-    assert "Jarvis-Tagesplan" in note and "RECHNUNG" in note and "2.380,00 €" in note
+    assert "Jarvis-Tagesplan" in note and "Rechnung fällig" in note and "Steuernummer" in note
+    assert "2.380,00 €" in deals.invoice_text(store.placements(store.connect())[-1])
     assert out["plan"] >= 0
 
 

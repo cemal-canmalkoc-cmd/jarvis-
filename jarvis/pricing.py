@@ -27,7 +27,7 @@ def describe(row) -> str:
         betrag = f"{row['wert']:,.0f}".replace(",", ".") + " €"
         status = (config.UST_STATUS or "unklar").lower()
         if status.startswith("klein"):
-            price = f"{betrag} pauschal (gemäss § 19 UStG keine Umsatzsteuer)"
+            price = f"{betrag} pauschal (gemäß § 19 UStG keine Umsatzsteuer)"
         elif status.startswith("regel"):
             price = f"{betrag} netto pauschal (zzgl. 19 % MwSt.)"
         else:

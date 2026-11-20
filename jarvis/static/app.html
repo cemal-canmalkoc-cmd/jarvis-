@@ -298,7 +298,16 @@ async function loadSales() {
   if (!v.vermittlungen.length) pb.append(h("div", {class: "empty"}, "Noch keine Vermittlung – die erste kommt! 💪"));
   for (const p of v.vermittlungen) pb.append(h("div", {class: "card small"},
     h("div", {class: "row"}, h("span", {}, `Start ${p.start_date}`), h("span", {}, Math.round(p.fee).toLocaleString("de-DE") + " €")),
-    h("div", {class: "row"}, h("span", {}, "Status"), h("span", {}, p.status)),
+    h("div", {class: "row"}, h("span", {}, "Status"), h("span", {}, p.status + (p.rechnung_nr ? " · " + p.rechnung_nr : ""))),
+    p.firma ? h("div", {class: "row"}, h("span", {}, "Firma"), h("span", {}, p.firma)) : null,
+    h("div", {class: "chips", style: "flex-wrap:wrap"},
+      h("a", {class: "chip", href: `/api/vermittlung/${p.id}/rechnung.pdf`, target: "_blank"}, "📄 Rechnung ansehen"),
+      p.status === "offen" ? h("button", {class: "chip on", onclick: async () => {
+        let body = {};
+        if (!p.firma_adresse) { const ad = prompt(`Rechnungsadresse von ${p.firma || "der Firma"} (Strasse Nr., PLZ Ort):`); if (!ad) return; body.adresse = ad; }
+        if (!confirm("Rechnung jetzt per E-Mail an die Firma senden?")) return;
+        try { toast((await api(`/api/vermittlung/${p.id}/rechnung`, {method: "POST", body: JSON.stringify(body)})).meldung); loadSales(); }
+        catch (e) { alert(e.message); } }}, "🧾 Rechnung senden") : null),
     p.status !== "bezahlt" ? h("button", {class: "chip on", onclick: async () => {
       try { toast((await api(`/api/vermittlung/${p.id}/bezahlt`, {method: "POST"})).meldung); loadSales(); load(); } catch (e) { toast(e.message); }
     }}, "💶 Bezahlt") : null));

@@ -8,3 +8,4 @@ python-multipart>=0.0.9
 twilio>=9.13
 requests>=2.31
 cryptography>=42
+reportlab>=4.0

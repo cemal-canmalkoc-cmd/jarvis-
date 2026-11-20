@@ -113,6 +113,7 @@ COMPANY_EXTRA_COLUMNS = {
     "email": "TEXT",          # Ansprechperson HR (aus Telefonat oder manuell)
     "contact_name": "TEXT",
     "agreement": "TEXT",      # Datum, an dem die Vermittlungsvereinbarung verschickt/bestätigt wurde
+    "address": "TEXT",        # vollständige Rechnungsadresse
     "branche": "TEXT",        # gesundheit | lkw
 }
 
@@ -477,6 +478,11 @@ EDITABLE_SETTINGS = {
     "TWILIO_AUTH_TOKEN": "Twilio Auth Token",
     "TWILIO_VOICE_FROM": "Twilio-Telefonnummer (Absender)",
     "UST_STATUS": "Umsatzsteuer: unklar / kleinunternehmer / regel",
+    "FIRMA_ADRESSE": "Deine Geschäftsadresse (Strasse Nr., PLZ Ort) – für Rechnungen",
+    "STEUERNUMMER": "Steuernummer oder USt-IdNr. – für Rechnungen",
+    "IBAN": "IBAN – für Rechnungen",
+    "BANK": "Bank (optional)",
+    "AUTO_INVOICE": "Rechnung am Starttag automatisch senden (1 = ja, 0 = nach deinem Tipp)",
     "AUTO_APPLY": "Bewerbungen auf Stellenanzeigen automatisch senden (1 = ja, 0 = nur mit Freigabe)",
     "DAILY_BUDGET_USD": "Automatisches Tagesbudget in $ (0 = Jarvis fragt immer vorher)",
     "DAILY_MINIMUM": "Mindestens X neue Kandidaten pro Tag",
@@ -612,4 +618,10 @@ def log_sale(conn: sqlite3.Connection, company_id: int, result: str, note: str =
     with _lock:
         conn.execute("INSERT INTO sales_log (company_id, result, note, created) VALUES (?,?,?,?)",
                      (company_id, result, note, datetime.now().isoformat(timespec="minutes")))
+        conn.commit()
+
+
+def set_company_address(conn: sqlite3.Connection, cid: int, address: str) -> None:
+    with _lock:
+        conn.execute("UPDATE companies SET address=? WHERE id=?", (address.strip(), cid))
         conn.commit()

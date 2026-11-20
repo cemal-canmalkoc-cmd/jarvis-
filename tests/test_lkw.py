@@ -119,7 +119,7 @@ def test_applicant_becomes_interested_with_cv_and_firms(monkeypatch, tmp_path):
                                               reasons=r, missing=m))
     assert store.get_candidate(conn, key)["status"] == "interessiert"
     note = store.notifications(conn, 1)[0]["text"]
-    assert "NEUER BEWERBER: Bea Bewerber" in note and "Spedition Ruhr" in note and "liegt vor" in note
+    assert "NEUER BEWERBER: Bea Bewerber" in note and "Passende Firmen" in note and "liegt vor" in note
     cl = TestClient(server.app)
     h = {"Authorization": "Bearer t0k"}
     assert cl.get(f"/api/kandidat/{key}", headers=h).json()["lebenslauf"] is True

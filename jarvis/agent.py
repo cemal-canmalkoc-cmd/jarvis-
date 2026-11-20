@@ -233,6 +233,15 @@ def t_vermittlungsschritt(id: str, schritt: str, firma_id: int = 0, datum: str =
     return "Unbekannter Schritt."
 
 
+def t_rechnung_senden(vermittlung_id: int, adresse: str = "") -> str:
+    from . import invoices
+    if adresse:
+        p = next((x for x in store.placements(store.connect()) if x["id"] == vermittlung_id), None)
+        if p and p["company_id"]:
+            store.set_company_address(store.connect(), p["company_id"], adresse)
+    return invoices.send_invoice(vermittlung_id)
+
+
 def t_umsatz() -> dict:
     conn = store.connect()
     return {"monat": store.revenue_month(conn), "ziel": config.REVENUE_GOAL,
@@ -329,11 +338,14 @@ TOOLS = {
                              "schritt": {"type": "string", "enum": ["gespraech", "eingestellt", "unterlagen_senden", "dokumente_anfordern"]},
                              "firma_id": {"type": "integer"}, "datum": {"type": "string"}, "honorar": {"type": "number"}}),
     "umsatz": (t_umsatz, "Umsatz des Monats, offene Rechnungen, Ziel.", {}),
+    "rechnung_senden": (t_rechnung_senden, "PDF-Rechnung für eine Vermittlung erstellen und an die Firma senden.",
+                        {"vermittlung_id": {"type": "integer"}, "adresse": {"type": "string",
+                         "description": "Rechnungsadresse der Firma, falls noch nicht gespeichert"}}),
     "jarvis_aktualisieren": (t_update, "Neueste Jarvis-Version von GitHub installieren und neu starten.", {}),
     "autopilot_jetzt": (t_autopilot_jetzt, "Kompletten Tagesablauf sofort ausführen.", {}),
 }
 
-REQUIRED = {"anruf_ergebnis": ["firma_id", "ergebnis"], "vermittlungsschritt": ["id", "schritt"],
+REQUIRED = {"rechnung_senden": ["vermittlung_id"], "anruf_ergebnis": ["firma_id", "ergebnis"], "vermittlungsschritt": ["id", "schritt"],
             "kandidat_hinzufuegen": ["angaben"], "kunde_anlegen": ["name"], "preis_setzen": ["bereich", "modell", "wert"],
             "passende_firmen": ["id"], "kandidat_vorstellen": ["id", "firma_id"],
             "firma_kontakt": ["id", "email"], "kandidat": ["id"], "status_setzen": ["id", "status"], "kandidat_anrufen": ["id"],

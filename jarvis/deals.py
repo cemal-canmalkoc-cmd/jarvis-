@@ -267,7 +267,7 @@ def invoice_text(p: dict) -> str:
     ust = (config.UST_STATUS or "unklar").lower()
     fee = p["fee"] or 0
     if ust.startswith("klein"):
-        tax = f"Gemäss § 19 UStG wird keine Umsatzsteuer berechnet.\nGesamt: {eur(fee)}"
+        tax = f"Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.\nGesamt: {eur(fee)}"
     elif ust.startswith("regel"):
         tax = f"zzgl. 19 % USt.: {eur(fee * 0.19)}\nGesamt: {eur(fee * 1.19)}"
     else:
@@ -313,12 +313,23 @@ def daily_drive() -> dict:
     for row in conn.execute("SELECT * FROM candidates WHERE status='gespraech'").fetchall():
         when = store.get_state(conn, f"interview:{row['key']}") or ""
         out["erinnerungen"].append(f"📅 {row['name']}: Gespräch {when} – wie ist es gelaufen? (App → Eingestellt / kein Interesse)")
+    from . import invoices
     for p in store.placements(conn, "offen"):
         if p["start_date"] <= today.isoformat():
-            out["erinnerungen"].append(f"🧾 Rechnung fällig ({p['start_date']} Start):\n{invoice_text(p)}")
-            store.set_placement_status(conn, p["id"], "rechnung")
+            if config.AUTO_INVOICE:
+                try:
+                    res = invoices.send_invoice(p["id"])
+                except Exception as exc:  # noqa: BLE001
+                    res = f"Rechnung nicht gesendet: {exc}"
+                out["erinnerungen"].append(f"🧾 {res}")
+            else:
+                fehlt = invoices.missing_business_data()
+                out["erinnerungen"].append(
+                    f"🧾 Rechnung fällig (Start {p['start_date']}): App → Firmen → Vermittlungen → „Rechnung senden“"
+                    + (f"\n   Vorher unter ⚙️ eintragen: {', '.join(fehlt)}" if fehlt else ""))
     for p in store.placements(conn, "rechnung"):
-        if p["start_date"] <= (today - timedelta(days=21)).isoformat():
+        sent = store.get_state(conn, f"invoice_sent:{p['id']}") or p["start_date"]
+        if sent <= (today - timedelta(days=14)).isoformat():
             out["erinnerungen"].append(f"💶 Zahlung prüfen: Vermittlung mit Start {p['start_date']} "
                                        f"({p['fee']:,.0f} €) – bezahlt? App → Umsatz".replace(",", "."))
     queue = application_queue(config.AUTO_APPLY_PER_DAY)
@@ -360,7 +371,7 @@ def application_queue(limit: int = 10) -> list[dict]:
     queue, used_firms = [], set()
     for cand in conn.execute("SELECT * FROM candidates WHERE status IN ('interessiert','vorgestellt') "
                              "AND tier IN ('A','B') ORDER BY score DESC").fetchall():
-        for m in matching.matches(conn, cand, 5):
+        for m in matching.matches(conn, cand, 50):
             firm = store.get_company(conn, m["id"])
             if (not firm or not firm["email"] or firm["id"] in used_firms or firm["agreement"]
                     or firm["status"] in ("kein_bedarf", "nicht_anrufen", "kunde")

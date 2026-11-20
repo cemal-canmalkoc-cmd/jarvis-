@@ -281,8 +281,14 @@ async def vertrieb(request: Request):
     authed(request)
     from . import deals
     conn = store.connect()
+    verm = store.placements(conn)
+    for v in verm:
+        firm = store.get_company(conn, v["company_id"]) if v["company_id"] else None
+        v["firma"] = firm["name"] if firm else ""
+        v["firma_adresse"] = (firm["address"] if firm else "") or ""
+        v["rechnung_nr"] = store.get_state(conn, f"invoice_no:{v['id']}") or ""
     return {"plan": deals.sales_plan(), "umsatz": store.revenue_month(conn), "ziel": config.REVENUE_GOAL,
-            "vermittlungen": store.placements(conn)}
+            "vermittlungen": verm}
 
 
 @router.get("/api/bewerbungen")
@@ -307,6 +313,37 @@ async def vertrieb_ergebnis(request: Request, cid: int, daten: dict = Body(...))
     msg = await asyncio.to_thread(deals.record_call, cid, daten.get("ergebnis", ""), daten.get("email", ""),
                                   daten.get("kontakt", ""), daten.get("notiz", ""))
     return {"meldung": msg}
+
+
+@router.post("/api/vermittlung/{pid}/rechnung")
+async def vermittlung_rechnung(request: Request, pid: int, daten: dict = Body(default={})):
+    authed(request)
+    from . import invoices
+    conn = store.connect()
+    p = next((x for x in store.placements(conn) if x["id"] == pid), None)
+    if not p:
+        raise HTTPException(404, "Vermittlung nicht gefunden")
+    if daten.get("adresse") and p["company_id"]:
+        store.set_company_address(conn, p["company_id"], daten["adresse"])
+    try:
+        msg = await asyncio.to_thread(invoices.send_invoice, pid)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(502, str(exc)) from exc
+    return {"meldung": msg}
+
+
+@router.get("/api/vermittlung/{pid}/rechnung.pdf")
+async def vermittlung_pdf(request: Request, pid: int):
+    authed(request)
+    from . import invoices
+    p = next((x for x in store.placements(store.connect()) if x["id"] == pid), None)
+    if not p:
+        raise HTTPException(404, "Vermittlung nicht gefunden")
+    fehlt = invoices.missing_business_data()
+    if fehlt:
+        raise HTTPException(400, "Unter ⚙️ fehlt noch: " + ", ".join(fehlt))
+    path, number, _ = await asyncio.to_thread(invoices.build_pdf, p)
+    return FileResponse(path, media_type="application/pdf", filename=f"{number}.pdf")
 
 
 @router.post("/api/vermittlung/{pid}/bezahlt")
