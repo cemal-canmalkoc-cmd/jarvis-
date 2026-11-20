@@ -37,9 +37,14 @@ Für Bewerber ist die Vermittlung kostenlos.
 
 Regeln:
 - Keine erfundenen Lohnzahlen, keine konkreten Arbeitgebernamen, keine Garantien.
-- Immer beide Kontaktwege nennen: Formular {config.PUBLIC_URL}/bewerbung{" und Telefon " + config.CALL_IN_NUMBER if config.CALL_IN_NUMBER else ""}.
+- Immer die Kontaktwege nennen: WhatsApp {{wa}} und Formular {config.PUBLIC_URL}/bewerbung{" und Telefon " + config.CALL_IN_NUMBER if config.CALL_IN_NUMBER else ""}.
 - 3–6 Emojis sparsam, kurze Absätze, maximal ca. 120 Wörter, am Ende 3–5 passende Hashtags.
 - Gib NUR den fertigen Inseratstext aus, ohne Vorbemerkung."""
+
+
+def _system() -> str:
+    from .outreach import contact_number
+    return AD_SYSTEM.replace("{wa}", contact_number() or "(keine)")
 
 
 def target_for_today(offset: int = 0) -> str:
@@ -49,7 +54,7 @@ def target_for_today(offset: int = 0) -> str:
 def write_ad(target: str | None = None, platform: str = "Facebook") -> str:
     target = target or target_for_today()
     resp = brain.create(
-        model=config.MODEL, max_tokens=2000, system=AD_SYSTEM, output_config={"effort": "low"},
+        model=config.MODEL, max_tokens=2000, system=_system(), output_config={"effort": "low"},
         messages=[{"role": "user", "content": f"Plattform: {platform}. Zielgruppe: {target}. "
                                               f"Schreib ein neues, abwechslungsreiches Inserat (Datum {date.today()})."}],
     )

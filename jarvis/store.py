@@ -429,19 +429,14 @@ def notifications(conn: sqlite3.Connection, limit: int = 30) -> list[dict]:
 EDITABLE_SETTINGS = {
     "META_PAGE_ID": "Facebook-Seiten-ID",
     "META_PAGE_TOKEN": "Facebook-Seiten-Token",
-    "META_TOKEN": "WhatsApp-Token (Meta)",
-    "META_PHONE_NUMBER_ID": "WhatsApp Phone-Number-ID",
-    "META_APP_SECRET": "Meta App-Geheimcode",
-    "META_TEMPLATE_FIRST_CONTACT": "WhatsApp-Vorlage (Name)",
     "OWNER_EMAIL": "Deine E-Mail für Meldungen",
-    "SMTP_HOST": "E-Mail-Server (SMTP)",
-    "SMTP_USER": "E-Mail-Benutzer",
-    "SMTP_PASSWORD": "E-Mail-Passwort",
-    "SMTP_FROM": "Absender-Adresse",
+    "SMTP_USER": "Dein GMX-Login (E-Mail-Adresse) – damit Jarvis Kandidaten anschreibt",
+    "SMTP_PASSWORD": "Dein GMX-Passwort",
+    "CONTACT_WHATSAPP": "Deine WhatsApp-Nummer für Kandidaten",
     "SEARCH_EVERY_HOURS": "Suche alle X Stunden",
     "ADS_PER_DAY": "Inserate pro Tag",
 }
-SECRET_SETTINGS = {"META_PAGE_TOKEN", "META_TOKEN", "META_APP_SECRET", "SMTP_PASSWORD"}
+SECRET_SETTINGS = {"META_PAGE_TOKEN", "SMTP_PASSWORD"}
 
 
 def apply_settings(conn: sqlite3.Connection | None = None) -> None:

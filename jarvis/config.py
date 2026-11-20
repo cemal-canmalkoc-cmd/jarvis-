@@ -123,7 +123,7 @@ JARVIS_WHATSAPP_NUMBER = os.environ.get("JARVIS_WHATSAPP_NUMBER", "")  # Jarvis'
 # ---------------------------------------------------------------------------
 # E-Mail (kostenlos über dein bestehendes Postfach): Kandidatenprofile an Kliniken senden
 # ---------------------------------------------------------------------------
-SMTP_HOST = os.environ.get("JARVIS_SMTP_HOST", "")
+SMTP_HOST = os.environ.get("JARVIS_SMTP_HOST", "mail.gmx.net")
 SMTP_PORT = int(os.environ.get("JARVIS_SMTP_PORT", "587"))
 SMTP_USER = os.environ.get("JARVIS_SMTP_USER", "")
 SMTP_PASSWORD = os.environ.get("JARVIS_SMTP_PASSWORD", "")
@@ -149,3 +149,6 @@ SEARCH_HOURS = (8, 21)
 ADS_PER_DAY = int(os.environ.get("JARVIS_ADS_PER_DAY", "2"))
 META_PAGE_ID = os.environ.get("META_PAGE_ID", "")        # ID der Facebook-Seite "Hansa Personal"
 META_PAGE_TOKEN = os.environ.get("META_PAGE_TOKEN", "")  # dauerhaftes Seiten-Token (pages_manage_posts)
+
+# Deine WhatsApp-Nummer, über die sich Kandidaten bei dir melden (Inserate, E-Mails, Formular).
+CONTACT_WHATSAPP = os.environ.get("JARVIS_CONTACT_WHATSAPP", "")

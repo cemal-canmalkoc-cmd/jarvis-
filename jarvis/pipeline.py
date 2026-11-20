@@ -52,7 +52,8 @@ def run(use_folder: bool = True, use_email: bool = True, use_web: bool = False,
             except Exception as exc:  # noqa: BLE001 – ein Fokus darf die ganze Suche nie stoppen
                 log.error("Web-Sourcing '%s' fehlgeschlagen: %s", focus, exc)
 
-    stats = {"geprueft": 0, "neu": 0, "A": 0, "B": 0, "C": 0, "X": 0, "fehler": 0}
+    stats = {"geprueft": 0, "neu": 0, "A": 0, "B": 0, "C": 0, "X": 0, "fehler": 0, "angeschrieben": 0}
+    from . import outreach
     for raw in raws:
         try:
             c = evaluate(raw)
@@ -64,6 +65,12 @@ def run(use_folder: bool = True, use_email: bool = True, use_web: bool = False,
         stats[c.tier] += 1
         if store.upsert(conn, c):
             stats["neu"] += 1
+            if raw.source.startswith("http"):  # öffentliches Stellengesuch → Headhunter-Ansprache
+                try:
+                    if outreach.reach_out(c) == "gesendet":
+                        stats["angeschrieben"] += 1
+                except Exception as exc:  # noqa: BLE001
+                    log.error("Ansprache %s fehlgeschlagen: %s", raw.source, exc)
         sources.archive(raw)
         log.info("%s → %s (%d)", c.assessment.full_name, c.tier, c.score)
 

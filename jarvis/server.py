@@ -399,7 +399,8 @@ LEBENSLAUF:
     bg.add_task(_evaluate_form, raw)
 
     chat = ""
-    num = messaging.jarvis_number()
+    from .outreach import contact_number
+    num = "".join(ch for ch in contact_number() if ch.isdigit()) or messaging.jarvis_number()
     if num:
         msg = quote(f"Hallo, ich habe mich gerade beworben ({bereich}). Mein Name: {name}")
         chat = (f'<p>Schneller geht\'s per WhatsApp – schreiben Sie uns direkt:</p>'
