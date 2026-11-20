@@ -46,7 +46,13 @@ def role_phrase(a: Assessment) -> str:
 
 
 def build_message(a: Assessment) -> str:
-    first = a.full_name.split()[0] if a.full_name else ""
+    first = a.full_name.split()[0] if a.full_name and a.full_name.lower() not in ("unbekannt", "") else ""
+    if a.category == "lkw":
+        return (f"Hallo{' ' + first if first else ''}, hier ist {RECRUITER_NAME} von {AGENCY_NAME}. "
+                f"Ich habe deine Anzeige gesehen – du suchst als {role_phrase(a)} eine neue Stelle? "
+                "Wir vermitteln Fahrer kostenlos an Speditionen in ganz Deutschland (Nah- und Fernverkehr). "
+                "Wenn du magst, schick mir kurz deinen Lebenslauf oder ein Foto vom Führerschein, dann melde ich mich "
+                "mit passenden Stellen. Kein Interesse? Kurz Nein schreiben, dann melde ich mich nicht mehr.")
     greeting = f"Grüezi {first}" if first else "Grüezi"
 
     if a.category == "arzt":
@@ -64,7 +70,8 @@ def build_message(a: Assessment) -> str:
         f"{greeting}, hier ist {RECRUITER_NAME} von {AGENCY_NAME}. "
         f"Ich bin auf Ihr Profil als {role} aufmerksam geworden. "
         f"{hook}. "
-        "Hätten Sie diese Woche kurz 10 Minuten für ein unverbindliches Gespräch? "
+        "Wenn Sie mögen, schicken Sie mir einfach Ihren Lebenslauf (Foto/PDF genügt) – oder hätten Sie diese Woche "
+        "kurz 10 Minuten für ein unverbindliches Gespräch? "
         + (f"Sie können uns auch jederzeit anrufen: {config.CALL_IN_NUMBER}. " if config.CALL_IN_NUMBER else "")
         + "Falls kein Interesse besteht, genügt ein kurzes Nein – dann melde ich mich nicht mehr."
     )

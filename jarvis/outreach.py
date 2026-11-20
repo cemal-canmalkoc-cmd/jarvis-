@@ -130,8 +130,15 @@ def portal_digest(cands: list[ScoredCandidate]) -> str | None:
     rows = [c for c in cands if c.tier != "X"]
     if not rows:
         return None
-    lines = [f"📋 {len(rows)} neue Stellengesuche gefunden – bitte im Portal anschreiben (Text unten kopieren):", ""]
-    for c in rows[:10]:
+    with_phone = [c for c in rows if c.whatsapp_link]
+    lines = [f"📋 {len(rows)} neue Stellengesuche gefunden.", ""]
+    if with_phone:
+        lines.append("📱 Mit Nummer in der Anzeige – 1× tippen, Nachricht ist fertig, nur noch senden:")
+        for c in with_phone[:10]:
+            lines.append(f"• {role_phrase(c.assessment)}, {c.assessment.current_location or '?'}: {c.whatsapp_link}")
+        lines.append("")
+    lines.append("💬 Nur übers Portal erreichbar (Anzeige öffnen → Nachricht einfügen):")
+    for c in [c for c in rows if not c.whatsapp_link][:10]:
         a = c.assessment
         lines.append(f"• {role_phrase(a)}, {a.current_location or '?'} – Tier {c.tier}\n  {c.source}")
     lines += ["", "Nachricht zum Kopieren:", portal_message(rows[0])]

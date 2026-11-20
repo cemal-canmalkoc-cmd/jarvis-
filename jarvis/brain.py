@@ -179,11 +179,13 @@ Strikte Regeln:
 - Keine Profile aus Login-geschützten Netzwerken, keine erratenen Kontaktdaten, keine Telefonnummern
   aus anderen Quellen zusammenführen.
 - Bevorzuge Personen, die aktuell in der Schweiz sind.
-- Gib für jede Person die exakte Quell-URL an.
+- Gib für jede Person die exakte Quell-URL an – wenn möglich die EINZELNE Anzeige
+  (z.B. kleinanzeigen.de/s-anzeige/…), nicht die Übersichtsseite. Öffne dazu die einzelne Anzeige.
+- Übernimm Anzeigentitel wörtlich und eine Telefon-/WhatsApp-Nummer NUR, wenn sie öffentlich in der Anzeige steht.
 
 Antworte am Ende ausschliesslich mit einem JSON-Codeblock. profile_text muss ALLE Angaben aus der Anzeige
 enthalten: Berufsbezeichnung/Abschluss wörtlich, Ort mit PLZ und Land, Erfahrung, Alter/Jahrgang, gewünschtes
-Pensum, Verfügbarkeit, Datum des Gesuchs, Kontaktweg (Portal/E-Mail):
+Pensum, Verfügbarkeit, Datum des Gesuchs, Anzeigentitel, Kontaktweg (Portal/E-Mail/Telefon):
 ```json
 [{{"source_url": "...", "profile_text": "..."}}]
 ```
@@ -205,9 +207,11 @@ So gehst du vor (genau so suchen, Begriff passend zum Fokus):
 Sammelseiten in einzelne Personen zerlegen. Stellenangebote von Speditionen/Personaldienstleistern und
 Gesuche älter als 12 Monate weglassen. Kontakt über das Portal reicht (Inserats-URL als Kontaktweg).
 Keine Login-Profile, keine erratenen Kontaktdaten.
+Gib wenn möglich die URL der EINZELNEN Anzeige an (kleinanzeigen.de/s-anzeige/…), nicht die Übersichtsseite,
+dazu den Anzeigentitel wörtlich. Telefon-/WhatsApp-Nummer nur, wenn sie öffentlich in der Anzeige steht.
 
 Antworte am Ende ausschliesslich mit einem JSON-Codeblock. profile_text muss ALLE Angaben enthalten:
-Führerscheinklasse, Fahrerkarte, Modul 95, ADR, Erfahrung, Verkehrsart, Ort mit PLZ, Datum, Kontaktweg:
+Führerscheinklasse, Fahrerkarte, Modul 95, ADR, Erfahrung, Verkehrsart, Ort mit PLZ, Datum, Anzeigentitel, Kontaktweg:
 ```json
 [{{"source_url": "...", "profile_text": "..."}}]
 ```

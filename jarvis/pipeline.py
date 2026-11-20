@@ -19,7 +19,7 @@ def evaluate(raw: sources.RawProfile) -> ScoredCandidate:
     c = ScoredCandidate(assessment=a, source=raw.source, score=pts, tier=tier,
                         reasons=reasons, missing=missing,
                         consent_whatsapp=raw.consent_whatsapp, consent_call=raw.consent_call)
-    if tier in ("A", "B"):
+    if tier in ("A", "B", "C"):
         c.whatsapp_message = whatsapp.build_message(a)
         c.whatsapp_link = whatsapp.build_link(a.phone, c.whatsapp_message)
     return c
