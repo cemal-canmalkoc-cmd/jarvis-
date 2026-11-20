@@ -153,6 +153,13 @@ def tick() -> None:
         except Exception as exc:  # noqa: BLE001
             log.exception("Morgenlauf fehlgeschlagen")
             messaging.notify_owner(f"⚠️ Morgenlauf fehlgeschlagen: {exc}")
+    if now.hour == 3 and store.get_state(conn, "update_day") != date.today().isoformat():
+        store.set_state(conn, "update_day", date.today().isoformat())
+        try:
+            from . import updater
+            log.info("Auto-Update: %s", updater.update())
+        except Exception as exc:  # noqa: BLE001
+            log.error("Auto-Update fehlgeschlagen: %s", exc)
     slot = now.strftime("%Y-%m-%d %H")
     if voice.within_call_hours(now) and store.get_state(conn, "call_slot") != slot:
         store.set_state(conn, "call_slot", slot)

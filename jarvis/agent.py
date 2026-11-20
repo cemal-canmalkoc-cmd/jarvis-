@@ -189,6 +189,11 @@ def t_kandidat_hinzufuegen(angaben: str, whatsapp_ok: bool = False, anruf_ok: bo
             "score": c.score, "fehlt": c.missing, "whatsapp_link": c.whatsapp_link}
 
 
+def t_update() -> dict:
+    from . import updater
+    return updater.update(force=True)
+
+
 def t_autopilot_jetzt() -> dict:
     from . import autopilot
     return autopilot.morning(force=True)
@@ -253,6 +258,7 @@ TOOLS = {
                              {"angaben": {"type": "string"},
                               "whatsapp_ok": {"type": "boolean", "description": "Person hat WhatsApp-Kontakt erlaubt"},
                               "anruf_ok": {"type": "boolean", "description": "Person hat Anruf erlaubt"}}),
+    "jarvis_aktualisieren": (t_update, "Neueste Jarvis-Version von GitHub installieren und neu starten.", {}),
     "autopilot_jetzt": (t_autopilot_jetzt, "Kompletten Tagesablauf sofort ausführen.", {}),
 }
 

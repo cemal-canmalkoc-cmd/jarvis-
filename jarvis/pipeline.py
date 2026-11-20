@@ -49,7 +49,7 @@ def run(use_folder: bool = True, use_email: bool = True, use_web: bool = False,
                 for lead in brain.find_public_leads(focus):
                     raws.append(sources.RawProfile(source=lead.get("source_url", "web"),
                                                    text=lead["profile_text"]))
-            except anthropic.APIError as exc:
+            except Exception as exc:  # noqa: BLE001 – ein Fokus darf die ganze Suche nie stoppen
                 log.error("Web-Sourcing '%s' fehlgeschlagen: %s", focus, exc)
 
     stats = {"geprueft": 0, "neu": 0, "A": 0, "B": 0, "C": 0, "X": 0, "fehler": 0}

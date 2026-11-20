@@ -160,7 +160,7 @@ def find_public_leads(focus: str, max_searches: int | None = None) -> list[dict]
     for _ in range(5):  # pause_turn kann mehrmals vorkommen
         response = create(
             model=MODEL,
-            max_tokens=32000,
+            max_tokens=16000,
             system=SOURCING_SYSTEM,
             output_config={"effort": EFFORT},
             tools=tools,

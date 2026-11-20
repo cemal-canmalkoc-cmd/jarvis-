@@ -109,6 +109,7 @@ nav button.on{color:var(--accent)}
   </div>
   <h2>Schnellbefehle</h2>
   <div class="chips" id="quick"></div>
+  <button class="btn sec" id="update-btn">⬇️ Jarvis aktualisieren</button>
   <h2>Meldungen</h2>
   <div id="news"></div>
   <h2>Letzte Anrufe</h2>
@@ -387,6 +388,15 @@ else {
     rec.start();
   };
 }
+
+$("#update-btn").onclick = async () => {
+  if (!confirm("Neueste Jarvis-Version installieren? Jarvis startet dafür kurz neu.")) return;
+  try {
+    const r = await api("/api/update", {method: "POST"});
+    toast(r.status === "aktuell" ? "Jarvis ist aktuell ✅" : "Update installiert, Neustart … ⏳");
+    if (r.status !== "aktuell") setTimeout(() => location.reload(), 15000);
+  } catch (e) { toast("Fehler: " + e.message); }
+};
 
 // ---------- Start
 $("#reload").onclick = () => { chatLoaded = false; load(); if ($("#s-jarvis").classList.contains("on")) loadChat(); };

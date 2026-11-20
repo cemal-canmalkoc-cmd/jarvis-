@@ -37,7 +37,7 @@ def find(focus: str, region: str = "Deutschschweiz", max_searches: int | None = 
     response = None
     for _ in range(5):
         response = brain.create(
-            model=MODEL, max_tokens=32000,
+            model=MODEL, max_tokens=16000,
             system=SYSTEM, output_config={"effort": EFFORT}, tools=tools, messages=messages,
         )
         if response.stop_reason != "pause_turn":

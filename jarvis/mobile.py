@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
 import json
@@ -275,6 +276,17 @@ async def befehl_status(request: Request, job_id: str):
     if not job:
         raise HTTPException(404, "Unbekannter Auftrag")
     return {"job": job_id, "status": job["status"], "antwort": job["antwort"]}
+
+
+@router.post("/api/update")
+async def update_now(request: Request):
+    """Neueste Jarvis-Version von GitHub holen und neu starten."""
+    authed(request)
+    from . import updater
+    try:
+        return await asyncio.to_thread(updater.update, True)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(502, f"Update fehlgeschlagen: {exc}") from exc
 
 
 @router.get("/api/verlauf")
