@@ -35,6 +35,27 @@ def next_number() -> str:
     return f"RE-{year}-{n:03d}"
 
 
+def ensure_reportlab() -> bool:
+    """Installiert das PDF-Paket beim ersten Bedarf nach (ältere Server-Images haben es noch nicht)."""
+    try:
+        import reportlab  # noqa: F401
+        return True
+    except ImportError:
+        import subprocess
+        import sys
+        r = subprocess.run([sys.executable, "-m", "pip", "install", "--quiet", "--no-cache-dir", "reportlab"],
+                           capture_output=True, text=True, timeout=600)
+        if r.returncode != 0:
+            return False
+        import importlib
+        importlib.invalidate_caches()
+        try:
+            import reportlab  # noqa: F401,F811
+            return True
+        except ImportError:
+            return False
+
+
 def build_pdf(p: dict) -> tuple[Path, str, float]:
     """Erstellt die Rechnung als PDF. Gibt (Pfad, Rechnungsnummer, Bruttobetrag) zurück."""
     from reportlab.lib.pagesizes import A4
@@ -123,10 +144,9 @@ def send_invoice(pid: int) -> str:
         return "Für diese Vermittlung ist keine Firma mit E-Mail hinterlegt."
     if not firm["address"]:
         return f"Für {firm['name']} fehlt die vollständige Rechnungsadresse (App → Firma → Adresse)."
-    try:
-        path, number, gross = build_pdf(p)
-    except ImportError:
-        return "PDF-Baustein fehlt noch – bitte in der App einmal '⬇️ Jarvis aktualisieren' drücken."
+    if not ensure_reportlab():
+        return "PDF-Baustein konnte nicht installiert werden – bitte in der App '⬇️ Jarvis aktualisieren' drücken."
+    path, number, gross = build_pdf(p)
     send_email(firm["email"], f"Rechnung {number} – {config.AGENCY_NAME}",
                f"Guten Tag{' ' + firm['contact_name'] if firm['contact_name'] else ''},\n\nvielen Dank für die "
                f"Zusammenarbeit. Anbei erhalten Sie unsere Rechnung {number} über {eur(gross)} für die "

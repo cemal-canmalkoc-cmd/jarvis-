@@ -342,6 +342,8 @@ async def vermittlung_pdf(request: Request, pid: int):
     fehlt = invoices.missing_business_data()
     if fehlt:
         raise HTTPException(400, "Unter ⚙️ fehlt noch: " + ", ".join(fehlt))
+    if not await asyncio.to_thread(invoices.ensure_reportlab):
+        raise HTTPException(503, "PDF-Baustein fehlt – bitte 'Jarvis aktualisieren' drücken.")
     path, number, _ = await asyncio.to_thread(invoices.build_pdf, p)
     return FileResponse(path, media_type="application/pdf", filename=f"{number}.pdf")
 
