@@ -388,7 +388,7 @@ In 2 Minuten bewerben, wir melden uns schnell.{call_hint}</p>
     return _page(f"Bewerbung Schweiz – {config.AGENCY_NAME}", body)
 
 
-def _evaluate_form(raw: sources.RawProfile) -> None:
+def _evaluate_form(raw: sources.RawProfile, cv_path: str | None = None) -> None:
     try:
         c = pipeline.evaluate(raw)
     except Exception:  # noqa: BLE001
@@ -398,11 +398,28 @@ def _evaluate_form(raw: sources.RawProfile) -> None:
         return
     conn = store.connect()
     store.upsert(conn, c)
-    if c.tier in ("A", "B"):
+    key = store.candidate_key(c)
+    if cv_path:
+        store.set_state(conn, f"cv:{key}", cv_path)
+    if c.tier != "X":
+        # Wer sich selbst bewirbt, ist interessiert → sofort vermittelbar
+        store.set_status(conn, key, "interessiert", "hat sich über das Formular beworben")
+        from . import matching
+        from .whatsapp import role_phrase
         a = c.assessment
-        role = a.physician_specialty if a.category == "arzt" else a.nursing_field
-        messaging.notify_owner(f"📝 Neue Bewerbung: {a.full_name} – {role}, Tier {c.tier} ({c.score})\n"
-                               f"{a.summary}\nID {store.candidate_key(c)}")
+        row = store.get_candidate(conn, key)
+        firms = matching.matches(conn, row, 3)
+        delivered = matching.auto_deliver()
+        lines = [f"📝 NEUER BEWERBER: {a.full_name} – {role_phrase(a)}, {a.current_location or '?'} (Tier {c.tier})",
+                 a.summary, "Lebenslauf: " + ("liegt vor ✅" if cv_path else "nicht hochgeladen")]
+        if delivered:
+            lines.append("📦 Automatisch an Partner geschickt: " + "; ".join(delivered))
+        if firms:
+            lines.append("🤝 Passende Firmen: " + ", ".join(f"{f['name']} ({f['ort'] or '?'})" for f in firms))
+        else:
+            lines.append("🔍 Noch keine passende Firma gespeichert – in der App 'Passende Firmen suchen' tippen.")
+        lines.append("👉 App → Kandidaten → 🔥 Interessiert → Profil an Firma senden")
+        messaging.notify_owner("\n".join(lines))
         if c.consent_call and voice.within_call_hours():
             # Heisse Bewerber sofort anrufen, solange das Interesse frisch ist
             log.info(voice.place_call("kandidat", store.candidate_key(c)))
@@ -429,13 +446,15 @@ async def bewerbung_submit(
         raise HTTPException(400, "Einwilligung erforderlich")
 
     cv_text = ""
+    cv_file = None
     if cv is not None and cv.filename:
         data = await cv.read(MAX_UPLOAD + 1)
         if len(data) > MAX_UPLOAD:
             raise HTTPException(413, "Datei zu gross")
         UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
         safe = "".join(ch for ch in Path(cv.filename).name if ch.isalnum() or ch in "._-")[:80]
-        (UPLOAD_DIR / f"{datetime.now():%Y%m%d-%H%M%S}-{safe}").write_bytes(data)
+        cv_file = UPLOAD_DIR / f"{datetime.now():%Y%m%d-%H%M%S}-{safe}"
+        cv_file.write_bytes(data)
         try:
             cv_text = sources.file_to_text(safe, data) or ""
         except Exception:  # noqa: BLE001
@@ -478,7 +497,8 @@ LEBENSLAUF:
 {cv_text or "(kein Lebenslauf hochgeladen)"}"""
     raw = sources.RawProfile(source="Bewerbungsformular", text=text,
                              consent_whatsapp=consent_whatsapp == "1", consent_call=consent_call == "1")
-    bg.add_task(_evaluate_form, raw)
+    raw.file = None
+    bg.add_task(_evaluate_form, raw, str(cv_file) if cv_file else None)
 
     chat = ""
     from .outreach import contact_number

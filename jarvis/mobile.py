@@ -212,7 +212,38 @@ async def kandidat(request: Request, key: str):
     out["quelle"] = row["source"] if (row["source"] or "").startswith("http") else ""
     out["nachricht"] = outreach.portal_message(c)
     out["whatsapp_kontakt"] = outreach.wa_link()
+    cvp = store.get_state(conn, f"cv:{row['key']}")
+    out["lebenslauf"] = bool(cvp and Path(cvp).exists())
     return out
+
+
+@router.get("/api/kandidat/{key}/lebenslauf")
+async def lebenslauf(request: Request, key: str):
+    authed(request)
+    conn = store.connect()
+    row = store.get_candidate(conn, key)
+    path = store.get_state(conn, f"cv:{row['key']}") if row else None
+    if not path or not Path(path).exists():
+        raise HTTPException(404, "Kein Lebenslauf vorhanden")
+    return FileResponse(path, filename=Path(path).name.split("-", 2)[-1])
+
+
+@router.post("/api/kandidat/{key}/firmen_suchen")
+async def firmen_fuer_kandidat(request: Request, key: str):
+    """Sucht im Web Firmen mit offenen Stellen in der Nähe des Kandidaten (ca. 3–5 Cent)."""
+    authed(request)
+    conn = store.connect()
+    row = store.get_candidate(conn, key)
+    if not row:
+        raise HTTPException(404, "Kandidat nicht gefunden")
+    from . import companies
+    from .whatsapp import role_phrase
+    a = store.load(row).assessment
+    lkw = a.category == "lkw"
+    region = a.current_location or ("Deutschland" if lkw else "Deutschschweiz")
+    await asyncio.to_thread(companies.find, role_phrase(a), region, None, "lkw" if lkw else "")
+    found = matching.matches(conn, store.get_candidate(conn, key))
+    return {"meldung": f"{len(found)} passende Firmen gefunden", "firmen": found}
 
 
 @router.post("/api/kandidat/{key}/loeschen")

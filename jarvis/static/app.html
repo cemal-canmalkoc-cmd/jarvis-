@@ -306,7 +306,12 @@ async function openCand(id) {
       catch (e) { toast(e.message); } }}, "🗑 Kandidat löschen"),
     h("div", {class: "chips"}, ["kontaktiert", "interessiert", "kein_interesse", "vermittelt"].map(s =>
       h("button", {class: "chip" + (d.status === s ? " on" : ""), onclick: () => act(`/api/kandidat/${id}/status`, {status: s})}, STATUS_DE[s]))),
-    d.passende_firmen.length ? h("h2", {}, "🤝 Passende Firmen") : null,
+    d.lebenslauf ? h("a", {class: "btn sec", href: `/api/kandidat/${id}/lebenslauf`, target: "_blank"}, "📄 Lebenslauf öffnen / weiterleiten") : null,
+    h("h2", {}, "🤝 Passende Firmen"),
+    !d.passende_firmen.length ? h("button", {class: "btn sec", onclick: async (ev) => {
+      ev.target.textContent = "🔍 Suche läuft … (ca. 1 Min.)"; ev.target.disabled = true;
+      try { toast((await api(`/api/kandidat/${id}/firmen_suchen`, {method: "POST"})).meldung); openCand(id); }
+      catch (e) { toast(e.message); ev.target.disabled = false; } }}, "🔍 Passende Firmen suchen (ca. 3–5 Cent)") : null,
     d.passende_firmen.map(f => h("div", {class: "card"},
       h("div", {style: "display:flex;justify-content:space-between;gap:8px;align-items:center"},
         h("div", {}, h("b", {}, f.name), h("div", {class: "muted small"}, [f.ort, f.bedarf].filter(Boolean).join(" · "))),

@@ -51,7 +51,7 @@ def test_lkw_texts():
 
 def test_driver_form(monkeypatch):
     seen = {}
-    monkeypatch.setattr(server, "_evaluate_form", lambda raw: seen.update(text=raw.text))
+    monkeypatch.setattr(server, "_evaluate_form", lambda raw, cv=None: seen.update(text=raw.text))
     c = TestClient(server.app)
     page = c.get("/bewerbung?bereich=lkw").text
     assert "LKW-Fahrer gesucht" in page and 'name="fuehrerschein"' in page
@@ -101,3 +101,26 @@ def test_app_shows_readable_unknown_candidates(monkeypatch):
     assert d["quelle"].startswith("https://www.kleinanzeigen.de") and "Speditionen" in d["nachricht"]
     assert cl.post(f"/api/kandidat/{key}/loeschen", headers=h).status_code == 200
     assert store.get_candidate(store.connect(), key) is None
+
+
+def test_applicant_becomes_interested_with_cv_and_firms(monkeypatch, tmp_path):
+    from jarvis import messaging
+    monkeypatch.setattr(config, "ADMIN_TOKEN", "t0k")
+    a = driver(full_name="Bea Bewerber", phone="+49 170 7770099")
+    p, t, r, m = score(a)
+    monkeypatch.setattr(pipeline, "evaluate", lambda raw: ScoredCandidate(
+        assessment=a, source="Bewerbungsformular", score=p, tier=t, reasons=r, missing=m, consent_whatsapp=True))
+    conn = store.connect()
+    store.add_company(conn, name="Spedition Ruhr", city="Dortmund", needs="LKW-Fahrer CE Fernverkehr")
+    cv = tmp_path / "20261120-cv.pdf"
+    cv.write_bytes(b"%PDF-1.4 test")
+    server._evaluate_form(server.sources.RawProfile(source="Bewerbungsformular", text="x"), str(cv))
+    key = store.candidate_key(ScoredCandidate(assessment=a, source="Bewerbungsformular", score=p, tier=t,
+                                              reasons=r, missing=m))
+    assert store.get_candidate(conn, key)["status"] == "interessiert"
+    note = store.notifications(conn, 1)[0]["text"]
+    assert "NEUER BEWERBER: Bea Bewerber" in note and "Spedition Ruhr" in note and "liegt vor" in note
+    cl = TestClient(server.app)
+    h = {"Authorization": "Bearer t0k"}
+    assert cl.get(f"/api/kandidat/{key}", headers=h).json()["lebenslauf"] is True
+    assert cl.get(f"/api/kandidat/{key}/lebenslauf", headers=h).content.startswith(b"%PDF")
