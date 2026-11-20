@@ -52,6 +52,11 @@ async def _autopilot_loop() -> None:
 async def lifespan(_: FastAPI):
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     store.apply_settings(store.connect())
+    try:
+        from . import budget
+        budget.ensure_defaults()
+    except Exception:  # noqa: BLE001
+        logging.getLogger("jarvis").exception("Standardwerte nicht gesetzt")
     task = None
     if os.environ.get("JARVIS_AUTOPILOT", "1") not in ("0", "false", "nein"):
         task = asyncio.create_task(_autopilot_loop())

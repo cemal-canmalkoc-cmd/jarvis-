@@ -192,7 +192,8 @@ def ensure_minimum(now: datetime | None = None) -> dict:
     rounds = 0
     while store.potentials_today(conn) < config.DAILY_MINIMUM:
         est = budget.EST_SEARCH_FOCUS_USD * 3
-        if budget.today_spend() - start_spend + est > config.MINIMUM_MAX_USD or rounds >= 8:
+        if (budget.today_spend() - start_spend + est > config.MINIMUM_MAX_USD or rounds >= 8
+                or not budget.auto_allowed(est)):
             break
         k = (now.toordinal() * 7 + now.hour + rounds * 3)
         focuses = [MINIMUM_FOCUSES[(k + i) % len(MINIMUM_FOCUSES)] for i in range(3)]

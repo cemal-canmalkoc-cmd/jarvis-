@@ -159,7 +159,7 @@ OWNER_CALLS_PER_DAY = int(os.environ.get("JARVIS_OWNER_CALLS_PER_DAY", "3"))
 
 # Ausgaben: automatisches Tagesbudget in $ für Arbeit, die Jarvis von SICH AUS startet
 # (Suchrunden, Inserate). 0 = nichts automatisch, Jarvis fragt stattdessen. Befehle von dir laufen immer.
-DAILY_BUDGET_USD = float(os.environ.get("JARVIS_DAILY_BUDGET_USD", "0"))
+DAILY_BUDGET_USD = float(os.environ.get("JARVIS_DAILY_BUDGET_USD", "1.0"))  # Gesamtgrenze pro Tag
 
 # Tagesminimum: Jarvis sucht so lange (in mehreren Runden, mit wechselnden Berufen/Portalen),
 # bis mindestens so viele NEUE potenzielle Kandidaten (Tier A/B/C) gefunden sind – höchstens bis
@@ -200,7 +200,7 @@ AUTO_INVOICE = os.environ.get("JARVIS_AUTO_INVOICE", "0").strip().lower() in ("1
 # --------------------------------------------------------------------------- Selbstständiger Betrieb
 # Gespräche mit Bewerbern und Firmen führt die KI selbst – höchstens CHAT_MAX_USD pro Tag und nur,
 # solange die Freigabe läuft (AUTO_DAYS Tage; danach in der App auf „Weiter" tippen).
-CHAT_MAX_USD = float(os.environ.get("JARVIS_CHAT_MAX_USD", "0.05"))
+CHAT_MAX_USD = float(os.environ.get("JARVIS_CHAT_MAX_USD", "0.20"))
 AUTO_DAYS = int(os.environ.get("JARVIS_AUTO_DAYS", "5"))
 # Postfach lesen und beantworten (gleiche Zugangsdaten wie der E-Mail-Versand)
 AUTO_INBOX = os.environ.get("JARVIS_AUTO_INBOX", "1").strip().lower() in ("1", "true", "ja")

@@ -110,3 +110,35 @@ def test_inbox_ignores_autoreplies_and_unknown():
     assert inbox.handle("noreply@shop.example", "Ihre Bestellung", "Danke", []) is None
     assert inbox.handle("fremd@example.org", "Hallo", "Werbung", []) is None
     assert inbox.imap_host() in ("", "imap.gmx.net", "outlook.office365.com") or config.IMAP_HOST
+
+
+def test_total_budget_one_per_day_and_waits_after_five_days(monkeypatch):
+    from jarvis import budget as b
+    monkeypatch.setattr(config, "DAILY_BUDGET_USD", 1.0)
+    monkeypatch.setattr(config, "CHAT_MAX_USD", 0.20)
+    conn = store.connect()
+    store.set_state(conn, "auto_until", date.today().isoformat())
+    store.set_state(conn, f"spend:{date.today()}", "0.79")
+    store.set_state(conn, f"chat_spend:{date.today()}", "0")
+    assert not b.auto_allowed(0.02)                 # 0,20 $ bleiben für Gespräche reserviert
+    assert b.chat_allowed(0.01)
+    store.set_state(conn, f"spend:{date.today()}", "0.999")
+    assert not b.chat_allowed(0.01)                 # Gesamtgrenze 1,00 $
+    store.set_state(conn, f"spend:{date.today()}", "0")
+    store.set_state(conn, "auto_until", (date.today() - timedelta(days=1)).isoformat())
+    assert not b.auto_allowed(0.01) and not b.chat_allowed(0.001)   # wartet auf „Weiter“
+    b.autonomy_continue()
+
+
+def test_defaults_applied_once_after_update():
+    from jarvis import budget as b
+    conn = store.connect()
+    store.set_state(conn, "autonomy_version", "")
+    store.save_setting(conn, "DAILY_BUDGET_USD", "0")
+    b.ensure_defaults()
+    assert config.DAILY_BUDGET_USD == 1.0 and config.CHAT_MAX_USD == 0.20 and config.AUTO_APPLY is True
+    assert b.autonomy_until() == date.today() + timedelta(days=4)
+    store.save_setting(conn, "CHAT_MAX_USD", "0.1")
+    b.ensure_defaults()                              # zweites Mal ändert nichts
+    assert config.CHAT_MAX_USD == 0.1
+    store.save_setting(conn, "CHAT_MAX_USD", "0.20")
