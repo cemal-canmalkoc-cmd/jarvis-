@@ -177,3 +177,6 @@ LKW_REQUIREMENTS_TEXT = """BEDARF DEUTSCHLAND: Berufskraftfahrer/innen (LKW)
 - Von Vorteil: ADR-Schein (Gefahrgut), Erfahrung im Nah- oder Fernverkehr, Kran/Stapler,
   Deutsch mind. B1 (für Kundenkontakt), Wohnort in Deutschland oder EU.
 - Für Fahrer ist die Vermittlung kostenlos."""
+
+# Umsatzsteuer-Status deines Einzelunternehmens: "unklar" | "kleinunternehmer" | "regel"
+UST_STATUS = os.environ.get("JARVIS_UST_STATUS", "unklar")

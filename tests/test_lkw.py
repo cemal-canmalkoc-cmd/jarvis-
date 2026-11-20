@@ -64,5 +64,13 @@ def test_driver_form(monkeypatch):
 def test_lkw_default_price():
     from jarvis import pricing
     txt = pricing.for_candidate("lkw", None)
-    assert txt.startswith("2.000 € netto pauschal (zzgl. MwSt.)") and "Erfolgshonorar" in txt
+    assert txt.startswith("2.000 € pauschal (zzgl. gesetzlicher MwSt., sofern anfallend)") and "Garantie" not in txt
     assert pricing.overview()["LKW"] == txt
+
+
+def test_ust_status(monkeypatch):
+    from jarvis import pricing
+    monkeypatch.setattr(config, "UST_STATUS", "kleinunternehmer")
+    assert "§ 19 UStG keine Umsatzsteuer" in pricing.for_candidate("lkw", None)
+    monkeypatch.setattr(config, "UST_STATUS", "regel")
+    assert "2.000 € netto pauschal (zzgl. 19 % MwSt.)" in pricing.for_candidate("lkw", None)

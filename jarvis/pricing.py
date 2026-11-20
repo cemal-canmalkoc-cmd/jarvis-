@@ -24,7 +24,14 @@ def describe(row) -> str:
     if row["modell"] == "prozent_jahreslohn":
         price = f"{row['wert']:g} % des vereinbarten Bruttojahreslohns"
     elif row["modell"] == "pauschal_eur_netto":
-        price = f"{row['wert']:,.0f}".replace(",", ".") + " € netto pauschal (zzgl. MwSt.)"
+        betrag = f"{row['wert']:,.0f}".replace(",", ".") + " €"
+        status = (config.UST_STATUS or "unklar").lower()
+        if status.startswith("klein"):
+            price = f"{betrag} pauschal (gemäss § 19 UStG keine Umsatzsteuer)"
+        elif status.startswith("regel"):
+            price = f"{betrag} netto pauschal (zzgl. 19 % MwSt.)"
+        else:
+            price = f"{betrag} pauschal (zzgl. gesetzlicher MwSt., sofern anfallend)"
     else:
         price = f"CHF {row['wert']:,.0f}".replace(",", "'") + " pauschal"
     text = f"{price}, fällig erst bei erfolgreicher Anstellung (Erfolgshonorar)"

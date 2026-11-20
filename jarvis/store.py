@@ -448,6 +448,7 @@ EDITABLE_SETTINGS = {
     "TWILIO_ACCOUNT_SID": "Twilio Account SID",
     "TWILIO_AUTH_TOKEN": "Twilio Auth Token",
     "TWILIO_VOICE_FROM": "Twilio-Telefonnummer (Absender)",
+    "UST_STATUS": "Umsatzsteuer: unklar / kleinunternehmer / regel",
     "DAILY_BUDGET_USD": "Automatisches Tagesbudget in $ (0 = Jarvis fragt immer vorher)",
     "DAILY_MINIMUM": "Mindestens X neue Kandidaten pro Tag",
     "MINIMUM_MAX_USD": "Höchstens $ pro Tag für das Tagesminimum",
