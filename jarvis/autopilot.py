@@ -251,7 +251,20 @@ def tick() -> None:
             log.info("Inserat: %s", ads.daily_round(slot_i))
         except Exception:  # noqa: BLE001
             log.exception("Inserat fehlgeschlagen")
-    if config.DAILY_MINIMUM > 0 and now.hour in (9, 13, 17):
+    # Postfach alle 10 Minuten: Antworten von Firmen und Bewerbern selbst bearbeiten
+    slot = f"inbox:{now:%Y-%m-%d %H}:{now.minute // 10}"
+    if not store.get_state(conn, slot):
+        store.set_state(conn, slot, "1")
+        try:
+            from . import inbox
+            done = inbox.poll()
+            if done:
+                log.info("Postfach: %s", done)
+        except Exception as exc:  # noqa: BLE001
+            log.error("Postfach fehlgeschlagen: %s", exc)
+    if not budget.autonomy_active():
+        budget.remind_autonomy()
+    elif config.DAILY_MINIMUM > 0 and now.hour in (9, 13, 17):
         key = f"minimum:{date.today()}:{now.hour}"
         if not store.get_state(conn, key):
             store.set_state(conn, key, "1")

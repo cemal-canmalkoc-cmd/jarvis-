@@ -443,8 +443,13 @@ def _evaluate_form(raw: sources.RawProfile, cv_path: str | None = None) -> None:
 
 # --------------------------------------------------------------------------- Direkt in Cemal-Cans WhatsApp
 @app.get("/wa")
-async def wa_redirect(b: str = "lkw", q: str = ""):
+async def wa_redirect(b: str = "lkw", q: str = "", direkt: str = ""):
     from .outreach import WA_TEXTS, contact_number, wa_link
+    if config.CHAT_FIRST and not direkt and b in CHAT_GREETINGS:
+        # Selbstständiger Betrieb: Bewerber landen beim KI-Chat statt in deinem WhatsApp
+        return RedirectResponse(f"/chat?b={b}&q={quote(q)}", status_code=302)
+    if b == "firma" and config.CHAT_FIRST and not direkt:
+        return RedirectResponse("/firmen", status_code=302)
     if not contact_number():
         return RedirectResponse("/bewerbung" + ("?bereich=lkw" if b == "lkw" else ""))
     conn = store.connect()
@@ -454,6 +459,113 @@ async def wa_redirect(b: str = "lkw", q: str = ""):
         k2 = f"clicks_src:{date.today()}:{q}"
         store.set_state(conn, k2, str(int(store.get_state(conn, k2) or 0) + 1))
     return RedirectResponse(wa_link(WA_TEXTS.get(b, WA_TEXTS["lkw"])), status_code=302)
+
+
+# --------------------------------------------------------------------------- KI-Chat für Bewerber (rund um die Uhr)
+CHAT_GREETINGS = {
+    "lkw": "Hallo! 👋 Ich bin Jarvis, der KI-Assistent von {agency}. Wir vermitteln LKW-Fahrer an Speditionen in "
+           "ganz Deutschland – für dich kostenlos. Welchen Führerschein hast du (C oder CE)?",
+    "arzt": "Guten Tag! Ich bin Jarvis, der KI-Assistent von {agency}. Wir vermitteln Ärztinnen und Ärzte an "
+            "Kliniken in der Schweiz – für Sie kostenlos. In welcher Fachrichtung sind Sie tätig?",
+    "pflege": "Guten Tag! Ich bin Jarvis, der KI-Assistent von {agency}. Wir vermitteln Pflegefachpersonen an "
+              "Spitäler, Kliniken und Heime in der Schweiz – für Sie kostenlos. Was ist Ihr Beruf bzw. Ihr Abschluss?",
+}
+
+CHAT_PAGE = """<!doctype html><html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Chat – {agency}</title>
+<style>{css}
+main{{display:flex;flex-direction:column;height:calc(100dvh - 32px)}}
+#log{{flex:1;overflow-y:auto;padding:4px 0}}
+.m{{max-width:85%;padding:10px 14px;border-radius:16px;margin:6px 0;white-space:pre-wrap;word-wrap:break-word}}
+.b{{background:var(--card);border:1px solid var(--line)}} .u{{background:var(--accent);color:var(--accent-text);margin-left:auto}}
+#f{{display:flex;gap:8px;padding-top:8px}} #t{{flex:1;padding:12px;border-radius:12px;border:1px solid var(--line);
+background:var(--card);color:var(--text);font:inherit}} #f button{{padding:0 18px;border:0;border-radius:12px;
+background:var(--accent);color:var(--accent-text);font:inherit;font-weight:600}}
+.hint{{font-size:13px;color:var(--muted);text-align:center;margin:4px 0}}
+</style></head><body><main>
+<div class="brand">{agency}</div>
+<div id="log"></div>
+<form id="f"><input id="t" autocomplete="off" maxlength="1500" placeholder="Nachricht schreiben …" required>
+<button>Senden</button></form>
+<p class="hint">KI-Assistent · Ihre Angaben werden nur mit Ihrer Zustimmung an Arbeitgeber weitergegeben ·
+<a href="/datenschutz">Datenschutz</a>{wa}</p>
+</main><script>
+const B={b}, G={greeting};
+let sid; try {{ sid = localStorage.getItem("jchat"); }} catch (e) {{}}
+if (!sid) {{ sid = Array.from(crypto.getRandomValues(new Uint8Array(12)), x => x.toString(16).padStart(2,"0")).join("");
+  try {{ localStorage.setItem("jchat", sid); }} catch (e) {{}} }}
+const log = document.getElementById("log");
+function add(t, cls) {{ const d = document.createElement("div"); d.className = "m " + cls; d.textContent = t;
+  log.appendChild(d); log.scrollTop = log.scrollHeight; return d; }}
+add(G, "b");
+document.getElementById("f").onsubmit = async (e) => {{
+  e.preventDefault(); const i = document.getElementById("t"); const text = i.value.trim(); if (!text) return;
+  i.value = ""; add(text, "u"); const w = add("…", "b");
+  try {{
+    const r = await fetch("/chat/nachricht", {{method: "POST", headers: {{"Content-Type": "application/json"}},
+      body: JSON.stringify({{sid, text, b: B}})}});
+    const j = await r.json(); w.textContent = j.antwort || "Bitte später nochmal versuchen.";
+  }} catch (err) {{ w.textContent = "Verbindung unterbrochen – bitte nochmal senden."; }}
+  log.scrollTop = log.scrollHeight;
+}};
+</script></body></html>"""
+
+
+@app.get("/chat", response_class=HTMLResponse)
+async def chat_page(b: str = "pflege", q: str = ""):
+    from .outreach import contact_number, wa_short
+    b = b if b in CHAT_GREETINGS else "pflege"
+    conn = store.connect()
+    key = f"chat_opens:{date.today()}:{b}"
+    store.set_state(conn, key, str(int(store.get_state(conn, key) or 0) + 1))
+    greeting = CHAT_GREETINGS[b].replace("{agency}", config.AGENCY_NAME)
+    wa = (f' · <a href="{wa_short(b, q or "chat")}&direkt=1">lieber persönlich per WhatsApp</a>'
+          if contact_number() else "")
+    return HTMLResponse(CHAT_PAGE.format(agency=html.escape(config.AGENCY_NAME), css=FORM_CSS, wa=wa,
+                                         b=json.dumps(b), greeting=json.dumps(greeting)))
+
+
+@app.post("/chat/nachricht")
+async def chat_message(request: Request):
+    import re as _re
+    from . import convo
+    ip = request.client.host if request.client else "?"
+    if not _rate_ok("chat:" + ip, limit=60):
+        return {"antwort": "Bitte einen Moment warten und dann nochmal schreiben."}
+    try:
+        data = await request.json()
+    except Exception:  # noqa: BLE001
+        raise HTTPException(400, "Ungültige Anfrage")
+    sid, text, b = str(data.get("sid", "")), str(data.get("text", "")).strip()[:1500], str(data.get("b", "pflege"))
+    if not _re.fullmatch(r"[0-9a-f]{16,40}", sid) or not text:
+        raise HTTPException(400, "Ungültige Anfrage")
+    cid = f"web:{sid}"
+    conn = store.connect()
+    if not store.get_convo(conn, cid):
+        greeting = CHAT_GREETINGS.get(b, CHAT_GREETINGS["pflege"]).replace("{agency}", config.AGENCY_NAME)
+        store.save_convo(conn, cid, "kandidat", [
+            {"role": "user", "content": f"(Person öffnet den Chat auf der Webseite, Bereich: {b})"},
+            {"role": "assistant", "content": greeting}])
+    reply = await asyncio.to_thread(convo.candidate_turn, cid, text, "Web-Chat")
+    return {"antwort": reply}
+
+
+@app.get("/datenschutz", response_class=HTMLResponse)
+async def datenschutz():
+    e = html.escape
+    kontakt = config.SMTP_FROM or config.SMTP_USER or config.OWNER_EMAIL or ""
+    return _page("Datenschutz", f"""<div class="card"><h1>Datenschutz</h1>
+<p><b>Verantwortlich:</b> {e(config.RECRUITER_NAME)}, {e(config.AGENCY_NAME)}{(", " + e(config.FIRMA_ADRESSE)) if config.FIRMA_ADRESSE else ""}
+{("· E-Mail: " + e(kontakt)) if kontakt else ""}</p>
+<p><b>Zweck:</b> Wir verarbeiten Ihre Angaben (Kontaktdaten, beruflicher Werdegang, Unterlagen), um Ihnen passende
+Stellen zu vermitteln. Grundlage ist Ihre Einwilligung bzw. Ihre Anfrage (Art. 6 Abs. 1 a und b DSGVO).</p>
+<p><b>Weitergabe:</b> Ihr Profil geht zunächst nur anonym an Arbeitgeber. Name, Kontaktdaten und Unterlagen geben wir
+erst weiter, wenn Sie zugestimmt haben und ein Arbeitgeber Interesse zeigt.</p>
+<p><b>KI-Assistent:</b> Chat und E-Mail-Antworten werden von einem KI-Assistenten erstellt. Dafür werden die Nachrichten
+an den KI-Dienst Anthropic (USA) übermittelt und dort verarbeitet.</p>
+<p><b>Speicherdauer:</b> bis zum Ende der Vermittlung bzw. bis zu Ihrem Widerruf, höchstens 2 Jahre.</p>
+<p><b>Ihre Rechte:</b> Auskunft, Berichtigung, Löschung, Einschränkung, Widerspruch, Datenübertragbarkeit und
+Beschwerde bei einer Aufsichtsbehörde. Eine kurze Nachricht „STOP“ oder „Bitte löschen“ genügt.</p></div>""")
 
 
 # --------------------------------------------------------------------------- Firmen-Seite (eigener Vertrieb)

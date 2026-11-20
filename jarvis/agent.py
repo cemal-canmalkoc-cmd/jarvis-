@@ -253,6 +253,11 @@ def t_update() -> dict:
     return updater.update(force=True)
 
 
+def t_weiter() -> str:
+    from . import budget
+    return budget.autonomy_continue()
+
+
 def t_autopilot_jetzt() -> dict:
     from . import autopilot
     return autopilot.morning(force=True)
@@ -338,7 +343,10 @@ TOOLS = {
                              "schritt": {"type": "string", "enum": ["gespraech", "eingestellt", "unterlagen_senden", "dokumente_anfordern"]},
                              "firma_id": {"type": "integer"}, "datum": {"type": "string"}, "honorar": {"type": "number"}}),
     "umsatz": (t_umsatz, "Umsatz des Monats, offene Rechnungen, Ziel.", {}),
-    "rechnung_senden": (t_rechnung_senden, "PDF-Rechnung für eine Vermittlung erstellen und an die Firma senden.",
+    "freigabe_weiter": (t_weiter, "Selbstständigen Betrieb (KI-Gespräche, Suche) für weitere 5 Tage freigeben – "
+                        "wenn der Inhaber 'weiter' sagt.", {}),
+    "rechnung_senden": (t_rechnung_senden, "PDF-Rechnung für eine Vermittlung erstellen und an die Firma senden. "
+                        "NUR wenn der Inhaber es ausdrücklich verlangt.",
                         {"vermittlung_id": {"type": "integer"}, "adresse": {"type": "string",
                          "description": "Rechnungsadresse der Firma, falls noch nicht gespeichert"}}),
     "jarvis_aktualisieren": (t_update, "Neueste Jarvis-Version von GitHub installieren und neu starten.", {}),

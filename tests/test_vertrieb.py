@@ -7,6 +7,7 @@ from tests.test_deals import _driver
 
 def test_whatsapp_redirect_counts(monkeypatch):
     monkeypatch.setattr(config, "CONTACT_WHATSAPP", "+49 176 00000000")
+    monkeypatch.setattr(config, "CHAT_FIRST", False)
     c = TestClient(server.app)
     r = c.get("/wa?b=lkw&q=test", follow_redirects=False)
     assert r.status_code == 302 and r.headers["location"].startswith("https://wa.me/4917600000000?text=")

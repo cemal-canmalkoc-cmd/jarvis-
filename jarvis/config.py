@@ -185,7 +185,7 @@ UST_STATUS = os.environ.get("JARVIS_UST_STATUS", "unklar")
 REVENUE_GOAL = float(os.environ.get("JARVIS_REVENUE_GOAL", "25000"))
 
 # Bewerbungen auf Stellenanzeigen: 0 = nur mit deiner Freigabe in der App (empfohlen), 1 = automatisch
-AUTO_APPLY = os.environ.get("JARVIS_AUTO_APPLY", "0").strip().lower() in ("1", "true", "ja")
+AUTO_APPLY = os.environ.get("JARVIS_AUTO_APPLY", "1").strip().lower() in ("1", "true", "ja")
 AUTO_APPLY_PER_DAY = int(os.environ.get("JARVIS_AUTO_APPLY_PER_DAY", "10"))
 
 # Rechnungsdaten (Pflichtangaben § 14 UStG) – in der App unter ⚙️ eintragen
@@ -195,3 +195,15 @@ IBAN = os.environ.get("JARVIS_IBAN", "")
 BANK = os.environ.get("JARVIS_BANK", "")
 # Rechnung am Starttag automatisch senden (1) oder erst nach deinem Tipp (0)
 AUTO_INVOICE = os.environ.get("JARVIS_AUTO_INVOICE", "0").strip().lower() in ("1", "true", "ja")
+
+
+# --------------------------------------------------------------------------- Selbstständiger Betrieb
+# Gespräche mit Bewerbern und Firmen führt die KI selbst – höchstens CHAT_MAX_USD pro Tag und nur,
+# solange die Freigabe läuft (AUTO_DAYS Tage; danach in der App auf „Weiter" tippen).
+CHAT_MAX_USD = float(os.environ.get("JARVIS_CHAT_MAX_USD", "0.05"))
+AUTO_DAYS = int(os.environ.get("JARVIS_AUTO_DAYS", "5"))
+# Postfach lesen und beantworten (gleiche Zugangsdaten wie der E-Mail-Versand)
+AUTO_INBOX = os.environ.get("JARVIS_AUTO_INBOX", "1").strip().lower() in ("1", "true", "ja")
+IMAP_HOST = os.environ.get("JARVIS_IMAP_HOST", "")
+# Bewerber-Links (/wa?b=…) führen zum KI-Chat statt in dein WhatsApp (1 = ja)
+CHAT_FIRST = os.environ.get("JARVIS_CHAT_FIRST", "1").strip().lower() in ("1", "true", "ja")

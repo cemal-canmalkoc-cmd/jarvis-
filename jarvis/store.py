@@ -47,6 +47,14 @@ CREATE TABLE IF NOT EXISTS calls (
     transcript TEXT DEFAULT '[]',
     summary TEXT DEFAULT ''
 );
+CREATE TABLE IF NOT EXISTS convos (
+    id TEXT PRIMARY KEY,
+    kind TEXT,
+    messages TEXT DEFAULT '[]',
+    cand_key TEXT,
+    company_id INTEGER,
+    updated TEXT
+);
 CREATE TABLE IF NOT EXISTS chats (
     phone TEXT PRIMARY KEY,
     messages TEXT DEFAULT '[]',
@@ -336,6 +344,59 @@ def save_chat(conn: sqlite3.Connection, phone: str, messages: list) -> None:
         conn.commit()
 
 
+def get_convo(conn: sqlite3.Connection, cid: str) -> dict | None:
+    r = conn.execute("SELECT * FROM convos WHERE id=?", (cid,)).fetchone()
+    if not r:
+        return None
+    return {"id": r["id"], "kind": r["kind"], "messages": json.loads(r["messages"] or "[]"),
+            "cand_key": r["cand_key"], "company_id": r["company_id"], "updated": r["updated"]}
+
+
+def save_convo(conn: sqlite3.Connection, cid: str, kind: str, messages: list, cand_key: str | None = None,
+               company_id: int | None = None) -> None:
+    with _lock:
+        conn.execute(
+            "INSERT INTO convos (id, kind, messages, cand_key, company_id, updated) VALUES (?,?,?,?,?,?) "
+            "ON CONFLICT(id) DO UPDATE SET messages=excluded.messages, cand_key=COALESCE(excluded.cand_key, cand_key), "
+            "company_id=COALESCE(excluded.company_id, company_id), updated=excluded.updated",
+            (cid, kind, json.dumps(messages, ensure_ascii=False), cand_key, company_id,
+             datetime.now().isoformat(timespec="seconds")))
+        conn.commit()
+
+
+def recent_convos(conn: sqlite3.Connection, limit: int = 30) -> list[dict]:
+    return [get_convo(conn, r[0]) for r in
+            conn.execute("SELECT id FROM convos ORDER BY updated DESC LIMIT ?", (limit,)).fetchall()]
+
+
+def find_candidate_by_email(conn: sqlite3.Connection, email: str) -> sqlite3.Row | None:
+    email = (email or "").strip().lower()
+    if not email:
+        return None
+    for r in conn.execute("SELECT * FROM candidates WHERE lower(data) LIKE ?", (f"%{email}%",)).fetchall():
+        if (load(r).assessment.email or "").strip().lower() == email:
+            return r
+    return None
+
+
+def find_company_by_email(conn: sqlite3.Connection, email: str) -> sqlite3.Row | None:
+    email = (email or "").strip().lower()
+    if not email:
+        return None
+    r = conn.execute("SELECT * FROM companies WHERE lower(email)=?", (email,)).fetchone()
+    if r:
+        return r
+    domain = email.split("@")[-1]
+    if domain in FREEMAIL:
+        return None
+    return conn.execute("SELECT * FROM companies WHERE lower(email) LIKE ?", (f"%@{domain}",)).fetchone()
+
+
+FREEMAIL = {"gmail.com", "googlemail.com", "gmx.de", "gmx.net", "gmx.ch", "web.de", "t-online.de", "outlook.com",
+            "outlook.de", "hotmail.com", "hotmail.de", "live.de", "live.com", "yahoo.com", "yahoo.de", "icloud.com",
+            "me.com", "bluewin.ch", "freenet.de", "aol.com", "mail.de", "posteo.de", "proton.me", "protonmail.com"}
+
+
 def add_optout(conn: sqlite3.Connection, phone: str) -> None:
     with _lock:
         conn.execute("INSERT OR IGNORE INTO optout (phone, added) VALUES (?,?)",
@@ -482,8 +543,12 @@ EDITABLE_SETTINGS = {
     "STEUERNUMMER": "Steuernummer oder USt-IdNr. – für Rechnungen",
     "IBAN": "IBAN – für Rechnungen",
     "BANK": "Bank (optional)",
-    "AUTO_INVOICE": "Rechnung am Starttag automatisch senden (1 = ja, 0 = nach deinem Tipp)",
+    "AUTO_INVOICE": "Rechnung automatisch senden (0 = nur nach deiner Genehmigung – empfohlen)",
     "AUTO_APPLY": "Bewerbungen auf Stellenanzeigen automatisch senden (1 = ja, 0 = nur mit Freigabe)",
+    "CHAT_MAX_USD": "Höchstens $ pro Tag für KI-Gespräche mit Bewerbern und Firmen",
+    "AUTO_DAYS": "Freigabe gilt X Tage, danach fragt Jarvis nach „Weiter“",
+    "AUTO_INBOX": "E-Mail-Postfach selbst lesen und beantworten (1 = ja)",
+    "IMAP_HOST": "Posteingangs-Server (leer = automatisch)",
     "DAILY_BUDGET_USD": "Automatisches Tagesbudget in $ (0 = Jarvis fragt immer vorher)",
     "DAILY_MINIMUM": "Mindestens X neue Kandidaten pro Tag",
     "MINIMUM_MAX_USD": "Höchstens $ pro Tag für das Tagesminimum",

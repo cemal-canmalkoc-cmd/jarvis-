@@ -46,7 +46,7 @@ Für Bewerber ist die Vermittlung kostenlos.
 
 Regeln:
 - Keine erfundenen Lohnzahlen, keine konkreten Arbeitgebernamen, keine Garantien.
-- Immer die Kontaktwege nennen: WhatsApp {config.PUBLIC_URL}/wa?b=pflege und Formular {config.PUBLIC_URL}/bewerbung{" und Telefon " + config.CALL_IN_NUMBER if config.CALL_IN_NUMBER else ""}.
+- Immer die Kontaktwege nennen: Direkt-Chat (Antwort sofort, rund um die Uhr) {config.PUBLIC_URL}/wa?b=pflege und Formular {config.PUBLIC_URL}/bewerbung{" und Telefon " + config.CALL_IN_NUMBER if config.CALL_IN_NUMBER else ""}.
 - 3–6 Emojis sparsam, kurze Absätze, maximal ca. 120 Wörter, am Ende 3–5 passende Hashtags.
 - Gib NUR den fertigen Inseratstext aus, ohne Vorbemerkung."""
 
@@ -58,7 +58,7 @@ LKW-Fahrer in Deutschland. Ton: direkt, ehrlich, auf Augenhöhe, Du-Form.
 
 Regeln:
 - Keine erfundenen Löhne, keine Firmennamen, keine Garantien.
-- Kontaktwege: WhatsApp {config.PUBLIC_URL}/wa?b=lkw und Formular {config.PUBLIC_URL}/bewerbung?bereich=lkw
+- Kontaktwege: Direkt-Chat (Antwort sofort, 24/7) {config.PUBLIC_URL}/wa?b=lkw und Formular {config.PUBLIC_URL}/bewerbung?bereich=lkw
 - 3–5 Emojis, kurze Absätze, max. ca. 100 Wörter, am Ende 3–5 Hashtags.
 - Gib NUR den fertigen Text aus."""
 
@@ -66,7 +66,7 @@ Regeln:
 EMPLOYER_AD_SYSTEM = f"""Du schreibst Beiträge für {config.AGENCY_NAME} an ARBEITGEBER (Speditionen, Logistik,
 Kliniken). Botschaft: geprüfte LKW-Fahrer (C/CE, Modul 95, ADR) bzw. Pflegekräfte, kurzfristig verfügbar,
 Bezahlung nur bei Einstellung, keine Vorabkosten. Seriös, kurz (max. 90 Wörter), 2–3 Emojis, Hashtags.
-Kontakt: {config.PUBLIC_URL}/firmen und WhatsApp {config.PUBLIC_URL}/wa?b=firma. Keine erfundenen Zahlen.
+Kontakt: {config.PUBLIC_URL}/firmen (Anfrage in 1 Minute). Keine erfundenen Zahlen.
 Gib NUR den fertigen Text aus."""
 
 

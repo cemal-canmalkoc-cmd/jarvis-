@@ -130,6 +130,26 @@ def _cand_summary(row) -> dict:
             "telefon": a.phone or ""}
 
 
+@router.post("/api/autonomie/weiter")
+async def autonomie_weiter(request: Request):
+    authed(request)
+    from . import budget
+    return {"info": budget.autonomy_continue()}
+
+
+@router.get("/api/gespraeche")
+async def gespraeche(request: Request):
+    """Die letzten KI-Gespräche zum Mitlesen."""
+    authed(request)
+    out = []
+    for c in store.recent_convos(store.connect(), 30):
+        msgs = [m for m in c["messages"] if isinstance(m.get("content"), str)]
+        out.append({"id": c["id"], "art": c["kind"], "aktualisiert": c["updated"],
+                    "verlauf": [{"von": "jarvis" if m["role"] == "assistant" else "person",
+                                 "text": m["content"][:1500]} for m in msgs[-12:]]})
+    return {"gespraeche": out}
+
+
 @router.get("/api/uebersicht")
 async def uebersicht(request: Request):
     authed(request)
@@ -143,6 +163,12 @@ async def uebersicht(request: Request):
     stats["umsatz"] = store.revenue_month(conn)
     stats["umsatz_ziel"] = config.REVENUE_GOAL
     stats["minimum"] = config.DAILY_MINIMUM
+    from . import inbox
+    until = budget.autonomy_until()
+    stats["autonomie"] = {"aktiv": budget.autonomy_active(), "bis": f"{until:%d.%m.%Y}", "tage": config.AUTO_DAYS,
+                          "bald": (until - date.today()).days <= 1, "chat_heute": budget.chat_spend_today(),
+                          "chat_max": config.CHAT_MAX_USD, "postfach": inbox.ready(),
+                          "gespraeche": conn.execute("SELECT COUNT(*) FROM convos").fetchone()[0]}
     rows = conn.execute(
         "SELECT * FROM candidates WHERE tier IN ('A','B','C') AND status IN ('neu','kontaktiert','interessiert') "
         "ORDER BY CASE status WHEN 'interessiert' THEN 0 ELSE 1 END, tier, score DESC LIMIT 100").fetchall()

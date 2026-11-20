@@ -101,6 +101,9 @@ nav button.on{color:var(--accent)}
     <div class="ring" id="ring"><div><span id="goal-n">–</span><small id="goal-z">von 20</small></div></div>
     <div><b>Vermittelbar heute</b><div class="muted small" id="goal-txt">Lade …</div></div>
   </div>
+  <div class="card" id="auto-card"><b>🤖 Jarvis arbeitet selbstständig</b>
+    <div class="muted small" id="auto-txt">Lade …</div>
+    <button class="btn" id="auto-go" style="margin-top:8px;display:none">▶️ Weiter (5 Tage)</button></div>
   <div class="card" id="revenue-card"><b>💶 Umsatz diesen Monat</b>
     <div style="font-size:28px;font-weight:700;margin-top:4px" id="rev-sum">–</div>
     <div class="muted small" id="rev-txt"></div></div>
@@ -217,8 +220,19 @@ async function load() {
   const fmt = x => Math.round(x).toLocaleString("de-DE") + " €";
   $("#rev-sum").textContent = `${fmt(u.umsatz)} / ${fmt(s.umsatz_ziel || 25000)}`;
   $("#rev-txt").textContent = `${u.vermittlungen} Vermittlungen · davon bezahlt ${fmt(u.bezahlt)}`;
+  const au = s.autonomie || {};
+  $("#auto-txt").textContent = au.aktiv
+    ? `Freigegeben bis ${au.bis} · Gespräche heute ${(au.chat_heute || 0).toFixed(3)} / ${(au.chat_max || 0).toFixed(2)} $`
+      + ` · ${au.gespraeche || 0} KI-Gespräche gesamt` + (au.postfach ? " · Postfach ✅" : " · Postfach: E-Mail unter ⚙️ eintragen")
+    : `⏸️ Pausiert seit ${au.bis} – Jarvis antwortet nur ohne KI.`;
+  $("#auto-go").textContent = `▶️ Weiter (${au.tage || 5} Tage)`;
+  $("#auto-go").style.display = au.aktiv && !au.bald ? "none" : "";
   renderCalls(); renderCands(); renderFirms(); renderNews(); loadSales();
 }
+$("#auto-go").onclick = async () => {
+  try { const r = await api("/api/autonomie/weiter", {method: "POST"}); toast(r.info); load(); }
+  catch (e) { toast("Fehler: " + e.message); }
+};
 
 function renderNews() {
   const box = $("#news"); box.replaceChildren();

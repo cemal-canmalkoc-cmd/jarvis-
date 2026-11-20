@@ -71,9 +71,9 @@ def build_email(c: ScoredCandidate) -> tuple[str, str]:
 ich bin auf Ihr Stellengesuch als {role} aufmerksam geworden. Ich bin {config.RECRUITER_NAME} von
 {config.AGENCY_NAME} – {offer}
 {f"{rec} ist dabei ein grosser Vorteil." if rec else ""}
-Wenn Sie Interesse haben, schreiben Sie mir einfach kurz per WhatsApp:
+Wenn Sie Interesse haben, antworten Sie einfach auf diese E-Mail – oder schreiben Sie im
+Direkt-Chat (Antwort sofort, rund um die Uhr):
 {wa_short('lkw' if lkw else ('arzt' if a.category == 'arzt' else 'pflege'), 'mail')}
-({contact_number()})
 
 Oder bewerben Sie sich in 2 Minuten online: {config.PUBLIC_URL}/bewerbung
 
@@ -94,7 +94,8 @@ def reach_out(c: ScoredCandidate) -> str:
         return "keine_email"
     conn = store.connect()
     key = f"mailed:{email.lower()}"
-    if store.get_state(conn, key) or store.is_opted_out(conn, c.assessment.phone):
+    if (store.get_state(conn, key) or store.is_opted_out(conn, c.assessment.phone)
+            or store.get_state(conn, f"optout_mail:{email.lower()}")):
         return "schon_kontaktiert"
     if not can_email():
         return "email_nicht_eingerichtet"
@@ -102,7 +103,11 @@ def reach_out(c: ScoredCandidate) -> str:
     subject, body = build_email(c)
     send_email(email, subject, body)
     store.set_state(conn, key, "1")
-    store.set_status(conn, store.candidate_key(c), "kontaktiert", f"E-Mail mit WhatsApp-Link an {email}")
+    store.set_status(conn, store.candidate_key(c), "kontaktiert", f"E-Mail an {email} (Antworten bearbeitet Jarvis)")
+    if not store.get_convo(conn, f"mail:{email.lower()}"):
+        store.save_convo(conn, f"mail:{email.lower()}", "kandidat",
+                         [{"role": "user", "content": "(Jarvis hat die Person per E-Mail angeschrieben)"},
+                          {"role": "assistant", "content": body}], store.candidate_key(c))
     return "gesendet"
 
 
@@ -113,7 +118,7 @@ def portal_message(c: ScoredCandidate) -> str:
     if c.assessment.category == "lkw":
         return (f"Hallo, ich habe Ihr Stellengesuch als {role} gesehen. Ich bin {config.RECRUITER_NAME} von "
                 f"{config.AGENCY_NAME} – wir vermitteln Fahrer kostenlos an Speditionen in ganz Deutschland "
-                f"(Nah- und Fernverkehr). Interesse? Schreiben Sie mir direkt per WhatsApp: {wa_short('lkw', 'portal')} "
+                f"(Nah- und Fernverkehr). Interesse? Schreiben Sie uns im Direkt-Chat (Antwort sofort): {wa_short('lkw', 'portal')} "
                 f"– oder bewerben Sie sich hier: {config.PUBLIC_URL}/bewerbung?bereich=lkw")
     return (f"Hallo, ich habe Ihr Stellengesuch als {role} gesehen. Ich bin {config.RECRUITER_NAME} von "
             f"{config.AGENCY_NAME} – wir vermitteln Pflegekräfte kostenlos an Kliniken und Heime in der Schweiz "

@@ -83,7 +83,8 @@ def from_email() -> list[RawProfile]:
     """Liest ungelesene Bewerbungs-Mails. Konfiguration über Umgebungsvariablen:
     JARVIS_IMAP_HOST, JARVIS_IMAP_USER, JARVIS_IMAP_PASSWORD, JARVIS_IMAP_FOLDER (Standard INBOX)."""
     host = os.environ.get("JARVIS_IMAP_HOST")
-    if not host:
+    from . import inbox
+    if not host or inbox.ready():  # das Postfach bearbeitet dann inbox.poll (liest + antwortet)
         return []
     box = imaplib.IMAP4_SSL(host)
     box.login(os.environ["JARVIS_IMAP_USER"], os.environ["JARVIS_IMAP_PASSWORD"])

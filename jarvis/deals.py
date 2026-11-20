@@ -332,6 +332,11 @@ def daily_drive() -> dict:
         if sent <= (today - timedelta(days=14)).isoformat():
             out["erinnerungen"].append(f"💶 Zahlung prüfen: Vermittlung mit Start {p['start_date']} "
                                        f"({p['fee']:,.0f} €) – bezahlt? App → Umsatz".replace(",", "."))
+    try:
+        from . import convo
+        out["erinnerungen"] += [f"📨 {x}" for x in convo.followups()]
+    except Exception as exc:  # noqa: BLE001
+        log.error("Nachfragen fehlgeschlagen: %s", exc)
     queue = application_queue(config.AUTO_APPLY_PER_DAY)
     sent_apps = send_applications(queue) if (config.AUTO_APPLY and queue) else []
     plan = sales_plan()
@@ -348,7 +353,7 @@ def daily_drive() -> dict:
     rev = store.revenue_month(conn)
     lines.append(f"💶 Umsatz {rev['monat']}: {rev['umsatz']:,.0f} € / Ziel {config.REVENUE_GOAL:,.0f} €".replace(",", "."))
     if plan:
-        lines.append(f"\n📞 Heute anrufen ({len(plan)} Firmen, Liste + Leitfaden in der App → Firmen):")
+        lines.append(f"\n📞 Optional – nur wenn du Lust hast ({len(plan)} Firmen ohne E-Mail, Leitfaden in der App):")
         lines += [f"• {p['firma']} ({p['ort'] or '?'}) {p['telefon']} – für {p['profil']} #{p['kandidat']}" for p in plan]
     if out["dokument_whatsapp"]:
         lines.append("\n📄 Dokumente per WhatsApp anfordern (antippen, senden):")
@@ -408,15 +413,14 @@ Fachkraft vor, die sich aktiv bei uns beworben hat und kurzfristig verfügbar is
 
 {matching.anonymous_profile(row)}
 
-Wenn Sie die Person kennenlernen möchten, antworten Sie kurz – Sie erhalten dann sofort die vollständigen
-Unterlagen und wir vereinbaren einen Vorstellungstermin.
+Wenn Sie die Person kennenlernen möchten, antworten Sie einfach auf diese E-Mail – Sie erhalten dann sofort
+die vollständigen Unterlagen und die Kontaktdaten für einen Vorstellungstermin.
 
 Konditionen: {price}. Ohne Einstellung entstehen Ihnen keine Kosten.
 
 Freundliche Grüsse
 {config.RECRUITER_NAME}
 {config.AGENCY_NAME}
-WhatsApp: {config.PUBLIC_URL}/wa?b=firma
 
 Sie möchten keine weiteren Vorschläge? Eine kurze Antwort „Kein Interesse" genügt."""
     matching.send_email(firm["email"], f"Bewerbung über {config.AGENCY_NAME}: {role_phrase(a)} – kurzfristig verfügbar", body)

@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date
+from datetime import date, timedelta
 
 from . import config, store
 
@@ -73,3 +73,53 @@ def ask_once(what: str, estimate: float) -> None:
         f"💬 Soll ich {what}? (ca. {estimate:.2f} $)\n{hint} – ich gebe nichts aus, ohne dass du es sagst.\n"
         f"Zum Starten im Jarvis-Chat schreiben: „{'Starte die Web-Suche' if 'such' in what else 'Schreib ein Inserat'}“ "
         f"– oder unter ⚙️ ein Tagesbudget erlauben.")
+
+
+# --------------------------------------------------------------------------- Gespräche + 5-Tage-Freigabe
+def autonomy_until() -> date:
+    conn = store.connect()
+    v = store.get_state(conn, "auto_until")
+    if not v:  # erste Freigabe: ab Installation AUTO_DAYS Tage
+        v = (date.today() + timedelta(days=max(1, config.AUTO_DAYS) - 1)).isoformat()
+        store.set_state(conn, "auto_until", v)
+    return date.fromisoformat(v)
+
+
+def autonomy_active() -> bool:
+    return date.today() <= autonomy_until()
+
+
+def autonomy_continue() -> str:
+    until = date.today() + timedelta(days=max(1, config.AUTO_DAYS) - 1)
+    store.set_state(store.connect(), "auto_until", until.isoformat())
+    return f"✅ Jarvis arbeitet selbstständig weiter bis {until:%d.%m.%Y} (max. {config.CHAT_MAX_USD:.2f} $ pro Tag für Gespräche)."
+
+
+def chat_spend_today() -> float:
+    return float(store.get_state(store.connect(), f"chat_spend:{date.today()}") or 0)
+
+
+def add_chat_spend(c: float) -> None:
+    conn = store.connect()
+    key = f"chat_spend:{date.today()}"
+    store.set_state(conn, key, f"{float(store.get_state(conn, key) or 0) + c:.6f}")
+
+
+def chat_allowed(estimate: float = 0.002) -> bool:
+    return autonomy_active() and chat_spend_today() + estimate <= float(config.CHAT_MAX_USD or 0)
+
+
+def remind_autonomy() -> None:
+    """Einmal pro Tag melden, wenn die Freigabe abgelaufen oder das Tagesbudget aufgebraucht ist."""
+    from . import messaging
+    conn = store.connect()
+    key = f"auto_reminded:{date.today()}"
+    if store.get_state(conn, key):
+        return
+    store.set_state(conn, key, "1")
+    if not autonomy_active():
+        messaging.notify_owner(f"⏸️ Die {config.AUTO_DAYS}-Tage-Freigabe ist abgelaufen – Jarvis antwortet gerade "
+                               f"nur ohne KI. In der App auf „▶️ Weiter ({config.AUTO_DAYS} Tage)“ tippen.")
+    else:
+        messaging.notify_owner(f"💬 Gesprächsbudget heute ({config.CHAT_MAX_USD:.2f} $) ist aufgebraucht – "
+                               f"weitere Nachrichten beantwortet Jarvis morgen mit KI.")
