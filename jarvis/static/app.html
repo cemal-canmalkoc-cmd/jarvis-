@@ -127,6 +127,9 @@ nav button.on{color:var(--accent)}
     <button class="chip" data-f="A">Tier A</button>
     <button class="chip" data-f="pflege">Pflege</button>
     <button class="chip" data-f="arzt">Ärzte</button>
+    <button class="chip" data-f="lkw">🚛 LKW</button>
+    <button class="chip" data-f="B">Tier B</button>
+    <button class="chip" data-f="C">Tier C</button>
   </div>
   <div id="cands"></div>
 </section>
@@ -233,7 +236,7 @@ function renderCands() {
   for (const c of list) box.append(h("button", {class: "item", onclick: () => openCand(c.id)},
     h("div", {class: "badge t" + c.tier}, c.tier),
     h("div", {class: "t"}, h("div", {class: "n"}, c.name),
-      h("div", {class: "s"}, [c.bereich, "DE " + c.deutsch, REC_DE[c.anerkennung] || c.anerkennung].filter(Boolean).join(" · "))),
+      h("div", {class: "s"}, c.details || "")),
     h("span", {class: "pill" + (c.status === "interessiert" ? " hot" : "")}, STATUS_DE[c.status] || c.status)));
 }
 document.querySelectorAll("#filter .chip").forEach(b => b.onclick = () => {
@@ -268,14 +271,25 @@ async function act(path, body) {
 async function openCand(id) {
   let d; try { d = await api("/api/kandidat/" + id); } catch (e) { return toast(e.message); }
   const a = d.bewertung.assessment, c = DATA.kandidaten.find(x => x.id === id) || {};
-  const rows = [["Bereich", a.physician_specialty || a.nursing_field || a.category], ["Deutsch", a.german_level],
-    [a.category === "arzt" ? "MEBEKO" : "SRK", REC_DE[a.recognition_status] || a.recognition_status],
-    ["Diplom", a.has_diploma_certificate === true ? "ja" : a.has_diploma_certificate === false ? "nein" : "?"],
-    ["Wohnort", a.current_location || "?"], ["Verfügbar", a.availability || "?"], ["Score", d.bewertung.score + " / 100"],
-    ["Status", STATUS_DE[d.status] || d.status]];
+  const yn = v => v === true ? "ja" : v === false ? "nein" : "?";
+  const rows = a.category === "lkw"
+    ? [["Führerschein", a.driving_license || "?"], ["Fahrerkarte", yn(a.driver_card)], ["Modul 95", yn(a.code95)],
+       ["ADR", yn(a.adr)], ["Verkehr", a.traffic_type || "?"], ["Erfahrung", a.years_experience ? a.years_experience + " J." : "?"]]
+    : [["Bereich", a.physician_specialty || a.nursing_field || a.category], ["Deutsch", a.german_level],
+       [a.category === "arzt" ? "MEBEKO" : "SRK", REC_DE[a.recognition_status] || a.recognition_status],
+       ["Diplom", yn(a.has_diploma_certificate)]];
+  rows.push(["Wohnort", a.current_location || "?"], ["Verfügbar", a.availability || "?"],
+            ["Score", d.bewertung.score + " / 100"], ["Status", STATUS_DE[d.status] || d.status]);
+  const copy = async (t) => { try { await navigator.clipboard.writeText(t); toast("Nachricht kopiert 📋"); } catch (e) { prompt("Kopieren:", t); } };
   sheet(
-    h("h2", {style: "margin-top:0"}, a.full_name),
+    h("h2", {style: "margin-top:0"}, d.anzeige_name || a.full_name),
     h("div", {class: "muted small"}, a.summary),
+    d.quelle ? h("div", {class: "card small"},
+      h("b", {}, "So erreichst du die Person:"),
+      h("div", {class: "muted", style: "margin:4px 0 8px"}, "1. Nachricht kopieren  2. Inserat öffnen  3. dort über „Nachricht senden“ einfügen"),
+      h("div", {class: "btns"},
+        h("button", {class: "btn sec", onclick: () => copy(d.nachricht)}, "📋 Nachricht kopieren"),
+        h("a", {class: "btn sec", href: d.quelle, target: "_blank", rel: "noopener"}, "🔗 Inserat öffnen"))) : null,
     h("div", {class: "card"}, rows.map(([k, v]) => h("div", {class: "row"}, h("span", {}, k), h("span", {}, v)))),
     d.bewertung.missing.length ? h("div", {class: "card small"}, h("b", {}, "Fehlt noch: "), d.bewertung.missing.join(" · ")) : null,
     h("button", {class: "btn", disabled: !d.darf_anrufen || !DATA.anrufzeit, onclick: () => act(`/api/kandidat/${id}/anrufen`)},
@@ -286,6 +300,10 @@ async function openCand(id) {
       c.whatsapp_link ? h("a", {class: "btn sec", href: c.whatsapp_link}, "💬 WhatsApp") : null,
       a.phone ? h("a", {class: "btn sec", href: "tel:" + a.phone.replace(/[^+\d]/g, "")}, "☎️ Selbst anrufen") : null),
     h("h2", {}, "Status"),
+    h("button", {class: "btn sec", style: "color:var(--hot)", onclick: async () => {
+      if (!confirm("Diesen Kandidaten endgültig löschen?")) return;
+      try { toast((await api(`/api/kandidat/${id}/loeschen`, {method: "POST"})).meldung); closeSheet(); load(); }
+      catch (e) { toast(e.message); } }}, "🗑 Kandidat löschen"),
     h("div", {class: "chips"}, ["kontaktiert", "interessiert", "kein_interesse", "vermittelt"].map(s =>
       h("button", {class: "chip" + (d.status === s ? " on" : ""), onclick: () => act(`/api/kandidat/${id}/status`, {status: s})}, STATUS_DE[s]))),
     d.passende_firmen.length ? h("h2", {}, "🤝 Passende Firmen") : null,

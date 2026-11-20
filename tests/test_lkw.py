@@ -82,3 +82,22 @@ def test_adr_price():
     assert pricing.for_candidate("lkw", None, adr=True).startswith("3.000 € pauschal")
     assert pricing.for_candidate("lkw", None, adr=False).startswith("2.000 € pauschal")
     assert "LKW mit ADR" in pricing.overview()
+
+
+def test_app_shows_readable_unknown_candidates(monkeypatch):
+    monkeypatch.setattr(config, "ADMIN_TOKEN", "t0k")
+    a = driver(full_name="unbekannt", phone=None, current_location="44135 Dortmund", summary="Fahrer Dortmund xyz")
+    p, t, r, m = score(a)
+    c = ScoredCandidate(assessment=a, source="https://www.kleinanzeigen.de/s-anzeige/123", score=p, tier=t,
+                        reasons=r, missing=m)
+    store.upsert(store.connect(), c)
+    key = store.candidate_key(c)
+    cl = TestClient(server.app)
+    h = {"Authorization": "Bearer t0k"}
+    item = next(k for k in cl.get("/api/uebersicht", headers=h).json()["kandidaten"] if k["id"] == key)
+    assert item["name"] == "Berufskraftfahrer/in (CE) · 44135 Dortmund"
+    assert "Modul 95 ✓" in item["details"] and "ADR ✓" in item["details"]
+    d = cl.get(f"/api/kandidat/{key}", headers=h).json()
+    assert d["quelle"].startswith("https://www.kleinanzeigen.de") and "Speditionen" in d["nachricht"]
+    assert cl.post(f"/api/kandidat/{key}/loeschen", headers=h).status_code == 200
+    assert store.get_candidate(store.connect(), key) is None

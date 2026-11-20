@@ -502,3 +502,13 @@ def settings_overview() -> list[dict]:
 def potentials_today(conn: sqlite3.Connection) -> int:
     return conn.execute("SELECT COUNT(*) FROM candidates WHERE found_on=? AND tier != 'X'",
                         (date.today().isoformat(),)).fetchone()[0]
+
+
+def delete_candidate(conn: sqlite3.Connection, key: str) -> bool:
+    row = get_candidate(conn, key)
+    if row is None:
+        return False
+    with _lock:
+        conn.execute("DELETE FROM candidates WHERE key=?", (row["key"],))
+        conn.commit()
+    return True

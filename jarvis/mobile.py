@@ -95,10 +95,32 @@ async def icon(size: int):
 
 
 # --------------------------------------------------------------------------- Daten
+def _display_name(a) -> str:
+    from .whatsapp import role_phrase
+    name = (a.full_name or "").strip()
+    if not name or name.lower() in ("unbekannt", "unknown", "n/a", "-"):
+        return f"{role_phrase(a)}{' · ' + a.current_location if a.current_location else ''}"
+    return name
+
+
+def _details(a) -> str:
+    yn = lambda v, t: (t + " ✓") if v else None  # noqa: E731
+    if a.category == "lkw":
+        parts = [f"Führerschein {a.driving_license}" if a.driving_license else "Führerschein ?",
+                 yn(a.code95, "Modul 95"), yn(a.driver_card, "Fahrerkarte"), yn(a.adr, "ADR"), a.traffic_type]
+    else:
+        rec = {"anerkannt": "SRK/MEBEKO ✓", "positiver_precheck": "Pre-Check ✓", "laufend": "Anerkennung läuft",
+               "nicht_noetig": "CH-Diplom", "fehlt": "Anerkennung fehlt"}.get(a.recognition_status)
+        parts = [a.physician_specialty if a.category == "arzt" else a.nursing_field,
+                 f"Deutsch {a.german_level}" if a.german_level != "unbekannt" else None, rec]
+    parts.append(a.current_location)
+    return " · ".join(p for p in parts if p)
+
+
 def _cand_summary(row) -> dict:
     c = store.load(row)
     a = c.assessment
-    return {"id": row["key"], "name": a.full_name, "tier": c.tier, "score": c.score,
+    return {"id": row["key"], "name": _display_name(a), "details": _details(a), "tier": c.tier, "score": c.score,
             "kategorie": a.category,
             "bereich": (a.physician_specialty if a.category == "arzt" else a.nursing_field) or "",
             "deutsch": a.german_level, "anerkennung": a.recognition_status,
@@ -119,8 +141,8 @@ async def uebersicht(request: Request):
     stats["potenzielle_heute"] = store.potentials_today(conn)
     stats["minimum"] = config.DAILY_MINIMUM
     rows = conn.execute(
-        "SELECT * FROM candidates WHERE tier IN ('A','B') AND status IN ('neu','kontaktiert','interessiert') "
-        "ORDER BY CASE status WHEN 'interessiert' THEN 0 ELSE 1 END, score DESC LIMIT 60").fetchall()
+        "SELECT * FROM candidates WHERE tier IN ('A','B','C') AND status IN ('neu','kontaktiert','interessiert') "
+        "ORDER BY CASE status WHEN 'interessiert' THEN 0 ELSE 1 END, tier, score DESC LIMIT 100").fetchall()
     calls = conn.execute("SELECT * FROM calls ORDER BY id DESC LIMIT 15").fetchall()
     call_list = []
     for c in calls:
@@ -184,7 +206,21 @@ async def kandidat(request: Request, key: str):
     row = store.get_candidate(conn, key)
     out["passende_firmen"] = matching.matches(conn, row)
     out["leitfaden"] = leitfaden(row)
+    from . import outreach
+    c = store.load(row)
+    out["anzeige_name"] = _display_name(c.assessment)
+    out["quelle"] = row["source"] if (row["source"] or "").startswith("http") else ""
+    out["nachricht"] = outreach.portal_message(c)
+    out["whatsapp_kontakt"] = outreach.wa_link()
     return out
+
+
+@router.post("/api/kandidat/{key}/loeschen")
+async def kandidat_loeschen(request: Request, key: str):
+    authed(request)
+    if not store.delete_candidate(store.connect(), key):
+        raise HTTPException(404, "Kandidat nicht gefunden")
+    return {"meldung": "Gelöscht 🗑"}
 
 
 @router.post("/api/kandidat/{key}/vorstellen")
