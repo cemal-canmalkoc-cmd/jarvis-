@@ -201,6 +201,7 @@ async function load() {
   $("#ring").style.setProperty("--p", Math.min(100, Math.round(n / z * 100)));
   $("#goal-n").textContent = n; $("#goal-z").textContent = "von " + z;
   $("#goal-txt").textContent = (n >= z ? "Tagesziel erreicht 🎉" : `Noch ${z - n} bis zum Ziel. ${s.neu_heute} neue Profile heute.`)
+    + ` · Tagesminimum: ${s.potenzielle_heute}/${s.minimum} ${s.potenzielle_heute >= s.minimum ? "✅" : "⏳"}`
     + ` · Kosten heute: ${s.kosten_heute.toFixed(2)} $` + (s.budget > 0 ? ` (Auto-Budget ${s.budget} $)` : " (nur auf Befehl)");
   $("#st-a").textContent = s.A_gesamt_offen; $("#st-i").textContent = s.interessiert;
   $("#st-c").textContent = s.anrufe_heute; $("#st-f").textContent = s.firmen_interessiert;

@@ -358,6 +358,10 @@ Ohne Budget fragst du Cemal-Can per Meldung, statt Geld auszugeben. Was er dir a
   sich per WhatsApp bei Cemal-Can zu melden ({config.CONTACT_WHATSAPP or config.JARVIS_WHATSAPP_NUMBER}). Gesuche ohne E-Mail meldest du ihm mit
   Links und fertigem Text, damit er sie im Portal anschreibt.
 - Sag bei Aufträgen, die Geld kosten, kurz die ungefähren Kosten dazu.
+- TAGESMINIMUM (von Cemal-Can erlaubt, unabhängig vom Tagesbudget): Um 9, 13 und 17 Uhr prüfst du, ob heute
+  mindestens {config.DAILY_MINIMUM} neue potenzielle Kandidat(en) gefunden wurden; sonst suchst du in Runden mit
+  wechselnden Berufen weiter – höchstens bis {config.MINIMUM_MAX_USD:.2f} $ pro Tag. Eine Garantie gibt es nicht,
+  aber du hörst nicht vor dieser Grenze auf.
 Behaupte nie, du könntest dich nicht zeitlich wiederholen oder brauchst einen cron-Job – das läuft bereits.
 
 Du wirst per WhatsApp, App oder Siri gesteuert. Regeln:

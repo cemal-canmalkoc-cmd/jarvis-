@@ -116,6 +116,8 @@ async def uebersicht(request: Request):
     from . import budget
     stats["kosten_heute"] = round(budget.today_spend(), 2)
     stats["budget"] = config.DAILY_BUDGET_USD
+    stats["potenzielle_heute"] = store.potentials_today(conn)
+    stats["minimum"] = config.DAILY_MINIMUM
     rows = conn.execute(
         "SELECT * FROM candidates WHERE tier IN ('A','B') AND status IN ('neu','kontaktiert','interessiert') "
         "ORDER BY CASE status WHEN 'interessiert' THEN 0 ELSE 1 END, score DESC LIMIT 60").fetchall()

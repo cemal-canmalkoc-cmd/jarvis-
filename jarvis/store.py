@@ -441,6 +441,8 @@ EDITABLE_SETTINGS = {
     "TWILIO_AUTH_TOKEN": "Twilio Auth Token",
     "TWILIO_VOICE_FROM": "Twilio-Telefonnummer (Absender)",
     "DAILY_BUDGET_USD": "Automatisches Tagesbudget in $ (0 = Jarvis fragt immer vorher)",
+    "DAILY_MINIMUM": "Mindestens X neue Kandidaten pro Tag",
+    "MINIMUM_MAX_USD": "Höchstens $ pro Tag für das Tagesminimum",
     "SEARCH_EVERY_HOURS": "Suche alle X Stunden",
     "ADS_PER_DAY": "Inserate pro Tag",
 }
@@ -484,3 +486,8 @@ def settings_overview() -> list[dict]:
         out.append({"key": key, "label": label, "wert": shown, "gesetzt": bool(val),
                     "geheim": key in SECRET_SETTINGS})
     return out
+
+
+def potentials_today(conn: sqlite3.Connection) -> int:
+    return conn.execute("SELECT COUNT(*) FROM candidates WHERE found_on=? AND tier != 'X'",
+                        (date.today().isoformat(),)).fetchone()[0]

@@ -160,3 +160,9 @@ OWNER_CALLS_PER_DAY = int(os.environ.get("JARVIS_OWNER_CALLS_PER_DAY", "3"))
 # Ausgaben: automatisches Tagesbudget in $ für Arbeit, die Jarvis von SICH AUS startet
 # (Suchrunden, Inserate). 0 = nichts automatisch, Jarvis fragt stattdessen. Befehle von dir laufen immer.
 DAILY_BUDGET_USD = float(os.environ.get("JARVIS_DAILY_BUDGET_USD", "0"))
+
+# Tagesminimum: Jarvis sucht so lange (in mehreren Runden, mit wechselnden Berufen/Portalen),
+# bis mindestens so viele NEUE potenzielle Kandidaten (Tier A/B/C) gefunden sind – höchstens bis
+# MINIMUM_MAX_USD pro Tag. Zeiten: 9, 13 und 17 Uhr.
+DAILY_MINIMUM = int(os.environ.get("JARVIS_DAILY_MINIMUM", "1"))
+MINIMUM_MAX_USD = float(os.environ.get("JARVIS_MINIMUM_MAX_USD", "0.30"))

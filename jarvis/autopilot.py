@@ -170,6 +170,36 @@ def day_round(now: datetime | None = None) -> dict:
     return result
 
 
+# Breite Berufsliste für das Tagesminimum – jede Runde andere Begriffe
+MINIMUM_FOCUSES = [
+    "Krankenschwester", "Gesundheits- und Krankenpflegerin", "examinierte Pflegefachkraft",
+    "Altenpflegerin / Altenpfleger", "Intensivpflege Fachkraft", "OP-Pflege / OTA",
+    "Anästhesiepflege", "Psychiatrische Pflege / Fachkrankenpfleger Psychiatrie", "Pflegefachfrau HF Schweiz",
+    "Fachfrau Gesundheit FaGe", "Assistenzarzt / Assistenzärztin", "Facharzt Innere Medizin",
+    "Facharzt Psychiatrie", "Facharzt Anästhesie", "Pflegefachkraft Geriatrie",
+]
+
+
+def ensure_minimum(now: datetime | None = None) -> dict:
+    """Sucht in Runden, bis das Tagesminimum erreicht ist – höchstens bis MINIMUM_MAX_USD."""
+    from . import budget
+    now = now or _now()
+    conn = store.connect()
+    start_spend = budget.today_spend()
+    rounds = 0
+    while store.potentials_today(conn) < config.DAILY_MINIMUM:
+        est = budget.EST_SEARCH_FOCUS_USD * 3
+        if budget.today_spend() - start_spend + est > config.MINIMUM_MAX_USD or rounds >= 8:
+            break
+        k = (now.toordinal() * 7 + now.hour + rounds * 3)
+        focuses = [MINIMUM_FOCUSES[(k + i) % len(MINIMUM_FOCUSES)] for i in range(3)]
+        pipeline.run(use_folder=False, use_email=False, use_web=True, web_focuses=focuses)
+        rounds += 1
+    found = store.potentials_today(conn)
+    return {"gefunden_heute": found, "ziel": config.DAILY_MINIMUM, "runden": rounds,
+            "kosten": round(budget.today_spend() - start_spend, 2)}
+
+
 def ads_due(now: datetime) -> list[int]:
     from . import ads
     return ads.due_slots(now)
@@ -211,6 +241,24 @@ def tick() -> None:
             log.info("Inserat: %s", ads.daily_round(slot_i))
         except Exception:  # noqa: BLE001
             log.exception("Inserat fehlgeschlagen")
+    if config.DAILY_MINIMUM > 0 and now.hour in (9, 13, 17):
+        key = f"minimum:{date.today()}:{now.hour}"
+        if not store.get_state(conn, key):
+            store.set_state(conn, key, "1")
+            if store.potentials_today(conn) < config.DAILY_MINIMUM:
+                try:
+                    r = ensure_minimum(now)
+                    log.info("Tagesminimum: %s", r)
+                    if r["gefunden_heute"] >= r["ziel"]:
+                        messaging.notify_owner(f"✅ Tagesziel erreicht: {r['gefunden_heute']} neue potenzielle "
+                                               f"Kandidaten heute (Kosten {r['kosten']:.2f} $). Details in der App.")
+                    elif now.hour == 17:
+                        messaging.notify_owner(
+                            f"⚠️ Heute erst {r['gefunden_heute']} von {r['ziel']} neuen Kandidaten – ich habe bis zur "
+                            f"Kostengrenze ({config.MINIMUM_MAX_USD:.2f} $) gesucht. Morgen suche ich weiter. "
+                            f"Tipp: Inserat posten bringt zusätzliche Bewerber.")
+                except Exception:  # noqa: BLE001
+                    log.exception("Tagesminimum fehlgeschlagen")
     every = config.SEARCH_EVERY_HOURS
     if (every > 0 and config.SEARCH_HOURS[0] <= now.hour < config.SEARCH_HOURS[1]
             and store.get_state(conn, "morning") == date.today().isoformat()):
