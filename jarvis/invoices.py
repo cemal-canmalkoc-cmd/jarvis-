@@ -123,7 +123,10 @@ def send_invoice(pid: int) -> str:
         return "Für diese Vermittlung ist keine Firma mit E-Mail hinterlegt."
     if not firm["address"]:
         return f"Für {firm['name']} fehlt die vollständige Rechnungsadresse (App → Firma → Adresse)."
-    path, number, gross = build_pdf(p)
+    try:
+        path, number, gross = build_pdf(p)
+    except ImportError:
+        return "PDF-Baustein fehlt noch – bitte in der App einmal '⬇️ Jarvis aktualisieren' drücken."
     send_email(firm["email"], f"Rechnung {number} – {config.AGENCY_NAME}",
                f"Guten Tag{' ' + firm['contact_name'] if firm['contact_name'] else ''},\n\nvielen Dank für die "
                f"Zusammenarbeit. Anbei erhalten Sie unsere Rechnung {number} über {eur(gross)} für die "

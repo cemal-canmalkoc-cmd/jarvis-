@@ -10,6 +10,8 @@ import io
 import logging
 import os
 import shutil
+import subprocess
+import sys
 import tarfile
 import tempfile
 import threading
@@ -64,6 +66,34 @@ def apply(archive: bytes, target: Path = PKG_DIR) -> int:
     return count
 
 
+def requirements_from(archive: bytes) -> str:
+    """Liest requirements.txt aus dem Archiv (leer, wenn nicht vorhanden)."""
+    with tarfile.open(fileobj=io.BytesIO(archive), mode="r:gz") as tar:
+        for m in tar.getmembers():
+            parts = Path(m.name).parts
+            if len(parts) == 2 and parts[1] == "requirements.txt" and m.isfile():
+                f = tar.extractfile(m)
+                return f.read().decode() if f else ""
+    return ""
+
+
+def install_requirements(text: str) -> str:
+    """Installiert neue Python-Pakete (z. B. reportlab für Rechnungen). Bleibt im Container erhalten."""
+    if not text.strip():
+        return "keine"
+    with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False) as f:
+        f.write(text)
+    try:
+        r = subprocess.run([sys.executable, "-m", "pip", "install", "--quiet", "--no-cache-dir", "-r", f.name],
+                           capture_output=True, text=True, timeout=600)
+        if r.returncode != 0:
+            log.error("pip install fehlgeschlagen: %s", r.stderr[-500:])
+            return "fehler"
+        return "ok"
+    finally:
+        os.unlink(f.name)
+
+
 def _restart_later(delay: float = 2.0) -> None:
     def _go():
         time.sleep(delay)
@@ -77,9 +107,11 @@ def update(force: bool = False, restart: bool = True) -> dict:
     current = installed_sha()
     if sha == current and not force:
         return {"status": "aktuell", "version": sha[:7]}
-    files = apply(download(sha))
+    archive = download(sha)
+    files = apply(archive)
+    pakete = install_requirements(requirements_from(archive))
     store.set_state(store.connect(), "installed_sha", sha)
     if restart:
         _restart_later()
-    return {"status": "aktualisiert", "version": sha[:7], "dateien": files,
+    return {"status": "aktualisiert", "version": sha[:7], "dateien": files, "pakete": pakete,
             "info": "Jarvis startet in wenigen Sekunden neu."}
