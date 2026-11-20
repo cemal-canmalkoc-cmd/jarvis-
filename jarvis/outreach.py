@@ -119,10 +119,13 @@ def portal_message(c: ScoredCandidate) -> str:
                 f"{config.AGENCY_NAME} – wir vermitteln Fahrer kostenlos an Speditionen in ganz Deutschland "
                 f"(Nah- und Fernverkehr). Interesse? Schreiben Sie mir direkt per WhatsApp (Lebenslauf gern als Foto mitschicken): {wa_short('lkw', 'portal')} "
                 f"– oder bewerben Sie sich hier: {config.PUBLIC_URL}/bewerbung?bereich=lkw")
+    arzt = c.assessment.category == "arzt"
+    who = "Ärztinnen und Ärzte" if arzt else "Pflegefachkräfte"
+    help_ = "wir begleiten das MEBEKO-Verfahren" if arzt else "wir helfen bei der SRK-Anerkennung"
     return (f"Hallo, ich habe Ihr Stellengesuch als {role} gesehen. Ich bin {config.RECRUITER_NAME} von "
-            f"{config.AGENCY_NAME} – wir vermitteln Pflegekräfte kostenlos an Kliniken und Heime in der Schweiz "
-            f"(deutlich höherer Lohn, wir helfen bei der Anerkennung). Interesse? Schreiben Sie mir gern per "
-            f"WhatsApp: {wa_short('arzt' if c.assessment.category == 'arzt' else 'pflege', 'portal')} – oder online: {config.PUBLIC_URL}/bewerbung")
+            f"{config.AGENCY_NAME} – wir vermitteln {who} kostenlos an Kliniken in der Schweiz ({help_}). "
+            f"Interesse? Schreiben Sie mir gern per WhatsApp (Lebenslauf als PDF/Foto genügt): "
+            f"{wa_short('arzt' if arzt else 'pflege', 'portal')} – oder online: {config.PUBLIC_URL}/bewerbung")
 
 
 def portal_digest(cands: list[ScoredCandidate]) -> str | None:
