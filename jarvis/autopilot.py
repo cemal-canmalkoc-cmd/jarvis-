@@ -181,6 +181,10 @@ MINIMUM_FOCUSES = [
     "Facharzt Psychiatrie", "Facharzt Anästhesie", "Pflegefachkraft Geriatrie",
     "LKW: LKW-Fahrer CE", "LKW: Berufskraftfahrer", "LKW: Kraftfahrer Fernverkehr", "LKW: Fahrer ADR",
     "LKW: Kipperfahrer Baustelle", "LKW: Fahrer Entsorgung", "LKW: Sattelzugfahrer", "LKW: Fahrer Nahverkehr NRW",
+    "LKW: Fahrer sucht Arbeit mit Telefonnummer (quoka, dhd24, markt.de)",
+    "LKW: Kraftfahrer CE Stellengesuch Handy WhatsApp",
+    "Pflegefachkraft sucht Stelle mit Telefonnummer (quoka, markt.de, dhd24)",
+    "Krankenschwester Stellengesuch Handy WhatsApp Schweiz",
 ]
 
 

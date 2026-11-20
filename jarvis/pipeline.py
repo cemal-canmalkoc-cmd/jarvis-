@@ -31,7 +31,9 @@ def default_web_focuses() -> list[str]:
     focuses += [f"Arzt / Ärztin {s}" for s in PHYSICIAN_SPECIALTIES]
     from . import config
     if config.LKW_ENABLED:
-        focuses += ["LKW: Berufskraftfahrer CE Fernverkehr", "LKW: LKW-Fahrer CE Nahverkehr"]
+        focuses += ["LKW: Berufskraftfahrer CE Fernverkehr", "LKW: LKW-Fahrer CE Nahverkehr",
+                    "LKW: Fahrer sucht Arbeit mit Telefonnummer", "LKW: Kipperfahrer Baustelle sucht Stelle"]
+    focuses += ["Pflegefachkraft sucht Stelle mit Telefonnummer"]
     return focuses
 
 
