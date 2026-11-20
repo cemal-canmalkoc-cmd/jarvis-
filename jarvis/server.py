@@ -450,7 +450,7 @@ def _evaluate_form(raw: sources.RawProfile, cv_path: str | None = None) -> None:
 
 # --------------------------------------------------------------------------- Direkt in Cemal-Cans WhatsApp
 @app.get("/wa")
-async def wa_redirect(b: str = "lkw", q: str = "", direkt: str = ""):
+async def wa_redirect(b: str = "lkw", q: str = "", direkt: str = "", ref: str = ""):
     from .outreach import WA_TEXTS, contact_number, wa_link
     if config.CHAT_FIRST and not direkt and b in CHAT_GREETINGS:
         # Selbstständiger Betrieb: Bewerber landen beim KI-Chat statt in deinem WhatsApp
@@ -465,7 +465,45 @@ async def wa_redirect(b: str = "lkw", q: str = "", direkt: str = ""):
     if q:
         k2 = f"clicks_src:{date.today()}:{q}"
         store.set_state(conn, k2, str(int(store.get_state(conn, k2) or 0) + 1))
-    return RedirectResponse(wa_link(WA_TEXTS.get(b, WA_TEXTS["lkw"])), status_code=302)
+    text = WA_TEXTS.get(b, WA_TEXTS["lkw"])
+    ref = "".join(ch for ch in ref if ch.isalnum() or ch in " .-äöüÄÖÜß")[:40].strip()
+    if ref:
+        text += f"\n(Empfohlen von: {ref})"
+        k3 = f"referrals:{date.today()}"
+        store.set_state(conn, k3, str(int(store.get_state(conn, k3) or 0) + 1))
+    return RedirectResponse(wa_link(text), status_code=302)
+
+
+# --------------------------------------------------------------------------- Empfehlungsprogramm
+@app.get("/empfehlen", response_class=HTMLResponse)
+async def empfehlen(b: str = "lkw"):
+    """„Fahrer werben Fahrer“: Bewerber teilen ihren persönlichen Link mit Kollegen."""
+    b = b if b in ("lkw", "pflege", "arzt") else "lkw"
+    who = {"lkw": "LKW-Fahrer", "pflege": "Pflegekräfte", "arzt": "Ärztinnen und Ärzte"}[b]
+    bonus = (f"<p class='lead'>🎁 Als Dankeschön: <b>{html.escape(config.REFERRAL_BONUS)}</b>, wenn deine Empfehlung "
+             f"bei uns eine Stelle antritt.</p>" if config.REFERRAL_BONUS else "")
+    share_intro = {"lkw": "Hey, ich hab hier was für Fahrer: Hansa Personal vermittelt LKW-Fahrer kostenlos an "
+                          "Speditionen. Einfach Führerschein oder Lebenslauf per WhatsApp schicken:",
+                   "pflege": "Hallo, kennst du schon Hansa Personal? Sie vermitteln Pflegekräfte kostenlos in die "
+                             "Schweiz und helfen bei der Anerkennung:",
+                   "arzt": "Hallo, Hansa Personal vermittelt Ärztinnen und Ärzte kostenlos in die Schweiz:"}[b]
+    return _page(f"Empfehlen – {config.AGENCY_NAME}", f"""<div class="brand">{html.escape(config.AGENCY_NAME)}</div>
+<h1>Kennst du {who}, die eine neue Stelle suchen?</h1>
+<p class="lead">Schick ihnen deinen persönlichen Link – sie melden sich mit einem Tipp per WhatsApp. Für sie kostenlos.</p>
+{bonus}
+<fieldset><legend>Dein persönlicher Link</legend>
+<label for="n">Dein Name (damit wir wissen, von wem die Empfehlung kommt)</label>
+<input id="n" type="text" maxlength="40" placeholder="z. B. Ali K.">
+<a class="btn" id="share" href="#">💬 Per WhatsApp an Kollegen schicken</a>
+</fieldset>
+<script>
+const base = {json.dumps(config.PUBLIC_URL + "/wa?b=" + b + "&q=empfehlung")}, intro = {json.dumps(share_intro)};
+document.getElementById("share").onclick = e => {{
+  const n = document.getElementById("n").value.trim();
+  const link = base + (n ? "&ref=" + encodeURIComponent(n) : "");
+  e.currentTarget.href = "https://wa.me/?text=" + encodeURIComponent(intro + " " + link);
+}};
+</script>""")
 
 
 # --------------------------------------------------------------------------- KI-Chat für Bewerber (rund um die Uhr)

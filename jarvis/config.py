@@ -210,6 +210,8 @@ AUTO_INVOICE = os.environ.get("JARVIS_AUTO_INVOICE", "0").strip().lower() in ("1
 CHAT_MAX_USD = float(os.environ.get("JARVIS_CHAT_MAX_USD", "0.20"))
 AUTO_DAYS = int(os.environ.get("JARVIS_AUTO_DAYS", "5"))
 # Jeden Tag fragen: ohne dein „Ja“ in der App gibt Jarvis an dem Tag nichts automatisch aus
+# Empfehlungsprämie (Text, z. B. "100 €") – leer = keine Prämie anzeigen
+REFERRAL_BONUS = os.environ.get("JARVIS_REFERRAL_BONUS", "")
 ASK_DAILY = os.environ.get("JARVIS_ASK_DAILY", "1").strip().lower() in ("1", "true", "ja")
 # Postfach lesen und beantworten (gleiche Zugangsdaten wie der E-Mail-Versand)
 AUTO_INBOX = os.environ.get("JARVIS_AUTO_INBOX", "1").strip().lower() in ("1", "true", "ja")

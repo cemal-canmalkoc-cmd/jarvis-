@@ -77,6 +77,19 @@ async def app_page(request: Request):
     return FileResponse(STATIC / "app.html", media_type="text/html")
 
 
+@router.post("/api/tiefensuche")
+async def tiefensuche(request: Request, daten: dict = Body(...)):
+    """{"bereich": "lkw"|"pflege", "bestaetigt": false} → erst Kosten nennen, mit bestaetigt=true starten."""
+    authed(request)
+    from . import autopilot
+    bereich = "lkw" if daten.get("bereich") == "lkw" else "pflege"
+    cost = autopilot.deep_cost(bereich)
+    if not daten.get("bestaetigt"):
+        return {"kosten": cost, "suchen": len(autopilot.deep_focuses(bereich))}
+    threading.Thread(target=autopilot.deep_search, args=(bereich,), daemon=True).start()
+    return {"meldung": f"🔎 Tiefensuche läuft (ca. {cost:.2f} $, 5–10 Minuten). Du bekommst eine Mitteilung."}
+
+
 @router.get("/app/zentrale", response_class=HTMLResponse)
 async def zentrale_page(request: Request):
     """Großer Bildschirm (Notebook/Monitor): Jarvis-Kommandozentrale."""

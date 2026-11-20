@@ -311,3 +311,42 @@ def tick() -> None:
         except Exception as exc:  # noqa: BLE001
             log.exception("Anrufrunde fehlgeschlagen")
             messaging.notify_owner(f"⚠️ Anrufrunde fehlgeschlagen: {exc}")
+
+
+# --------------------------------------------------------------------------- Tiefensuche (auf Knopfdruck)
+DEEP_CITIES = ["Dortmund", "Essen", "Duisburg", "Köln", "Düsseldorf", "Hamburg", "Berlin", "Hannover", "Bremen",
+               "Leipzig", "Frankfurt", "Stuttgart", "München", "Nürnberg", "Bielefeld", "Münster"]
+DEEP_LKW_TYPES = ["Berufskraftfahrer CE Fernverkehr", "LKW-Fahrer CE Nahverkehr", "Kipperfahrer Baustelle",
+                  "Fahrer ADR Gefahrgut", "Sattelzugfahrer", "Fahrer Entsorgung", "Kraftfahrer C Verteilerverkehr"]
+DEEP_PFLEGE = ["Pflegefachfrau Akutspital", "Krankenschwester Psychiatrie", "Altenpflegerin examiniert",
+               "Gesundheits- und Krankenpfleger Intensiv", "Pflegefachkraft Geriatrie", "Fachfrau Gesundheit FaGe",
+               "Facharzt Innere Medizin", "Facharzt Psychiatrie", "Assistenzarzt Anästhesie", "Facharzt Radiologie"]
+
+
+def deep_focuses(bereich: str) -> list[str]:
+    if bereich == "lkw":
+        return [f"LKW: {t} {DEEP_CITIES[(i * 3) % len(DEEP_CITIES)]} mit Telefonnummer"
+                for i, t in enumerate(DEEP_LKW_TYPES)] + \
+               [f"LKW: {DEEP_LKW_TYPES[i % len(DEEP_LKW_TYPES)]} {c}" for i, c in enumerate(DEEP_CITIES[:5])]
+    return [f"{p} sucht Stelle mit Telefonnummer" for p in DEEP_PFLEGE]
+
+
+def deep_cost(bereich: str) -> float:
+    from . import budget
+    return round(len(deep_focuses(bereich)) * budget.EST_SEARCH_FOCUS_USD * 1.5, 2)
+
+
+def deep_search(bereich: str) -> dict:
+    """Intensive Suche über viele Portale/Städte/Berufe. Nur auf deinen ausdrücklichen Befehl."""
+    focuses = deep_focuses(bereich)
+    messaging.notify_owner(f"🔎 Tiefensuche {'LKW' if bereich == 'lkw' else 'Pflege/Ärzte'} gestartet: "
+                           f"{len(focuses)} Suchen über viele Portale und Städte (ca. {deep_cost(bereich):.2f} $).")
+    result = pipeline.run(use_folder=False, use_email=False, use_web=True, web_focuses=focuses)
+    conn = store.connect()
+    direct = conn.execute("SELECT COUNT(*) FROM candidates WHERE found_on=? AND phone IS NOT NULL AND phone != '' "
+                          "AND tier != 'X'", (date.today().isoformat(),)).fetchone()[0]
+    messaging.notify_owner(f"✅ Tiefensuche fertig: {result.get('neu', 0)} neue Profile "
+                           f"(A {result.get('A', 0)} · B {result.get('B', 0)} · C {result.get('C', 0)}), "
+                           f"heute direkt per WhatsApp erreichbar: {direct}. App → „Jetzt anschreiben“.")
+    result["direkt_heute"] = direct
+    return result

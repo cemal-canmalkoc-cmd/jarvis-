@@ -54,3 +54,30 @@ def test_job_ad_applications_need_approval(monkeypatch):
     assert all(x["firma_id"] != item["firma_id"] for x in deals.application_queue())   # nicht doppelt
     assert store.get_candidate(conn, item["kandidat_id"])["status"] == "vorgestellt"
     assert key
+
+
+def test_referral_page_and_tracked_link(monkeypatch):
+    from urllib.parse import unquote
+    monkeypatch.setattr(config, "CONTACT_WHATSAPP", "+49 176 00000000")
+    monkeypatch.setattr(config, "CHAT_FIRST", False)
+    monkeypatch.setattr(config, "REFERRAL_BONUS", "100 €")
+    c = TestClient(server.app)
+    page = c.get("/empfehlen?b=lkw").text
+    assert "Kennst du LKW-Fahrer" in page and "100 €" in page and "wa.me/?text=" in page
+    r = c.get("/wa?b=lkw&q=empfehlung&ref=Ali%20K.", follow_redirects=False)
+    assert "Empfohlen von: Ali K." in unquote(r.headers["location"])
+
+
+def test_deep_search_asks_cost_first(monkeypatch):
+    from jarvis import autopilot
+    monkeypatch.setattr(config, "ADMIN_TOKEN", "t0k")
+    started = []
+    monkeypatch.setattr(autopilot, "deep_search", lambda b: started.append(b))
+    c = TestClient(server.app)
+    h = {"Authorization": "Bearer t0k"}
+    q = c.post("/api/tiefensuche", json={"bereich": "lkw"}, headers=h).json()
+    assert q["kosten"] > 0 and q["suchen"] >= 10 and not started
+    assert all(f.lower().startswith("lkw:") for f in autopilot.deep_focuses("lkw"))
+    c.post("/api/tiefensuche", json={"bereich": "lkw", "bestaetigt": True}, headers=h)
+    import time; time.sleep(0.2)
+    assert started == ["lkw"]

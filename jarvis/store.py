@@ -548,6 +548,7 @@ EDITABLE_SETTINGS = {
     "AUTO_APPLY": "Bewerbungen auf Stellenanzeigen automatisch senden (1 = ja, 0 = nur mit Freigabe)",
     "CHAT_FIRST": "Bewerber-Links: 0 = direkt in dein WhatsApp, 1 = erst zum KI-Chat",
     "CHAT_MAX_USD": "Höchstens $ pro Tag für KI-Gespräche mit Bewerbern und Firmen",
+    "REFERRAL_BONUS": "Empfehlungsprämie für „Fahrer werben Fahrer“ (z. B. 100 €; leer = keine)",
     "ASK_DAILY": "Jeden Morgen fragen, bevor Geld ausgegeben wird (1 = ja, 0 = 5-Tage-Freigabe)",
     "AUTO_DAYS": "Freigabe gilt X Tage, danach fragt Jarvis nach „Weiter“ (nur wenn tägliches Fragen aus ist)",
     "AUTO_INBOX": "E-Mail-Postfach selbst lesen und beantworten (1 = ja)",
