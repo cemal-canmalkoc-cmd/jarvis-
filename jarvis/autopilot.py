@@ -64,6 +64,11 @@ def morning(force: bool = False) -> dict:
             except Exception as exc:  # noqa: BLE001
                 log.error("Firmensuche fehlgeschlagen: %s", exc)
 
+    try:
+        from . import jobboard
+        jobboard.sync()
+    except Exception as exc:  # noqa: BLE001
+        log.error("Stellenbörse fehlgeschlagen: %s", exc)
     stats = store.stats_today(conn)
     if result.get("A") or result.get("B"):
         _maybe_call_owner(result.get("A", 0), result.get("B", 0))

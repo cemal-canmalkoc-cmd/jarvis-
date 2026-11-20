@@ -337,6 +337,13 @@ def daily_drive() -> dict:
         out["erinnerungen"] += [f"📨 {x}" for x in convo.followups()]
     except Exception as exc:  # noqa: BLE001
         log.error("Nachfragen fehlgeschlagen: %s", exc)
+    try:
+        from . import jobboard
+        jb = jobboard.sync()
+        if jb["neu"]:
+            out["erinnerungen"].append(f"📌 {jb['neu']} neue Stellen in deiner Stellenbörse (aus gefundenen Arbeitgebern)")
+    except Exception as exc:  # noqa: BLE001
+        log.error("Stellenbörse fehlgeschlagen: %s", exc)
     queue = application_queue(config.AUTO_APPLY_PER_DAY)
     sent_apps = send_applications(queue) if (config.AUTO_APPLY and queue) else []
     plan = sales_plan()

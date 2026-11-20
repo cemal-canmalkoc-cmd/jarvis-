@@ -136,6 +136,10 @@ COMPANY_EXTRA_COLUMNS = {
     "branche": "TEXT",        # gesundheit | lkw
 }
 
+JOB_EXTRA_COLUMNS = {
+    "auto_key": "TEXT",       # gesetzt = automatisch aus gefundenen Arbeitgebern (Bereich|Region)
+}
+
 STATUSES = ("neu", "kontaktiert", "interessiert", "vorgestellt", "gespraech", "kein_interesse", "vermittelt")
 COMPANY_STATUSES = ("neu", "angerufen", "angeschrieben", "interessiert", "kunde", "kein_bedarf", "nicht_anrufen")
 
@@ -149,7 +153,8 @@ def connect() -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")  # Lesen blockiert Schreiben nicht (Server + Autopilot parallel)
     conn.execute("PRAGMA busy_timeout=30000")
     conn.executescript(SCHEMA)
-    for table, extra in (("candidates", CANDIDATE_EXTRA_COLUMNS), ("companies", COMPANY_EXTRA_COLUMNS)):
+    for table, extra in (("candidates", CANDIDATE_EXTRA_COLUMNS), ("companies", COMPANY_EXTRA_COLUMNS),
+                         ("jobs", JOB_EXTRA_COLUMNS)):
         existing = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
         for col, decl in extra.items():
             if col not in existing:

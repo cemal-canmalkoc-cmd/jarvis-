@@ -268,6 +268,11 @@ def t_stellen() -> list[dict]:
             for j in store.jobs(conn, only_active=False)]
 
 
+def t_stellen_auto() -> dict:
+    from . import jobboard
+    return jobboard.sync()
+
+
 def t_weiter() -> str:
     from . import budget
     return budget.autonomy_continue()
@@ -365,6 +370,8 @@ TOOLS = {
                        {"titel": {"type": "string"}, "bereich": {"type": "string", "enum": ["lkw", "pflege", "arzt"]},
                         "ort": {"type": "string"}, "beschreibung": {"type": "string"}, "gehalt": {"type": "string"}}),
     "stellen": (t_stellen, "Alle Stellen der Stellenbörse mit Anzahl passender Kandidaten aus dem Talentpool.", {}),
+    "stellen_automatisch": (t_stellen_auto, "Stellenbörse aus den gefundenen Arbeitgebern mit offenen Stellen "
+                            "aktualisieren (anonym, je Bereich und Region).", {}),
     "freigabe_weiter": (t_weiter, "Selbstständige Arbeit (Suche, Inserate, KI-Gespräche) für HEUTE freigeben – "
                         "wenn der Inhaber 'ja', 'weiter' oder 'leg los' auf die Morgenfrage antwortet.", {}),
     "rechnung_senden": (t_rechnung_senden, "PDF-Rechnung für eine Vermittlung erstellen und an die Firma senden. "

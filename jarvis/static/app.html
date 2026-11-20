@@ -156,6 +156,7 @@ nav button.on{color:var(--accent)}
 <div class="card small muted">Offene Stellen deiner Arbeitgeber – öffentlich auf deiner Seite und bei Google.
   Bewerber landen per WhatsApp bei dir. Nur echte Stellen eintragen.</div>
 <button class="btn" id="job-new">➕ Neue Stelle veröffentlichen</button>
+<button class="btn sec" onclick="act('/api/stellen/auto').then(loadJobs)">🔄 Stellen aus gefundenen Arbeitgebern erstellen</button>
 <div id="jobs"></div>
 <h2>📨 Bewerbungen auf Stellenanzeigen</h2><div id="apps"></div>
 <h2>📞 Heute anrufen</h2><div id="sales"></div>

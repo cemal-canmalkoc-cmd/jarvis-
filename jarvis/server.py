@@ -516,7 +516,9 @@ async def job_detail(jid: int):
           "jobLocation": {"@type": "Place", "address": {"@type": "PostalAddress", "addressLocality": j["ort"] or "",
                                                         "addressCountry": country}},
           "directApply": True}
-    return _page(f"{j['title']} – {config.AGENCY_NAME}", f"""<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False).replace("</", "<\\/")}</script>
+    ld_tag = ("" if j.get("auto_key") else
+              f'<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False).replace("</", "<\\/")}</script>')
+    return _page(f"{j['title']} – {config.AGENCY_NAME}", f"""{ld_tag}
 <div class="brand">{e(config.AGENCY_NAME)}</div>
 <h1>{e(j['title'])}</h1>
 <p class="lead">📍 {e(j['ort'] or '')}{' · 💶 ' + e(j['gehalt']) if j['gehalt'] else ''}</p>

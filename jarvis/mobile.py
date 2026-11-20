@@ -103,6 +103,15 @@ async def stelle_neu(request: Request, daten: dict = Body(...)):
     return {"meldung": f"✅ Stelle #{jid} ist online: {config.PUBLIC_URL}/jobs/{jid}", "id": jid}
 
 
+@router.post("/api/stellen/auto")
+async def stellen_auto(request: Request):
+    authed(request)
+    from . import jobboard
+    r = await asyncio.to_thread(jobboard.sync)
+    return {"meldung": f"📌 Stellen aus gefundenen Arbeitgebern: {r['neu']} neu, {r['aktualisiert']} aktualisiert, "
+                       f"{r['offline']} offline (kein aktueller Bedarf mehr)."}
+
+
 @router.post("/api/stellen/{jid}/aktiv")
 async def stelle_aktiv(request: Request, jid: int, daten: dict = Body(...)):
     authed(request)
