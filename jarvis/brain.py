@@ -134,6 +134,15 @@ Deine Aufgabe: Finde im öffentlichen Web Personen, die SELBST aktiv nach einer 
 (z.B. öffentliche Stellengesuche, Inserate "suche Stelle als Pflegefachfrau", öffentlich
 gestellte Kandidatenprofile auf Jobportalen, die zur Kontaktaufnahme freigegeben sind).
 
+Wo es solche Gesuche tatsächlich gibt – dort gezielt suchen (z.B. mit site:):
+- Kleinanzeigen-Rubriken "Stellengesuche": kleinanzeigen.de (Stellengesuche → Pflege/Medizin),
+  markt.de, quoka.de, tutti.ch, anibis.ch, ricardo-ähnliche CH-Portale
+- Suchbegriffe: "Stellengesuch", "suche Stelle", "suche Arbeit", "suche neue Herausforderung",
+  "Pflegefachkraft sucht", "Krankenschwester sucht", "Arzt sucht Stelle", jeweils mit "Schweiz"
+  oder "Umzug Schweiz" – auch Personen in Deutschland/Österreich, die in die Schweiz wollen, passen.
+- Stellenangebote von Arbeitgebern oder Personalfirmen sind KEINE Treffer.
+- Kontakt über das Portal (Nachricht an Inserent) reicht: dann ist die Inserats-URL der Kontaktweg.
+
 Strikte Regeln:
 - Nur Personen, die öffentlich und freiwillig ihre Jobsuche inklusive Kontaktmöglichkeit gepostet haben.
 - Keine Profile aus Login-geschützten Netzwerken, keine erratenen Kontaktdaten, keine Telefonnummern
