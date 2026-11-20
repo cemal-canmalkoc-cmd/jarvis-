@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 
 import anthropic
@@ -242,6 +243,7 @@ def find_public_leads(focus: str, max_searches: int | None = None) -> list[dict]
     system_prompt = LKW_SOURCING_SYSTEM if is_lkw_focus(focus) else SOURCING_SYSTEM
     tools = [web_search_tool(MODEL, max_searches or WEB_SEARCHES_PER_FOCUS)]
 
+    seen_urls: list[str] = []
     for _ in range(5):  # pause_turn kann mehrmals vorkommen
         response = create(
             model=MODEL,
@@ -251,6 +253,7 @@ def find_public_leads(focus: str, max_searches: int | None = None) -> list[dict]
             tools=tools,
             messages=messages,
         )
+        seen_urls += _result_urls(response)
         if response.stop_reason == "pause_turn":
             messages.append({"role": "assistant", "content": response.content})
             continue
@@ -265,4 +268,36 @@ def find_public_leads(focus: str, max_searches: int | None = None) -> list[dict]
         leads = json.loads(raw)
     except json.JSONDecodeError:
         return []
-    return [l for l in leads if isinstance(l, dict) and l.get("profile_text")]
+    leads = [l for l in leads if isinstance(l, dict) and l.get("profile_text")]
+    for l in leads:
+        l["source_url"] = real_url(l.get("source_url", ""), seen_urls)
+    return leads
+
+
+def _result_urls(response) -> list[str]:
+    """Alle URLs, die die Websuche wirklich geliefert hat."""
+    out = []
+    for block in getattr(response, "content", []) or []:
+        if getattr(block, "type", "") == "web_search_tool_result":
+            content = getattr(block, "content", None)
+            if isinstance(content, list):
+                out += [getattr(r, "url", "") for r in content if getattr(r, "url", "")]
+    return out
+
+
+def real_url(url: str, seen: list[str]) -> str:
+    """Nur echte Links übernehmen: steht die URL nicht in den Suchergebnissen (von der KI erfunden),
+    nimm den echten Treffer derselben Seite – sonst den ersten echten Treffer."""
+    if not seen or not url:
+        return url or (seen[0] if seen else "web")
+    norm = lambda u: u.split("#")[0].rstrip("/").lower()  # noqa: E731
+    if norm(url) in {norm(u) for u in seen}:
+        return url
+    from urllib.parse import urlparse
+    host = urlparse(url).netloc.lower().removeprefix("www.")
+    same = [u for u in seen if urlparse(u).netloc.lower().removeprefix("www.") == host]
+    if same:
+        path = urlparse(url).path.lower()
+        same.sort(key=lambda u: -len(os.path.commonprefix([urlparse(u).path.lower(), path])))
+        return same[0]
+    return seen[0]

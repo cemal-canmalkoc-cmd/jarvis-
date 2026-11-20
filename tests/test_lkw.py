@@ -132,3 +132,14 @@ def test_lkw_focus_detected_without_prefix():
     assert brain.is_lkw_focus("LKW: Fahrer ADR")
     assert not brain.is_lkw_focus("Pflegefachfrau Psychiatrie Zürich")
     assert not brain.is_lkw_focus("Arzt Anästhesie Bern")
+
+
+def test_invented_ad_links_are_replaced_by_real_search_results():
+    from jarvis import brain
+    seen = ["https://www.kleinanzeigen.de/s-jobs/lkw-fahrer-sucht-arbeit/k0c102",
+            "https://www.kleinanzeigen.de/s-anzeige/ce-fahrer-sucht-arbeit/2876543210-107-1234",
+            "https://www.quoka.de/stellengesuche/kraftfahrer.html"]
+    assert brain.real_url(seen[1], seen) == seen[1]                       # echter Link bleibt
+    fake = "https://www.kleinanzeigen.de/s-anzeige/erfunden/999-107-1"
+    assert brain.real_url(fake, seen) in seen[:2]                         # erfunden → echter Treffer
+    assert brain.real_url("https://erfunden.example/x", seen) == seen[0]
