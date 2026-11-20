@@ -1,0 +1,5 @@
+[
+  {"refnr": "10000-0000000001-S", "titel": "Pflegefachkraft (m/w/d) Innere Medizin", "beruf": "Pflegefachkraft", "arbeitgeber": "Beispielklinikum Berlin", "ort": "Berlin", "plz": "10115", "datum": "2026-11-18"},
+  {"refnr": "10000-0000000002-S", "titel": "Altenpfleger (m/w/d) Vollzeit", "beruf": "Altenpfleger", "arbeitgeber": "Seniorenresidenz Am Park", "ort": "Hamburg", "plz": "20095", "datum": "2026-11-17"},
+  {"refnr": "10000-0000000003-S", "titel": "Medizinische Fachangestellte (m/w/d)", "beruf": "Medizinische Fachangestellte", "arbeitgeber": "Praxis Dr. Muster", "ort": "München", "plz": "80331", "datum": "2026-11-19"}
+]

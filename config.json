@@ -1,0 +1,10 @@
+{
+  "firmenname": "PflegeJobs Direkt",
+  "kontakt_email": "kontakt@example.com",
+  "formular_endpoint": "",
+  "basis_url": "https://cemal-canmalkoc-cmd.github.io/jarvis-",
+  "suchbegriffe": ["Pflegefachkraft", "Gesundheits- und Krankenpfleger", "Altenpfleger", "Medizinische Fachangestellte", "Intensivpfleger", "OP-Pflege"],
+  "orte": ["Berlin", "Hamburg", "München", "Köln", "Frankfurt am Main", "Stuttgart", "Düsseldorf", "Leipzig", "Dortmund", "Essen", "Bremen", "Dresden", "Hannover", "Nürnberg"],
+  "umkreis_km": 25,
+  "max_jobs_pro_suche": 25
+}
