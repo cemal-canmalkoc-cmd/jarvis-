@@ -74,3 +74,11 @@ def test_ust_status(monkeypatch):
     assert "§ 19 UStG keine Umsatzsteuer" in pricing.for_candidate("lkw", None)
     monkeypatch.setattr(config, "UST_STATUS", "regel")
     assert "2.000 € netto pauschal (zzgl. 19 % MwSt.)" in pricing.for_candidate("lkw", None)
+
+
+
+def test_adr_price():
+    from jarvis import pricing
+    assert pricing.for_candidate("lkw", None, adr=True).startswith("3.000 € pauschal")
+    assert pricing.for_candidate("lkw", None, adr=False).startswith("2.000 € pauschal")
+    assert "LKW mit ADR" in pricing.overview()

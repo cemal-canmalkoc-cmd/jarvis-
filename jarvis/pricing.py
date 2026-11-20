@@ -9,11 +9,11 @@ from __future__ import annotations
 from . import config, store
 
 
-def area_for(category: str, role: str | None) -> str:
+def area_for(category: str, role: str | None, adr: bool | None = None) -> str:
     if category == "arzt":
         return "Arzt"
     if category == "lkw":
-        return "LKW"
+        return "LKW mit ADR" if adr else "LKW"
     r = (role or "").lower()
     if "fage" in r or "fachperson gesundheit" in r or "fachfrau gesundheit" in r or "fachmann gesundheit" in r:
         return "FaGe"
@@ -47,8 +47,8 @@ def overview() -> dict[str, str]:
     return {a: (describe(prices[a]) if a in prices else "noch nicht festgelegt") for a in store.PRICE_AREAS}
 
 
-def for_candidate(category: str, role: str | None) -> str | None:
-    row = store.get_prices(store.connect()).get(area_for(category, role))
+def for_candidate(category: str, role: str | None, adr: bool | None = None) -> str | None:
+    row = store.get_prices(store.connect()).get(area_for(category, role, adr))
     return describe(row) if row else None
 
 

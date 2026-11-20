@@ -393,7 +393,7 @@ def record_presentation(conn: sqlite3.Connection, cand_key: str, company_id: int
 
 
 # --------------------------------------------------------------------------- Preise
-PRICE_AREAS = ("Pflege", "FaGe", "Arzt", "LKW")
+PRICE_AREAS = ("Pflege", "FaGe", "Arzt", "LKW", "LKW mit ADR")
 PRICE_MODELS = ("prozent_jahreslohn", "pauschal_chf", "pauschal_eur_netto")
 
 
@@ -414,6 +414,8 @@ def set_price(conn: sqlite3.Connection, bereich: str, modell: str, wert: float,
 # Von Cemal-Can festgelegte Standardpreise (gelten, solange nichts anderes gespeichert ist)
 DEFAULT_PRICES = {
     "LKW": {"bereich": "LKW", "modell": "pauschal_eur_netto", "wert": 2000.0, "garantie_monate": 0, "notiz": ""},
+    "LKW mit ADR": {"bereich": "LKW mit ADR", "modell": "pauschal_eur_netto", "wert": 3000.0,
+                    "garantie_monate": 0, "notiz": ""},
 }
 
 

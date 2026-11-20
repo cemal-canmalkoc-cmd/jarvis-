@@ -157,7 +157,7 @@ def present(cand_key: str, company_id: int) -> str:
     if firm["status"] == "kunde":
         terms = "Es gelten die Konditionen unserer Kooperationsvereinbarung."
     else:
-        price = pricing.for_candidate(a.category, role)
+        price = pricing.for_candidate(a.category, role, a.adr)
         terms = (f"Unser Honorar: {price}." if price else
                  "Für Sie entstehen nur bei erfolgreicher Anstellung Kosten; gerne sende ich Ihnen unsere Konditionen.")
     greeting = f"Guten Tag {firm['contact_name']}" if firm["contact_name"] else "Guten Tag"
