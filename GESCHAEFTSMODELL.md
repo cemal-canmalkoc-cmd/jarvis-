@@ -45,7 +45,10 @@ Diese Besucherzahlen über Google aufzubauen dauert erfahrungsgemäß **3–9 Mo
 5. **Stellendaten der BA:** Die Seite verlinkt auf die Originalanzeigen und nennt die Quelle. Die Nutzungsbedingungen der BA solltest du selbst prüfen. Arbeitgeber zahlen nur, wenn **vor** der Vorstellung eines Kandidaten eine **schriftliche Provisionsvereinbarung** besteht.
 6. Steuern: Kleinunternehmerregelung prüfen (bis 25.000 € Vorjahresumsatz). Bei 10 k€/Monat fällt Umsatzsteuer an, also mit Steuerberater sprechen.
 
-## Dein Wochenplan (ca. 5–10 Std.)
+## Dein Wochenplan
+Der [digitale Mitarbeiter](MITARBEITER.md) übernimmt Postfach, Zustimmungen, Konditionen, Profilversand und Vorstellungen. Dir bleiben **ca. 2–4 Std./Woche**: Anrufliste abtelefonieren, offene Fragen beantworten, Rechnungen schreiben.
+
+Ohne Mitarbeiter (ca. 5–10 Std.):
 - **Mo:** Neue Bewerbungen sichten und Kandidaten anrufen (je 15 Min.)
 - **Di/Mi:** Für jeden guten Kandidaten 3–5 passende Arbeitgeber aus den Jobseiten kontaktieren (Vorlage unten)
 - **Do:** 2–3 Social-Media-Posts / Gruppenbeiträge

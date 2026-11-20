@@ -1,0 +1,50 @@
+name: Digitaler Mitarbeiter
+
+on:
+  schedule:
+    - cron: "7 * * * *"   # jede Stunde
+  workflow_dispatch:
+    inputs:
+      bericht:
+        description: "Tagesbericht sofort senden"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mitarbeiter
+  cancel-in-progress: false
+
+jobs:
+  arbeiten:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Aktuelle Stellen laden (für die Anrufliste)
+        run: python scripts/build.py
+      - name: Arbeitstag
+        env:
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASS: ${{ secrets.MAIL_PASS }}
+          IMAP_HOST: ${{ vars.IMAP_HOST || 'imap.gmail.com' }}
+          SMTP_HOST: ${{ vars.SMTP_HOST || 'smtp.gmail.com' }}
+          INHABER_EMAIL: ${{ secrets.INHABER_EMAIL }}
+          CRM_KEY: ${{ secrets.CRM_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODELL: ${{ vars.CLAUDE_MODELL || 'claude-opus-5-5' }}
+          ABSENDER_NAME: ${{ vars.ABSENDER_NAME || 'PflegeJobs Direkt' }}
+          HONORAR_TEXT: ${{ vars.HONORAR_TEXT }}
+        run: python -m mitarbeiter.agent ${{ inputs.bericht && '--bericht' || '' }}
+      - name: Verschlüsselte Datenbank sichern
+        run: |
+          git config user.name "digitaler-mitarbeiter"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/crm.enc 2>/dev/null || true
+          git diff --cached --quiet || (git commit -m "CRM aktualisiert" && git push)

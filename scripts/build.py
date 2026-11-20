@@ -133,6 +133,7 @@ def form(kind: str) -> str:
 <label>Ansprechpartner*<input name="name" required></label>
 <label>E-Mail*<input type="email" name="email" required></label>
 <label>Telefon<input name="telefon"></label>
+<label>Standort(e)*<input name="standort" required placeholder="z.B. Köln, Bonn"></label>
 <label>Gesuchte Positionen*<textarea name="positionen" rows="3" required></textarea></label>"""
     return f"""<form method="post" action="{html.escape(action)}"{enctype} class="form">{fields}
 <label class="check"><input type="checkbox" required> Ich willige ein, dass meine Angaben zur Vermittlung gespeichert

@@ -3,8 +3,11 @@ Automatisierte Personalfindung in der Schweiz, medizinischen Bereich sowie Perso
 
 **→ Geschäftsmodell, Zahlen, Rechtliches & Checkliste: [GESCHAEFTSMODELL.md](GESCHAEFTSMODELL.md)**
 
+**→ Digitaler Mitarbeiter (arbeitet stündlich selbstständig): [MITARBEITER.md](MITARBEITER.md)**
+
 ## Was hier automatisch läuft
 - `scripts/build.py` holt täglich Pflege-/Medizin-Stellen aus der BA-Jobsuche-API und baut eine statische Job-Website (Startseite, Seite pro Stadt, Bewerbung, Arbeitgeber, Schweiz, Sitemap).
+- `mitarbeiter/` + `.github/workflows/mitarbeiter.yml`: der digitale Mitarbeiter liest stündlich das Postfach, antwortet Kandidaten und Arbeitgebern, schickt anonyme Profile an Partner, stellt Kontakte her und mailt dir einen Tagesbericht.
 - `.github/workflows/website.yml` führt das täglich aus und veröffentlicht kostenlos auf GitHub Pages.
 
 ## Einrichten
