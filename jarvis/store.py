@@ -423,3 +423,52 @@ def add_notification(conn: sqlite3.Connection, text: str) -> None:
 def notifications(conn: sqlite3.Connection, limit: int = 30) -> list[dict]:
     return [dict(r) for r in conn.execute(
         "SELECT created, text FROM notifications ORDER BY id DESC LIMIT ?", (limit,)).fetchall()]
+
+
+# --------------------------------------------------------------------------- Einstellungen aus der App
+EDITABLE_SETTINGS = {
+    "META_PAGE_ID": "Facebook-Seiten-ID",
+    "META_PAGE_TOKEN": "Facebook-Seiten-Token",
+    "META_TOKEN": "WhatsApp-Token (Meta)",
+    "META_PHONE_NUMBER_ID": "WhatsApp Phone-Number-ID",
+    "META_APP_SECRET": "Meta App-Geheimcode",
+    "META_TEMPLATE_FIRST_CONTACT": "WhatsApp-Vorlage (Name)",
+    "OWNER_EMAIL": "Deine E-Mail für Meldungen",
+    "SMTP_HOST": "E-Mail-Server (SMTP)",
+    "SMTP_USER": "E-Mail-Benutzer",
+    "SMTP_PASSWORD": "E-Mail-Passwort",
+    "SMTP_FROM": "Absender-Adresse",
+    "SEARCH_EVERY_HOURS": "Suche alle X Stunden",
+    "ADS_PER_DAY": "Inserate pro Tag",
+}
+SECRET_SETTINGS = {"META_PAGE_TOKEN", "META_TOKEN", "META_APP_SECRET", "SMTP_PASSWORD"}
+
+
+def apply_settings(conn: sqlite3.Connection | None = None) -> None:
+    """Gespeicherte App-Einstellungen in die laufende Konfiguration übernehmen."""
+    from . import config
+    conn = conn or connect()
+    for key in EDITABLE_SETTINGS:
+        val = get_state(conn, f"setting:{key}")
+        if val is None:
+            continue
+        cur = getattr(config, key, "")
+        setattr(config, key, int(val) if isinstance(cur, int) and val.strip().lstrip("-").isdigit() else val)
+
+
+def save_setting(conn: sqlite3.Connection, key: str, value: str) -> None:
+    if key not in EDITABLE_SETTINGS:
+        raise ValueError(f"Unbekannte Einstellung {key}")
+    set_state(conn, f"setting:{key}", value.strip())
+    apply_settings(conn)
+
+
+def settings_overview() -> list[dict]:
+    from . import config
+    out = []
+    for key, label in EDITABLE_SETTINGS.items():
+        val = str(getattr(config, key, "") or "")
+        shown = ("••••" + val[-4:] if len(val) > 4 else "••••") if key in SECRET_SETTINGS and val else val
+        out.append({"key": key, "label": label, "wert": shown, "gesetzt": bool(val),
+                    "geheim": key in SECRET_SETTINGS})
+    return out

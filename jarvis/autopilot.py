@@ -158,6 +158,11 @@ def day_round(now: datetime | None = None) -> dict:
     return result
 
 
+def ads_due(now: datetime) -> list[int]:
+    from . import ads
+    return ads.due_slots(now)
+
+
 def tick() -> None:
     """Wird vom Server alle paar Minuten aufgerufen."""
     now = _now()
@@ -175,6 +180,16 @@ def tick() -> None:
             log.info("Auto-Update: %s", updater.update())
         except Exception as exc:  # noqa: BLE001
             log.error("Auto-Update fehlgeschlagen: %s", exc)
+    for slot_i in ads_due(now):
+        key = f"ads:{date.today()}:{slot_i}"
+        if store.get_state(conn, key):
+            continue
+        store.set_state(conn, key, "1")
+        try:
+            from . import ads
+            log.info("Inserat: %s", ads.daily_round(slot_i))
+        except Exception:  # noqa: BLE001
+            log.exception("Inserat fehlgeschlagen")
     every = config.SEARCH_EVERY_HOURS
     if (every > 0 and config.SEARCH_HOURS[0] <= now.hour < config.SEARCH_HOURS[1]
             and store.get_state(conn, "morning") == date.today().isoformat()):

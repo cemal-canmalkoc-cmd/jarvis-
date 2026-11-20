@@ -110,6 +110,7 @@ nav button.on{color:var(--accent)}
   <h2>Schnellbefehle</h2>
   <div class="chips" id="quick"></div>
   <button class="btn sec" id="update-btn">⬇️ Jarvis aktualisieren</button>
+  <button class="btn sec" id="settings-btn">⚙️ Verbindungen &amp; Einstellungen</button>
   <h2>Meldungen</h2>
   <div id="news"></div>
   <h2>Letzte Anrufe</h2>
@@ -396,6 +397,26 @@ $("#update-btn").onclick = async () => {
     toast(r.status === "aktuell" ? "Jarvis ist aktuell ✅" : "Update installiert, Neustart … ⏳");
     if (r.status !== "aktuell") setTimeout(() => location.reload(), 15000);
   } catch (e) { toast("Fehler: " + e.message); }
+};
+
+$("#settings-btn").onclick = async () => {
+  let list; try { list = await api("/api/einstellungen"); } catch (e) { return toast(e.message); }
+  const inputs = {};
+  sheet(
+    h("h2", {style: "margin-top:0"}, "⚙️ Verbindungen"),
+    h("div", {class: "muted small"}, "Nur ausfüllen, was du ändern willst. Geheime Werte werden nie vollständig angezeigt."),
+    list.map(s => {
+      const inp = h("input", {type: s.geheim ? "password" : "text", placeholder: s.wert || "nicht gesetzt",
+        style: "width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:16px"});
+      inputs[s.key] = inp;
+      return h("div", {class: "card small"}, h("div", {}, (s.gesetzt ? "✅ " : "⬜ ") + s.label), inp);
+    }),
+    h("button", {class: "btn", onclick: async () => {
+      const data = {}; for (const [k, el] of Object.entries(inputs)) if (el.value.trim()) data[k] = el.value.trim();
+      if (!Object.keys(data).length) return toast("Nichts geändert");
+      try { toast((await api("/api/einstellungen", {method: "POST", body: JSON.stringify(data)})).meldung); closeSheet(); }
+      catch (e) { toast("Fehler: " + e.message); }
+    }}, "Speichern"));
 };
 
 // ---------- Start

@@ -144,3 +144,8 @@ OWNER_EMAIL = os.environ.get("JARVIS_OWNER_EMAIL", "")
 # wechselnden Bereichen und Regionen. 0 = nur morgens. Kosten: ca. 0.20–0.30 $ pro Runde.
 SEARCH_EVERY_HOURS = int(os.environ.get("JARVIS_SEARCH_EVERY_HOURS", "2"))
 SEARCH_HOURS = (8, 21)
+
+# Inserate: Jarvis schreibt täglich Inserate und postet sie auf eurer Facebook-Seite.
+ADS_PER_DAY = int(os.environ.get("JARVIS_ADS_PER_DAY", "2"))
+META_PAGE_ID = os.environ.get("META_PAGE_ID", "")        # ID der Facebook-Seite "Hansa Personal"
+META_PAGE_TOKEN = os.environ.get("META_PAGE_TOKEN", "")  # dauerhaftes Seiten-Token (pages_manage_posts)

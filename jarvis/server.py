@@ -51,7 +51,7 @@ async def _autopilot_loop() -> None:
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
-    store.connect()
+    store.apply_settings(store.connect())
     task = None
     if os.environ.get("JARVIS_AUTOPILOT", "1") not in ("0", "false", "nein"):
         task = asyncio.create_task(_autopilot_loop())

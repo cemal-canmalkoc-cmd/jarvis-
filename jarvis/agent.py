@@ -189,6 +189,20 @@ def t_kandidat_hinzufuegen(angaben: str, whatsapp_ok: bool = False, anruf_ok: bo
             "score": c.score, "fehlt": c.missing, "whatsapp_link": c.whatsapp_link}
 
 
+def t_inserat_schreiben(zielgruppe: str = "", plattform: str = "Facebook-Gruppe") -> str:
+    from . import ads
+    return ads.write_ad(zielgruppe or None, plattform)
+
+
+def t_inserat_posten(text: str = "", zielgruppe: str = "") -> str:
+    from . import ads
+    if not ads.facebook_ready():
+        return ("Facebook-Seite noch nicht verbunden (META_PAGE_ID/META_PAGE_TOKEN fehlen). "
+                "Text zum manuellen Posten:\n\n" + (text or ads.write_ad(zielgruppe or None)))
+    text = text or ads.write_ad(zielgruppe or None)
+    return f"✅ Auf der Facebook-Seite gepostet (ID {ads.post_facebook_page(text)})."
+
+
 def t_update() -> dict:
     from . import updater
     return updater.update(force=True)
@@ -258,6 +272,11 @@ TOOLS = {
                              {"angaben": {"type": "string"},
                               "whatsapp_ok": {"type": "boolean", "description": "Person hat WhatsApp-Kontakt erlaubt"},
                               "anruf_ok": {"type": "boolean", "description": "Person hat Anruf erlaubt"}}),
+    "inserat_schreiben": (t_inserat_schreiben, "Neues Stelleninserat schreiben (für Gruppen, Instagram, Kleinanzeigen …).",
+                          {"zielgruppe": {"type": "string"}, "plattform": {"type": "string"}}),
+    "inserat_posten": (t_inserat_posten, "Inserat sofort auf der Facebook-Seite von Hansa Personal veröffentlichen.",
+                       {"text": {"type": "string", "description": "leer = Jarvis schreibt selbst"},
+                        "zielgruppe": {"type": "string"}}),
     "jarvis_aktualisieren": (t_update, "Neueste Jarvis-Version von GitHub installieren und neu starten.", {}),
     "autopilot_jetzt": (t_autopilot_jetzt, "Kompletten Tagesablauf sofort ausführen.", {}),
 }
@@ -327,6 +346,9 @@ DEIN AUTOPILOT LÄUFT AUTOMATISCH AUF DEM SERVER (du musst nichts einrichten und
 - Jeden Morgen um {config.MORNING_HOUR} Uhr: grosse Suche in allen Bereichen, bei Bedarf Zusatzrunden in weiteren Regionen.
 - Tagsüber ({config.SEARCH_HOURS[0]}–{config.SEARCH_HOURS[1]} Uhr): alle {config.SEARCH_EVERY_HOURS} Stunden eine Suchrunde mit wechselnden Bereichen/Regionen.
 - Neue Bewerbungen (Formular, WhatsApp, E-Mail) werden sofort geprüft; jede Nacht um 3 Uhr Selbst-Update.
+- Täglich um 10 und 18 Uhr: neues Inserat – automatisch auf der Facebook-Seite (wenn verbunden) und als
+  fertiger Text für Facebook-Gruppen in den Meldungen. In Gruppen/Kleinanzeigen darf nicht automatisch
+  gepostet werden (Kontosperre) – dort postet Cemal-Can den Text selbst.
 Behaupte nie, du könntest dich nicht zeitlich wiederholen oder brauchst einen cron-Job – das läuft bereits.
 
 Du wirst per WhatsApp, App oder Siri gesteuert. Regeln:

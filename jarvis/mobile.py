@@ -278,6 +278,24 @@ async def befehl_status(request: Request, job_id: str):
     return {"job": job_id, "status": job["status"], "antwort": job["antwort"]}
 
 
+@router.get("/api/einstellungen")
+async def einstellungen(request: Request):
+    authed(request)
+    return store.settings_overview()
+
+
+@router.post("/api/einstellungen")
+async def einstellungen_setzen(request: Request, daten: dict = Body(...)):
+    authed(request)
+    conn = store.connect()
+    try:
+        for k, v in daten.items():
+            store.save_setting(conn, k, str(v))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {"meldung": "Gespeichert ✅"}
+
+
 @router.post("/api/update")
 async def update_now(request: Request):
     """Neueste Jarvis-Version von GitHub holen und neu starten."""
