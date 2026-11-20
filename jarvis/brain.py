@@ -210,6 +210,10 @@ So gehst du vor (genau so suchen, Begriff passend zum Fokus):
 - "Kraftfahrer CE sucht neue Herausforderung Fernverkehr"
 - "Berufskraftfahrer sucht Job Nahverkehr <Region>"
 - "LKW Fahrer sucht Arbeit Telefon" / "Kraftfahrer CE sucht Stelle Handy WhatsApp"
+- weitere Quellen: "dhd24 Stellengesuche Kraftfahrer", "markt.de Stellengesuche Fahrer", "fahrerboerse Fahrer sucht",
+  "stellengesuche Berufskraftfahrer <Stadt>", "Kipperfahrer sucht Arbeit", "Baustellenfahrer sucht Stelle",
+  "Fahrer Entsorgung sucht Job", "Sattelzugfahrer sucht Arbeit", "Busfahrer/LKW-Fahrer sucht Stelle"
+  – wechsle Städte (Dortmund, Essen, Duisburg, Köln, Hamburg, Berlin, Hannover, Bremen, Leipzig, München …)
 VORRANG haben Anzeigen, in denen die Person ihre Telefon-/WhatsApp-Nummer oder E-Mail SELBST öffentlich angegeben
 hat – diese zuerst und vollständig aufnehmen (Nummer exakt so, wie sie in der Anzeige steht).
 Sammelseiten in einzelne Personen zerlegen. Stellenangebote von Speditionen/Personaldienstleistern und

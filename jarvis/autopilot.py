@@ -180,6 +180,7 @@ MINIMUM_FOCUSES = [
     "Fachfrau Gesundheit FaGe", "Assistenzarzt / Assistenzärztin", "Facharzt Innere Medizin",
     "Facharzt Psychiatrie", "Facharzt Anästhesie", "Pflegefachkraft Geriatrie",
     "LKW: LKW-Fahrer CE", "LKW: Berufskraftfahrer", "LKW: Kraftfahrer Fernverkehr", "LKW: Fahrer ADR",
+    "LKW: Kipperfahrer Baustelle", "LKW: Fahrer Entsorgung", "LKW: Sattelzugfahrer", "LKW: Fahrer Nahverkehr NRW",
 ]
 
 
