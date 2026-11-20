@@ -121,9 +121,19 @@ def smtp_host() -> str:
     return next((h for k, h in SMTP_BY_DOMAIN.items() if domain.startswith(k) or domain == k), "")
 
 
-def send_email(to: str, subject: str, body: str, attachments: list[str] | None = None) -> None:
+def mail_ready() -> bool:
+    """Kann Jarvis Mails senden? (Passwort – oder bei Outlook die Microsoft-Anmeldung)"""
+    from . import msauth
     host = smtp_host()
-    if not (host and config.SMTP_USER and config.SMTP_PASSWORD):
+    if not (host and config.SMTP_USER):
+        return False
+    return bool(config.SMTP_PASSWORD) or (msauth.is_outlook(host) and msauth.connected())
+
+
+def send_email(to: str, subject: str, body: str, attachments: list[str] | None = None) -> None:
+    from . import msauth
+    host = smtp_host()
+    if not mail_ready():
         raise RuntimeError("E-Mail-Versand nicht eingerichtet (E-Mail-Login und Passwort unter ⚙️ Verbindungen)")
     msg = EmailMessage()
     msg["From"] = f"{config.RECRUITER_NAME} – {config.AGENCY_NAME} <{config.SMTP_FROM or config.SMTP_USER}>"
@@ -143,7 +153,12 @@ def send_email(to: str, subject: str, body: str, attachments: list[str] | None =
     try:
         with smtplib.SMTP(host, config.SMTP_PORT, timeout=30) as s:
             s.starttls()
-            s.login(config.SMTP_USER, config.SMTP_PASSWORD)
+            if msauth.is_outlook(host) and msauth.connected():
+                s.ehlo()
+                token = msauth.xoauth2(config.SMTP_USER)
+                s.auth("XOAUTH2", lambda challenge=None: token, initial_response_ok=True)
+            else:
+                s.login(config.SMTP_USER, config.SMTP_PASSWORD)
             s.send_message(msg)
     except smtplib.SMTPAuthenticationError as exc:
         hint = (" Outlook/Hotmail: Microsoft lässt das normale Passwort oft nicht mehr zu – erstelle unter "

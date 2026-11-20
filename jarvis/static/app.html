@@ -118,6 +118,7 @@ nav button.on{color:var(--accent)}
   <button class="btn sec" id="update-btn">⬇️ Jarvis aktualisieren</button>
   <button class="btn" id="push-btn">🔔 Mitteilungen aktivieren</button>
   <button class="btn sec" id="mail-btn">📧 Testmail an mich</button>
+  <button class="btn sec" id="ms-btn">🔑 Outlook: Mit Microsoft anmelden</button>
   <button class="btn sec" id="call-btn">📞 Testanruf an mich</button>
   <button class="btn sec" id="settings-btn">⚙️ Verbindungen &amp; Einstellungen</button>
   <h2>Meldungen</h2>
@@ -547,6 +548,15 @@ $("#push-btn").onclick = async () => {
 };
 $("#mail-btn").onclick = async () => {
   try { alert((await api("/api/testmail", {method: "POST"})).meldung); } catch (e) { alert(e.message); }
+};
+$("#ms-btn").onclick = async () => {
+  try {
+    const r = await api("/api/microsoft/start", {method: "POST"});
+    try { await navigator.clipboard.writeText(r.code); } catch (e) {}
+    alert(`Code: ${r.code}\n(schon kopiert)\n\nGleich öffnet sich Microsoft: Code einfügen und mit deinem Outlook-Konto anmelden. `
+      + `Danach meldet sich Jarvis von selbst.`);
+    window.open(r.link, "_blank");
+  } catch (e) { alert(e.message); }
 };
 $("#call-btn").onclick = async () => {
   try { toast((await api("/api/testanruf", {method: "POST"})).meldung); } catch (e) { toast(e.message); }

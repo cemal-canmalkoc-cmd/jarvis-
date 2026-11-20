@@ -142,3 +142,35 @@ def test_defaults_applied_once_after_update():
     b.ensure_defaults()                              # zweites Mal ändert nichts
     assert config.CHAT_MAX_USD == 0.1
     store.save_setting(conn, "CHAT_MAX_USD", "0.20")
+
+
+def test_outlook_uses_microsoft_login_instead_of_password(monkeypatch):
+    import smtplib
+    from jarvis import msauth
+    monkeypatch.setattr(config, "SMTP_HOST", "")
+    monkeypatch.setattr(config, "SMTP_USER", "hansa.personal@outlook.de")
+    monkeypatch.setattr(config, "SMTP_PASSWORD", "")
+    monkeypatch.setattr(config, "MS_CLIENT_ID", "00000000-1111-2222-3333-444444444444")
+    store.set_state(store.connect(), "ms_refresh_token", "")
+    assert not matching.mail_ready()                          # ohne Anmeldung kein Versand
+    store.set_state(store.connect(), "ms_refresh_token", "rt-123")
+    monkeypatch.setattr(msauth, "_cache", {"token": "at-xyz", "exp": 9e12})
+    assert matching.mail_ready() and inbox.imap_host() == "outlook.office365.com"
+    calls = []
+
+    class FakeSMTP:
+        def __init__(self, host, port, timeout): calls.append(("host", host))
+        def __enter__(self): return self
+        def __exit__(self, *a): pass
+        def starttls(self): pass
+        def ehlo(self): pass
+        def auth(self, mech, obj, initial_response_ok=True): calls.append((mech, obj()))
+        def login(self, *a): calls.append(("login",))
+        def send_message(self, m): calls.append(("sent", m["To"]))
+    monkeypatch.setattr(smtplib, "SMTP", FakeSMTP)
+    matching.send_email("x@example.org", "Test", "Hallo")
+    assert ("host", "smtp-mail.outlook.com") in calls and ("login",) not in calls
+    mech, s = next(c for c in calls if c[0] == "XOAUTH2")
+    assert "user=hansa.personal@outlook.de" in s and "Bearer at-xyz" in s
+    assert ("sent", "x@example.org") in calls
+    store.set_state(store.connect(), "ms_refresh_token", "")

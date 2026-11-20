@@ -297,7 +297,7 @@ def daily_drive() -> dict:
             continue
         text = doc_request_text(row)
         sent = False
-        if a.email and matching.smtp_host() and config.SMTP_USER and config.SMTP_PASSWORD:
+        if a.email and matching.mail_ready():
             try:
                 matching.send_email(a.email, "Ihre Unterlagen – nächster Schritt", text)
                 out["dokument_mails"] += 1

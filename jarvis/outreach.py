@@ -46,8 +46,8 @@ def wa_short(bereich: str = "lkw", quelle: str = "") -> str:
 
 
 def can_email() -> bool:
-    from .matching import smtp_host
-    return bool(smtp_host() and config.SMTP_USER and config.SMTP_PASSWORD)
+    from .matching import mail_ready
+    return mail_ready()
 
 
 def build_email(c: ScoredCandidate) -> tuple[str, str]:

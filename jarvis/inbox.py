@@ -33,7 +33,7 @@ def imap_host() -> str:
 
 
 def ready() -> bool:
-    return bool(config.AUTO_INBOX and config.SMTP_USER and config.SMTP_PASSWORD and imap_host())
+    return bool(config.AUTO_INBOX and matching.mail_ready() and imap_host())
 
 
 def _body(msg) -> tuple[str, list[tuple[str, bytes]]]:
@@ -101,6 +101,15 @@ def handle(sender: str, subject: str, text: str, files: list[tuple[str, bytes]])
     return None
 
 
+def _login(box) -> None:
+    from . import msauth
+    if msauth.is_outlook(imap_host()) and msauth.connected():
+        token = msauth.xoauth2(config.SMTP_USER)
+        box.authenticate("XOAUTH2", lambda _: token.encode())
+    else:
+        box.login(config.SMTP_USER, config.SMTP_PASSWORD)
+
+
 def _set_status(ok: bool, err: str = "") -> None:
     from datetime import datetime
     store.set_state(store.connect(), "inbox_status",
@@ -128,7 +137,7 @@ def check() -> str:
         return "Server unbekannt – unter ⚙️ 'Posteingangs-Server' eintragen"
     try:
         box = imaplib.IMAP4_SSL(host, timeout=20)
-        box.login(config.SMTP_USER, config.SMTP_PASSWORD)
+        _login(box)
         box.select("INBOX")
         _, ids = box.search(None, "UNSEEN")
         box.logout()
@@ -160,7 +169,7 @@ def poll(max_mails: int = 15) -> list[str]:
     out = []
     try:
         box = imaplib.IMAP4_SSL(imap_host(), timeout=30)
-        box.login(config.SMTP_USER, config.SMTP_PASSWORD)
+        _login(box)
     except Exception as exc:  # noqa: BLE001
         _set_status(False, str(exc))
         raise

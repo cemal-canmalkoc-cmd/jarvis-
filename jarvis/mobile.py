@@ -545,6 +545,16 @@ async def testmail(request: Request):
     return {"meldung": f"Testmail an {to} gesendet ✅\nPosteingang: {postfach}"}
 
 
+@router.post("/api/microsoft/start")
+async def microsoft_start(request: Request):
+    authed(request)
+    from . import msauth
+    try:
+        return await asyncio.to_thread(msauth.start)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(400, str(exc)) from exc
+
+
 @router.post("/api/testanruf")
 async def testanruf(request: Request):
     authed(request)
