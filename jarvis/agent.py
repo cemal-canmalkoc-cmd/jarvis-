@@ -290,12 +290,26 @@ def _dump(content) -> list[dict]:
     return [b.model_dump(exclude_none=True) if hasattr(b, "model_dump") else b for b in content]
 
 
-def _conversation(conn, phone: str, max_age_h: int) -> list:
+def _fingerprint(system: str) -> str:
+    import hashlib
+    return hashlib.sha256(f"{config.MODEL}|{system}".encode()).hexdigest()[:16]
+
+
+def _conversation(conn, phone: str, max_age_h: int, system: str) -> list:
+    """Bisheriger Verlauf – aber nur, wenn Modell und Anweisungen gleich geblieben sind.
+    Nach einem Jarvis-Update beginnt ein frisches Gespräch (alte Gedanken-Blöcke passen sonst nicht)."""
     messages, updated = store.load_chat(conn, phone)
-    if not updated or datetime.fromisoformat(updated) < datetime.now() - timedelta(hours=max_age_h) \
+    key = f"chatfp:{store.digits(phone) or phone}"
+    same = store.get_state(conn, key) == _fingerprint(system)
+    if not same or not updated or datetime.fromisoformat(updated) < datetime.now() - timedelta(hours=max_age_h) \
             or len(messages) > 80:
+        store.set_state(conn, key, _fingerprint(system))
         return []  # neues Gespräch beginnen (alte Verläufe werden nie umgeschrieben)
     return messages
+
+
+def _is_binding_error(exc: Exception) -> bool:
+    return isinstance(exc, anthropic.BadRequestError) and "thinking" in str(exc) and "signature" in str(exc)
 
 
 # --------------------------------------------------------------------------- Owner
@@ -353,15 +367,22 @@ def handle_owner(text: str) -> str:
 def _handle_owner(text: str) -> str:
     conn = store.connect()
     phone = config.OWNER_WHATSAPP or "app"
-    messages = _conversation(conn, phone, max_age_h=3)
+    messages = _conversation(conn, phone, max_age_h=3, system=OWNER_SYSTEM)
     messages.append({"role": "user", "content": f"[{datetime.now():%d.%m.%Y %H:%M}] {text}"})
     reply = ""
     for _ in range(25):
-        response = brain.create(
-            model=config.MODEL, max_tokens=16000,
-            system=OWNER_SYSTEM, output_config={"effort": "low" if config.SPARMODUS else "medium"}, tools=TOOL_DEFS,
-            messages=messages,
-        )
+        kwargs = dict(model=config.MODEL, max_tokens=16000, system=OWNER_SYSTEM, tools=TOOL_DEFS,
+                      output_config={"effort": "low" if config.SPARMODUS else "medium"})
+        try:
+            response = brain.create(**kwargs, messages=messages)
+        except anthropic.BadRequestError as exc:
+            if not _is_binding_error(exc) or len(messages) <= 1:
+                raise
+            # Selbstheilung: alter Verlauf passt nicht mehr → nur mit dem aktuellen Auftrag neu beginnen
+            log.warning("Verlauf zurückgesetzt: %s", exc)
+            messages = [messages[-1]] if messages[-1]["role"] == "user" and isinstance(
+                messages[-1]["content"], str) else [{"role": "user", "content": f"[{datetime.now():%d.%m.%Y %H:%M}] {text}"}]
+            response = brain.create(**kwargs, messages=messages)
         messages.append({"role": "assistant", "content": _dump(response.content)})
         if response.stop_reason == "tool_use":
             results = []
@@ -474,12 +495,13 @@ def handle_candidate(sender: str, text: str, media: list[tuple[str, str]]) -> st
                    f"Anerkennung {c.assessment.recognition_status}, Tier {c.tier}, Status {row['status']}. "
                    f"Fehlt noch: {'; '.join(c.missing) or 'nichts'}")
 
-    messages = _conversation(conn, sender, max_age_h=24)
-    messages.append({"role": "user", "content": f"{text or '(Anhang)'}{extra}"})
+    messages = _conversation(conn, sender, max_age_h=24, system=CANDIDATE_SYSTEM)
+    messages.append({"role": "user", "content": f"(System-Info, für die Person unsichtbar: {profile})\n\n"
+                                                f"{text or '(Anhang)'}{extra}"})
     try:
         response = brain.create(
             model=config.MODEL, max_tokens=4000,
-            system=CANDIDATE_SYSTEM + "\n\n" + profile, output_config={"effort": "low"},
+            system=CANDIDATE_SYSTEM, output_config={"effort": "low"},
             messages=messages,
         )
     except anthropic.APIError as exc:

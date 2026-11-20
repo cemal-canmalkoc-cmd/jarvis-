@@ -58,3 +58,32 @@ def test_day_round_rotates_and_runs(monkeypatch):
     assert "Autopilot" not in config.__name__  # sanity
     from jarvis import agent
     assert "alle 2 Stunden" in agent.OWNER_SYSTEM and "cron" in agent.OWNER_SYSTEM
+
+
+def test_owner_chat_resets_after_update_and_self_heals(monkeypatch):
+    import anthropic
+    from types import SimpleNamespace
+    from jarvis import agent, config, store
+
+    class Block(SimpleNamespace):
+        def model_dump(self, exclude_none=False):
+            return dict(vars(self))
+
+    sent = []
+
+    def create(**kw):
+        sent.append([m["role"] for m in kw["messages"]])
+        if len(sent) == 2 and len(kw["messages"]) > 1:   # simuliert: alter Gedanken-Block passt nicht
+            raise anthropic.BadRequestError(
+                "Invalid `signature` in `thinking` block",
+                response=SimpleNamespace(status_code=400, headers={}, request=None), body=None)
+        return SimpleNamespace(stop_reason="end_turn", content=[Block(type="text", text="ok")])
+    monkeypatch.setattr(agent.brain, "create", create)
+    monkeypatch.setattr(config, "OWNER_WHATSAPP", "+491700000099")
+
+    assert agent.handle_owner("Hallo") == "ok"
+    assert agent.handle_owner("Noch was") == "ok"          # Fehler → automatisch neu begonnen
+    assert sent[-1] == ["user"]
+    monkeypatch.setattr(agent, "OWNER_SYSTEM", agent.OWNER_SYSTEM + " geändert")
+    agent.handle_owner("Nach Update")
+    assert sent[-1] == ["user"]                              # neuer Prompt → frisches Gespräch
