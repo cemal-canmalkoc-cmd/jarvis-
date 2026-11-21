@@ -168,6 +168,9 @@ def sales_plan(n: int = 8) -> list[dict]:
     conn = store.connect()
     interested = conn.execute("SELECT * FROM candidates WHERE status IN ('interessiert','vorgestellt') "
                               "AND tier IN ('A','B','C') ORDER BY score DESC LIMIT 50").fetchall()
+    if not interested:  # noch niemand interessiert → mit dem Talentpool (aktiv Jobsuchende) Firmen anrufen
+        interested = conn.execute("SELECT * FROM candidates WHERE status IN ('neu','kontaktiert') "
+                                  "AND tier IN ('A','B') ORDER BY score DESC LIMIT 50").fetchall()
     tried_today = {r[0] for r in conn.execute("SELECT company_id FROM sales_log WHERE substr(created,1,10)=?",
                                               (date.today().isoformat(),)).fetchall()}
     plan, seen = [], set()
