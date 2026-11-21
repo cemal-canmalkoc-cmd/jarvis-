@@ -28,7 +28,7 @@ def test_no_budget_means_ask_not_spend(monkeypatch):
     assert ran == []
     texts = [n["text"] for n in store.notifications(conn, 5)]
     assert any("Soll ich heute nach Kandidaten suchen" in t for t in texts)
-    assert any("Inserat" in t and "Soll ich" in t for t in texts)
+    assert not any("Inserat" in t and "Soll ich" in t for t in texts)      # Marketing ist aus
 
 
 def test_budget_allows_auto(monkeypatch):

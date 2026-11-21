@@ -141,6 +141,7 @@ def test_jobs_post_to_facebook_page_once_with_daily_limit(monkeypatch):
     class R:
         status_code = 200
         def json(self): return {"id": f"p{len(posts)}"}
+    monkeypatch.setattr(config, "MARKETING", True)
     monkeypatch.setattr(config, "META_PAGE_ID", "123")
     monkeypatch.setattr(config, "META_PAGE_TOKEN", "tok")
     monkeypatch.setattr(ads.requests, "post", lambda url, data, timeout: posts.append(data) or R())

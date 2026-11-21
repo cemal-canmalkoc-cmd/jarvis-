@@ -162,6 +162,15 @@ def ensure_defaults_v4() -> None:
     store.set_state(conn, "defaults_v4", "1")
 
 
+def ensure_defaults_v5() -> None:
+    """Einmalig: Marketing aus – keine automatischen Inserate mehr."""
+    conn = store.connect()
+    if store.get_state(conn, "defaults_v5"):
+        return
+    store.save_setting(conn, "ADS_PER_DAY", "0")
+    store.set_state(conn, "defaults_v5", "1")
+
+
 def ensure_defaults_v3() -> None:
     """Einmalig: Bewerber direkt ins WhatsApp, häufiger suchen (innerhalb 1 $/Tag). Freigabe bleibt wie sie ist."""
     conn = store.connect()

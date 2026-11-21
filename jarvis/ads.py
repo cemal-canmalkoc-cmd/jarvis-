@@ -126,7 +126,7 @@ def job_post_text(j: dict) -> str:
 
 def post_job(j: dict, force: bool = False) -> str | None:
     """Stelle auf der Facebook-Seite veröffentlichen (einmal pro Stelle, max. JOB_POSTS_PER_DAY pro Tag)."""
-    if not facebook_ready():
+    if not facebook_ready() or not config.MARKETING:
         return None
     conn = store.connect()
     if store.get_state(conn, f"fb_job:{j['id']}"):
@@ -148,7 +148,7 @@ def post_job(j: dict, force: bool = False) -> str | None:
 def post_open_jobs() -> list[str]:
     """Noch nicht gepostete aktive Stellen auf die Facebook-Seite bringen (Tageslimit beachten)."""
     out = []
-    if not facebook_ready():
+    if not facebook_ready() or not config.MARKETING:
         return out
     for j in store.jobs(store.connect()):
         try:

@@ -57,6 +57,7 @@ async def lifespan(_: FastAPI):
         budget.ensure_defaults()
         budget.ensure_defaults_v3()
         budget.ensure_defaults_v4()
+        budget.ensure_defaults_v5()
         n = store.dedupe_candidates(store.connect())
         if n:
             logging.getLogger("jarvis").info("%s doppelte Kandidaten zusammengeführt", n)

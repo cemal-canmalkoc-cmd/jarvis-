@@ -198,7 +198,7 @@ def test_team_shows_departments_and_blockers(monkeypatch):
     monkeypatch.setattr(config, "SMTP_USER", "")
     monkeypatch.setattr(config, "OUTBOX", False)
     t = {m["rolle"].split(" ")[0]: m for m in team.status()}
-    assert {"Sourcing", "Recruiting", "Vertrieb", "Disposition", "Marketing", "Backoffice"} <= set(t)
+    assert {"Sourcing", "Recruiting", "Vertrieb", "Disposition", "Backoffice"} <= set(t) and "Marketing" not in t
     assert not t["Vertrieb"]["ok"] and "E-Mail" in t["Vertrieb"]["problem"]
     assert "Dein Jarvis-Team" in team.summary_text()
 

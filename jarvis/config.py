@@ -162,7 +162,7 @@ SEARCH_EVERY_HOURS = int(os.environ.get("JARVIS_SEARCH_EVERY_HOURS", "2"))
 SEARCH_HOURS = (8, 21)
 
 # Inserate: Jarvis schreibt täglich Inserate und postet sie auf eurer Facebook-Seite.
-ADS_PER_DAY = int(os.environ.get("JARVIS_ADS_PER_DAY", "2"))
+ADS_PER_DAY = int(os.environ.get("JARVIS_ADS_PER_DAY", "0"))  # Marketing aus (Wunsch des Inhabers)
 META_PAGE_ID = os.environ.get("META_PAGE_ID", "")        # ID der Facebook-Seite "Hansa Personal"
 META_PAGE_TOKEN = os.environ.get("META_PAGE_TOKEN", "")  # dauerhaftes Seiten-Token (pages_manage_posts)
 
@@ -228,6 +228,8 @@ REFERRAL_BONUS_ARZT = os.environ.get("JARVIS_REFERRAL_BONUS_ARZT", "2.000 €")
 OUTBOX = os.environ.get("JARVIS_OUTBOX", "1").strip().lower() in ("1", "true", "ja")
 # Täglich so viele Firmen mit offener Stelle per E-Mail anschreiben (kostenlos, ohne Tages-Ja)
 ACQUISITION_PER_DAY = int(os.environ.get("JARVIS_ACQUISITION_PER_DAY", "10"))
+# Marketing-Funktion (Inserate schreiben, Facebook-Posts, Team „Marketing“) – aus
+MARKETING = os.environ.get("JARVIS_MARKETING", "0").strip().lower() in ("1", "true", "ja")
 ASK_DAILY = os.environ.get("JARVIS_ASK_DAILY", "1").strip().lower() in ("1", "true", "ja")
 # Postfach lesen und beantworten (gleiche Zugangsdaten wie der E-Mail-Versand)
 AUTO_INBOX = os.environ.get("JARVIS_AUTO_INBOX", "1").strip().lower() in ("1", "true", "ja")

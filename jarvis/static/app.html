@@ -130,7 +130,6 @@ nav button.on{color:var(--accent)}
   <button class="btn" id="push-btn">🔔 Mitteilungen aktivieren</button>
   <button class="btn sec" id="mail-btn">📧 Testmail an mich</button>
   <button class="btn sec" id="ms-btn">🔑 Outlook: Mit Microsoft anmelden</button>
-  <button class="btn sec" id="fb-btn">📣 Facebook testen</button>
   <button class="btn sec" id="call-btn">📞 Testanruf an mich</button>
   <button class="btn" onclick="deepSearch('lkw')">🔎 Tiefensuche LKW-Fahrer</button>
   <button class="btn sec" onclick="deepSearch('pflege')">🔎 Tiefensuche Pflege &amp; Ärzte</button>
@@ -573,7 +572,7 @@ function openFirm(f) {
 
 // ---------- Jarvis-Chat
 const QUICK = ["Tagesbericht", "Ruf die besten 5 Kandidaten an", "Such Kliniken in Zürich mit offenen Stellen",
-  "Schreib ein Inserat für Facebook-Gruppen Pflege", "Wer ist heute interessiert?", "Starte die Web-Suche"];
+  "Wer ist heute interessiert?", "Starte die Web-Suche"];
 for (const q of QUICK) {
   $("#quick").append(h("button", {class: "chip", onclick: () => { tab("jarvis"); send(q); }}, q));
   $("#sugg").append(h("button", {class: "chip", onclick: () => send(q)}, q));
@@ -664,9 +663,7 @@ $("#push-btn").onclick = async () => {
 $("#mail-btn").onclick = async () => {
   try { alert((await api("/api/testmail", {method: "POST"})).meldung); } catch (e) { alert(e.message); }
 };
-$("#fb-btn").onclick = async () => {
-  try { alert((await api("/api/facebook/test", {method: "POST"})).meldung); } catch (e) { alert(e.message); }
-};
+
 $("#ms-btn").onclick = async () => {
   try {
     const r = await api("/api/microsoft/start", {method: "POST"});
