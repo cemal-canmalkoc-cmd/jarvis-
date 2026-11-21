@@ -85,7 +85,7 @@ Wenn Sie Interesse haben, antworten Sie einfach mit Ihrer WhatsApp-Nummer – da
 Oder schreiben Sie mir selbst per WhatsApp (Lebenslauf gern als Foto mitschicken):
 {wa_short('lkw' if lkw else ('arzt' if a.category == 'arzt' else 'pflege'), 'mail')}
 
-Oder bewerben Sie sich in 2 Minuten online: {config.PUBLIC_URL}/bewerbung
+Oder bewerben Sie sich in 2 Minuten online: {config.PUBLIC_URL}/bewerbung{'?bereich=lkw' if lkw else ''}
 
 Freundliche Grüsse
 {config.RECRUITER_NAME}

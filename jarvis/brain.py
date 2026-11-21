@@ -168,6 +168,9 @@ So gehst du vor (bewährt – genau so suchen):
    - "medi-jobs.de Stellengesuche <Bereich>"
    - "<Beruf> sucht neue Stelle Schweiz"
    - "<Beruf> sucht Stelle Telefon" / "<Beruf> Stellengesuch Handy WhatsApp"
+   - "<Beruf> Stellengesuch E-Mail" / "<Beruf> sucht neue Herausforderung Kontakt E-Mail" /
+     "Stellengesuch <Beruf> Bewerbungsunterlagen auf Anfrage E-Mail" (Jobbörsen mit öffentlichen Gesuchen,
+     z. B. markt.de, quoka, dhd24, Kalaydo, regionale Anzeigenblätter, Jobbörsen-Bewerberprofile)
    VORRANG haben Anzeigen, in denen die Person ihre Telefon-/WhatsApp-Nummer oder E-Mail SELBST öffentlich
    angegeben hat – diese zuerst und vollständig aufnehmen (Nummer exakt so, wie sie in der Anzeige steht).
 2. Diese Treffer sind oft SAMMELSEITEN mit mehreren Gesuchen. Lies den Inhalt und nimm JEDE einzelne
@@ -210,6 +213,7 @@ So gehst du vor (genau so suchen, Begriff passend zum Fokus):
 - "Kraftfahrer CE sucht neue Herausforderung Fernverkehr"
 - "Berufskraftfahrer sucht Job Nahverkehr <Region>"
 - "LKW Fahrer sucht Arbeit Telefon" / "Kraftfahrer CE sucht Stelle Handy WhatsApp"
+- "Berufskraftfahrer Stellengesuch E-Mail" / "LKW Fahrer sucht Stelle Kontakt per E-Mail"
 - weitere Quellen: "dhd24 Stellengesuche Kraftfahrer", "markt.de Stellengesuche Fahrer", "fahrerboerse Fahrer sucht",
   "stellengesuche Berufskraftfahrer <Stadt>", "Kipperfahrer sucht Arbeit", "Baustellenfahrer sucht Stelle",
   "Fahrer Entsorgung sucht Job", "Sattelzugfahrer sucht Arbeit", "Busfahrer/LKW-Fahrer sucht Stelle"
