@@ -15,6 +15,8 @@ def area_for(category: str, role: str | None, adr: bool | None = None) -> str:
     if category == "lkw":
         return "LKW mit ADR" if adr else "LKW"
     r = (role or "").lower()
+    if "betreuung" in r or "live-in" in r or "24h" in r or "24-stunden" in r:
+        return "Betreuung 24h"
     if "fage" in r or "fachperson gesundheit" in r or "fachfrau gesundheit" in r or "fachmann gesundheit" in r:
         return "FaGe"
     return "Pflege"

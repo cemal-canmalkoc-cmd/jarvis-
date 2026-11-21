@@ -74,6 +74,15 @@ Pflege:
 - Gesuchte Fachrichtungen: {", ".join(PHYSICIAN_SPECIALTIES)}
 - Von Vorteil: MEBEKO-Anerkennung oder positiver Stand des Anerkennungsverfahrens.
 - Deutsch: mindestens B2, für Ärzte idealerweise C1.
+
+24-Stunden-/Live-in-Betreuung (Seniorenbetreuung zu Hause):
+- Betreuungskräfte, Pflegehelfer/innen, Altenpfleger/innen; Erfahrung in der Betreuung, Deutsch mind. B1.
+
+GESCHÄFTSMODELL SCHWEIZ (Partner-Modell):
+- Hansa Personal gewinnt medizinisches Personal in Deutschland (Ärzte, Pflegefachkräfte, FaGe, Betreuungskräfte).
+- Schweizer Partner (Kliniken, Spitex, Personalvermittler/-verleiher mit Bewilligung, 24h-Betreuungsanbieter)
+  stellen an und übernehmen Anstellung, Bewilligungen und Abwicklung.
+- Hansa Personal erhält dafür eine Provision (Erfolgshonorar) vom Partner – für Bewerber ist alles kostenlos.
 """.strip()
 
 # ---------------------------------------------------------------------------

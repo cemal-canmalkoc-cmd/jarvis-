@@ -75,7 +75,32 @@ def agreement_text(firm) -> str:
     lkw = (firm["branche"] or "") == "lkw" or any(w in f"{firm['needs']} {firm['name']}".lower()
                                                    for w in ("fahrer", "lkw", "spedition", "logistik"))
     areas = ("LKW", "LKW mit ADR") if lkw else ("Pflege", "FaGe", "Arzt")
+    if not lkw:
+        areas = ("Pflege", "FaGe", "Arzt", "Betreuung 24h")
     lines = [f"- {a}: {prices[a]}" for a in areas if prices.get(a) and prices[a] != "noch nicht festgelegt"]
+    if not lkw:
+        return f"""KOOPERATIONSVEREINBARUNG (Personalgewinnung Deutschland → Schweiz)
+
+zwischen {config.AGENCY_NAME} ({config.RECRUITER_NAME}) – nachfolgend „Hansa Personal"
+und {firm['name']}{', ' + firm['city'] if firm['city'] else ''} – nachfolgend „Partner"
+
+1. Hansa Personal gewinnt in Deutschland Kandidatinnen und Kandidaten (Ärzte, Pflegefachpersonen, FaGe,
+   Betreuungskräfte), prüft Qualifikation, Deutsch und Unterlagen vor und stellt sie dem Partner vor –
+   zunächst anonym, vollständige Unterlagen nach Bestätigung dieser Vereinbarung und mit Einwilligung der Person.
+2. Der Partner entscheidet über die Anstellung und übernimmt Arbeitsvertrag, Bewilligungen (inkl. Meldeverfahren)
+   und die gesamte Abwicklung in der Schweiz.
+3. Provision (Erfolgshonorar, nur bei Anstellung):
+{chr(10).join(lines) or '- gemäss gesondertem Angebot'}
+4. Fälligkeit: mit Arbeitsantritt der vorgestellten Person, zahlbar innerhalb von 14 Tagen nach Rechnung.
+5. Die Provision fällt auch an, wenn die vorgestellte Person innerhalb von 12 Monaten nach der Vorstellung beim
+   Partner oder bei einem Kunden des Partners eine Stelle antritt – auch bei direkter Kontaktaufnahme.
+6. Keine Ersatz- oder Nachbesetzungsgarantie. Für Kandidaten ist der Service kostenlos.
+7. Beide Seiten behandeln Bewerberdaten vertraulich (DSGVO / DSG).
+
+Bestätigung: Eine kurze Antwort „Einverstanden" per E-Mail genügt.
+
+{config.RECRUITER_NAME}, {config.AGENCY_NAME}
+(Hinweis: Vorlage – vor dem ersten Einsatz bitte rechtlich prüfen lassen.)"""
     return f"""VERMITTLUNGSVEREINBARUNG
 
 zwischen {config.AGENCY_NAME} ({config.RECRUITER_NAME}) – nachfolgend „Vermittler"
@@ -292,9 +317,7 @@ def acquisition_text(firm) -> tuple[str, str]:
                  "aus Ihrer Region, die aktiv eine neue Stelle suchen (Führerschein C/CE, Fahrerkarte, Modul 95).")
         terms = "Kosten entstehen nur bei Einstellung: 2.000 € netto pauschal (3.000 € bei ADR), keine Vorabkosten."
     else:
-        offer = ("Wir vermitteln Pflegefachpersonen und Ärztinnen/Ärzte aus Deutschland in die Schweiz und begleiten "
-                 "die Anerkennung (SRK/MEBEKO).")
-        terms = "Kosten entstehen nur bei Einstellung, keine Vorabkosten."
+        return partner_text(firm)
     subject = f"Ihre offene Stelle ({need[:60]}) – passende Bewerber"
     body = f"""Guten Tag{' ' + firm['contact_name'] if firm['contact_name'] else ''},
 
@@ -316,6 +339,46 @@ WhatsApp: {_owner_number()}
 
 Sie möchten keine Vorschläge von uns? Eine kurze Antwort „Kein Interesse“ genügt – dann melden wir uns nicht mehr."""
     return subject, body
+
+
+def partner_text(firm) -> tuple[str, str]:
+    """Schweizer Gesundheitswesen: Partner-Modell – wir liefern Personal aus Deutschland, der Partner stellt an
+    (inkl. Bewilligung), wir erhalten eine Provision."""
+    from . import pricing
+    need = firm["needs"] or "Pflege- und Betreuungspersonal"
+    prices = pricing.overview()
+    known = [f"{a}: {prices[a]}" for a in ("Pflege", "Arzt", "Betreuung 24h")
+             if prices.get(a) and prices[a] != "noch nicht festgelegt"]
+    terms = ("Provision nur bei erfolgreicher Anstellung – " + "; ".join(known)) if known else \
+        "Provision nur bei erfolgreicher Anstellung; die Konditionen besprechen wir gerne in einem kurzen Telefonat."
+    subject = f"Kooperation: Fachpersonal aus Deutschland für {need[:50]}"
+    body = f"""Grüezi{' ' + firm['contact_name'] if firm['contact_name'] else ''}
+
+ich habe gesehen, dass Sie aktuell {need} suchen.
+
+Ich bin {config.RECRUITER_NAME} von {config.AGENCY_NAME} aus Deutschland. Wir gewinnen medizinisches Personal in
+Deutschland – Ärztinnen und Ärzte, Pflegefachpersonen, FaGe und Betreuungskräfte –, das in der Schweiz arbeiten
+möchte, und klären vorab Diplom, Deutschkenntnisse, Anerkennung (SRK/MEBEKO), Erfahrung und Verfügbarkeit.
+
+Gerne leite ich Ihnen passende Personen zu – zunächst als anonymes Kurzprofil, bei Interesse mit vollständigen
+Unterlagen. Anstellung und Bewilligungen laufen über Sie.
+
+{terms}
+
+Hätten Sie Interesse an einer Zusammenarbeit? Eine kurze Antwort genügt.
+
+Freundliche Grüsse
+{config.RECRUITER_NAME}
+{config.AGENCY_NAME}
+WhatsApp: {_owner_number_intl()}
+
+Falls kein Interesse besteht, genügt eine kurze Antwort – dann melden wir uns nicht mehr."""
+    return subject, body
+
+
+def _owner_number_intl() -> str:
+    from .outreach import readable_number
+    return readable_number(national=False) or ""
 
 
 def _owner_number() -> str:

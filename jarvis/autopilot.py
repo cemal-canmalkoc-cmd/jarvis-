@@ -55,8 +55,9 @@ def morning(force: bool = False) -> dict:
     if len(store.list_companies(conn, "neu", 100)) < 15:
         for i in range(2):
             region = REGIONS[(day_idx + i) % len(REGIONS)]
-            focus = "Pflegefachpersonen und Ärzte" if i == 0 else \
-                f"Ärzte {', '.join(PHYSICIAN_SPECIALTIES[:4])}"
+            focus = ("Pflegefachpersonen und Ärzte" if i == 0 else
+                     "Partner: Personalvermittler/Personalverleiher Gesundheit, Spitex und 24h-Betreuungsanbieter "
+                     f"sowie Ärzte {', '.join(PHYSICIAN_SPECIALTIES[:3])}")
             try:
                 new_companies += companies.find(focus, region)["neu"]
                 if config.LKW_ENABLED and i == 0:
@@ -179,6 +180,7 @@ def day_round(now: datetime | None = None) -> dict:
 
 # Breite Berufsliste für das Tagesminimum – jede Runde andere Begriffe
 MINIMUM_FOCUSES = [
+    "Betreuungskraft 24h Live-in sucht Stelle Schweiz", "Altenpflegehelferin sucht Stelle Seniorenbetreuung",
     "Krankenschwester", "Gesundheits- und Krankenpflegerin", "examinierte Pflegefachkraft",
     "Altenpflegerin / Altenpfleger", "Intensivpflege Fachkraft", "OP-Pflege / OTA",
     "Anästhesiepflege", "Psychiatrische Pflege / Fachkrankenpfleger Psychiatrie", "Pflegefachfrau HF Schweiz",

@@ -177,3 +177,16 @@ def test_daily_acquisition_mails_ten_firms_once(monkeypatch):
     assert not deals.acquisition_round()                      # Tageslimit erreicht
     cid = conn.execute("SELECT id FROM companies WHERE email=?", (to,)).fetchone()[0]
     assert store.get_company(conn, cid)["status"] == "angeschrieben"
+
+
+def test_swiss_partner_model_mail_and_agreement(monkeypatch):
+    monkeypatch.setattr(config, "CONTACT_WHATSAPP", "+49 176 00000000")
+    conn = store.connect()
+    store.add_company(conn, name="Spitex Partner AG", city="Zürich", needs="Dipl. Pflegefachperson HF",
+                      email="hr@spitexpartner.example", branche="gesundheit")
+    firm = conn.execute("SELECT * FROM companies WHERE name='Spitex Partner AG'").fetchone()
+    subj, body = deals.acquisition_text(firm)
+    assert subj.startswith("Kooperation") and "Grüezi" in body and "Anstellung und Bewilligungen laufen über Sie" in body
+    assert "+49 176 00000000" in body and "Kein Interesse" not in subj
+    agr = deals.agreement_text(firm)
+    assert "KOOPERATIONSVEREINBARUNG" in agr and "Bewilligungen" in agr and "Kunden des Partners" in agr

@@ -11,8 +11,10 @@ SYSTEM = f"""Du bist Jarvis, Business-Development für eine Personalvermittlung 
 
 {REQUIREMENTS_TEXT}
 
-Aufgabe: Finde Schweizer Arbeitgeber (Spitäler, Kliniken, Psychiatrien, Alters- und Pflegeheime,
-Reha-Kliniken, Praxen), die AKTUELL Stellen in den obigen Bereichen ausgeschrieben haben.
+Aufgabe: Finde Schweizer Arbeitgeber und PARTNER (Spitäler, Kliniken, Psychiatrien, Alters- und Pflegeheime,
+Reha-Kliniken, Praxen, Spitex-Organisationen, Anbieter von 24-Stunden-/Live-in-Betreuung, Personalvermittler und
+Personalverleiher im Gesundheitswesen mit Bewilligung), die AKTUELL Personal in den obigen Bereichen suchen.
+Partner übernehmen Anstellung und Bewilligung – wir liefern Kandidaten aus Deutschland gegen Provision.
 
 Für jeden Arbeitgeber:
 - name, city (Ort), website
