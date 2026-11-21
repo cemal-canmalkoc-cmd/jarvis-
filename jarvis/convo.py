@@ -51,7 +51,9 @@ Antworte als JSON:
 - einwilligung: true nur, wenn die Person der Vorstellung/Weitergabe ausdrücklich zugestimmt hat
 - profil: ALLE bisher bekannten Angaben als kurzer Text (Name, Telefon, E-Mail, Beruf, Qualifikationen,
   Sprache, Ort, Verfügbarkeit …) – kumulativ, nichts erfinden
-- fertig: true, wenn Name, Beruf/Qualifikation, Ort, ein Kontaktweg UND die Einwilligung vorliegen"""
+- fertig: true, wenn Name, Beruf/Qualifikation, Ort, ein Kontaktweg UND die Einwilligung vorliegen
+- whatsapp: die Handy-/WhatsApp-Nummer, wenn die Person sie genannt hat, sonst ""
+Frage früh im Gespräch nach der WhatsApp-Nummer („Unter welcher WhatsApp-Nummer erreichen wir Sie am besten?“)."""
 
 CANDIDATE_SCHEMA = {
     "type": "object",
@@ -61,8 +63,9 @@ CANDIDATE_SCHEMA = {
         "einwilligung": {"type": "boolean"},
         "profil": {"type": "string"},
         "fertig": {"type": "boolean"},
+        "whatsapp": {"type": "string"},
     },
-    "required": ["antwort", "status", "einwilligung", "profil", "fertig"],
+    "required": ["antwort", "status", "einwilligung", "profil", "fertig", "whatsapp"],
     "additionalProperties": False,
 }
 
@@ -145,6 +148,8 @@ def candidate_turn(convo_id: str, text: str, channel: str, contact: str = "") ->
         return OFFLINE_REPLY
     reply = out["antwort"].strip()
     cand_key = conv["cand_key"]
+    if cand_key and (out.get("whatsapp") or "").strip():
+        _save_whatsapp(cand_key, out["whatsapp"].strip())
     if out["status"] == "kein_interesse" and cand_key:
         store.set_status(conn, cand_key, "kein_interesse", f"{channel}-Gespräch")
     ready = out["fertig"] and out["einwilligung"] and out["status"] != "kein_interesse"
@@ -171,6 +176,26 @@ def candidate_turn(convo_id: str, text: str, channel: str, contact: str = "") ->
     msgs.append({"role": "assistant", "content": reply})
     store.save_convo(conn, convo_id, "kandidat", msgs, cand_key)
     return reply
+
+
+def _save_whatsapp(cand_key: str, number: str) -> None:
+    """Genannte WhatsApp-Nummer beim Kandidaten speichern → erscheint in der App unter „Jetzt anschreiben“."""
+    from .whatsapp import build_link, build_message, normalize_phone
+    conn = store.connect()
+    row = store.get_candidate(conn, cand_key)
+    if not row or not normalize_phone(number, "49"):
+        return
+    c = store.load(row)
+    if c.assessment.phone and store.digits(c.assessment.phone)[-8:] == store.digits(number)[-8:]:
+        return
+    c.assessment.phone = number
+    c.whatsapp_message = c.whatsapp_message or build_message(c.assessment)
+    c.whatsapp_link = build_link(number, c.whatsapp_message, "49" if c.assessment.category == "lkw" else "41")
+    with store._lock:
+        conn.execute("UPDATE candidates SET phone=?, data=? WHERE key=?", (number, c.model_dump_json(), cand_key))
+        conn.commit()
+    messaging.notify_owner(f"📱 {c.assessment.full_name or 'Bewerber'} hat seine WhatsApp-Nummer geschickt: {number} "
+                           f"– App → „Jetzt anschreiben“.")
 
 
 def _create_candidate(profile: str, channel: str, contact: str) -> str | None:

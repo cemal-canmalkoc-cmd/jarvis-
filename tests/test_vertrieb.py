@@ -37,6 +37,7 @@ def test_job_ad_applications_need_approval(monkeypatch):
     mails = []
     monkeypatch.setattr(matching, "send_email", lambda to, s, b, attachments=None: mails.append((to, s, b)))
     monkeypatch.setattr(config, "AUTO_APPLY", False)
+    monkeypatch.setattr(config, "ACQUISITION_PER_DAY", 0)
     key = _driver("Anzeigen Fahrer", "+49 170 9990002", None)
     conn = store.connect()
     store.add_company(conn, name="Spedition Anzeige", city="Dortmund", needs="LKW-Fahrer CE Fernverkehr",
@@ -154,3 +155,25 @@ def test_jobs_post_to_facebook_page_once_with_daily_limit(monkeypatch):
     assert "/jobs/" in posts[0]["message"] and "#lkwfahrer" in posts[0]["message"]
     ads.post_open_jobs()
     assert len(posts) == ads.JOB_POSTS_PER_DAY                    # Tageslimit, keine Doppelposts
+
+
+
+def test_daily_acquisition_mails_ten_firms_once(monkeypatch):
+    mails = []
+    monkeypatch.setattr(matching, "send_email", lambda to, s, b, attachments=None: mails.append((to, s, b)))
+    monkeypatch.setattr(config, "ACQUISITION_PER_DAY", 3)
+    conn = store.connect()
+    store.set_state(conn, f"acq_today:{__import__('datetime').date.today()}", "0")
+    for r in conn.execute("SELECT id FROM companies").fetchall():   # Firmen anderer Tests ausblenden
+        store.set_state(conn, f"acq:{r[0]}", "x")
+    for i in range(5):
+        store.add_company(conn, name=f"Akquise Spedition {i}", city="Unna", needs="LKW-Fahrer CE",
+                          email=f"jobs{i}@akquise.example", branche="lkw")
+    sent = deals.acquisition_round()
+    ours = [m for m in mails if m[0].endswith("@akquise.example")]
+    assert len(sent) <= 3 and len(ours) <= 3 and ours
+    to, subj, body = ours[0]
+    assert "LKW-Fahrer CE" in body and "2.000 €" in body and "Kein Interesse" in body
+    assert not deals.acquisition_round()                      # Tageslimit erreicht
+    cid = conn.execute("SELECT id FROM companies WHERE email=?", (to,)).fetchone()[0]
+    assert store.get_company(conn, cid)["status"] == "angeschrieben"

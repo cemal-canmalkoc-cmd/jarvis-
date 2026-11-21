@@ -282,6 +282,79 @@ def invoice_text(p: dict) -> str:
             f"(Bitte Rechnungsnummer, deine Adresse, Steuernummer und Bankverbindung ergänzen.)")
 
 
+# --------------------------------------------------------------------------- Arbeitgeber-Akquise per E-Mail
+def acquisition_text(firm) -> tuple[str, str]:
+    lkw = (firm["branche"] or "") == "lkw" or any(w in (firm["needs"] or "").lower()
+                                                  for w in ("lkw", "fahrer", "kraftfahrer", "ce"))
+    need = firm["needs"] or ("LKW-Fahrer" if lkw else "Pflegepersonal")
+    if lkw:
+        offer = ("Wir sind eine Personalvermittlung für LKW-Fahrer und haben in unserem Bewerberpool aktuell Fahrer "
+                 "aus Ihrer Region, die aktiv eine neue Stelle suchen (Führerschein C/CE, Fahrerkarte, Modul 95).")
+        terms = "Kosten entstehen nur bei Einstellung: 2.000 € netto pauschal (3.000 € bei ADR), keine Vorabkosten."
+    else:
+        offer = ("Wir vermitteln Pflegefachpersonen und Ärztinnen/Ärzte aus Deutschland in die Schweiz und begleiten "
+                 "die Anerkennung (SRK/MEBEKO).")
+        terms = "Kosten entstehen nur bei Einstellung, keine Vorabkosten."
+    subject = f"Ihre offene Stelle ({need[:60]}) – passende Bewerber"
+    body = f"""Guten Tag{' ' + firm['contact_name'] if firm['contact_name'] else ''},
+
+ich habe gesehen, dass Sie aktuell {need} suchen.
+
+Ich bin {config.RECRUITER_NAME} von {config.AGENCY_NAME}. {offer}
+
+Gerne stelle ich Ihnen passende Personen vor – zunächst als anonymes Kurzprofil, bei Interesse mit
+vollständigen Unterlagen.
+
+{terms}
+
+Darf ich Ihnen die ersten Profile zusenden? Eine kurze Antwort genügt.
+
+Freundliche Grüße
+{config.RECRUITER_NAME}
+{config.AGENCY_NAME}
+WhatsApp: {_owner_number()}
+
+Sie möchten keine Vorschläge von uns? Eine kurze Antwort „Kein Interesse“ genügt – dann melden wir uns nicht mehr."""
+    return subject, body
+
+
+def _owner_number() -> str:
+    from .outreach import readable_number
+    return readable_number() or ""
+
+
+def acquisition_round(limit: int | None = None) -> list[str]:
+    """Täglich bis zu ACQUISITION_PER_DAY Firmen mit aktuell offener Stelle und öffentlicher E-Mail anschreiben
+    (jede Firma nur einmal; 'kein Interesse' wird beachtet). Kostet nichts, braucht daher kein Tages-Ja."""
+    from . import matching
+    conn = store.connect()
+    limit = config.ACQUISITION_PER_DAY if limit is None else limit
+    key = f"acq_today:{date.today()}"
+    done_today = int(store.get_state(conn, key) or 0)
+    since = (date.today() - timedelta(days=45)).isoformat()
+    out = []
+    for firm in conn.execute(
+            "SELECT * FROM companies WHERE email IS NOT NULL AND email != '' AND status = 'neu' "
+            "AND needs IS NOT NULL AND needs != '' AND (found_on IS NULL OR found_on >= ?) "
+            "ORDER BY found_on DESC", (since,)).fetchall():
+        if done_today >= limit:
+            break
+        if store.get_state(conn, f"acq:{firm['id']}"):
+            continue
+        subject, body = acquisition_text(firm)
+        try:
+            matching.send_email(firm["email"], subject, body)
+        except Exception as exc:  # noqa: BLE001
+            log.error("Akquise-Mail an %s fehlgeschlagen: %s", firm["name"], exc)
+            break
+        store.set_state(conn, f"acq:{firm['id']}", date.today().isoformat())
+        store.set_company_status(conn, firm["id"], "angeschrieben", "Akquise-Mail zu offener Stelle")
+        done_today += 1
+        out.append(f"{firm['name']} ({firm['city'] or '?'})")
+    store.set_state(conn, key, str(done_today))
+    return out
+
+
 # --------------------------------------------------------------------------- Tägliche Antriebsrunde
 def daily_drive() -> dict:
     """Einmal täglich: Dokumente anfordern, an Gespräche/Starts/Rechnungen erinnern, Vertriebsliste schicken."""
@@ -351,6 +424,12 @@ def daily_drive() -> dict:
             out["erinnerungen"].append("📣 Auf Facebook gepostet: " + "; ".join(posted))
     except Exception as exc:  # noqa: BLE001
         log.error("Stellenbörse fehlgeschlagen: %s", exc)
+    try:
+        acq = acquisition_round()
+        if acq:
+            out["erinnerungen"].append(f"✉️ {len(acq)} Firmen mit offener Stelle angeschrieben: " + "; ".join(acq))
+    except Exception as exc:  # noqa: BLE001
+        log.error("Akquise fehlgeschlagen: %s", exc)
     queue = application_queue(config.AUTO_APPLY_PER_DAY)
     sent_apps = send_applications(queue) if (config.AUTO_APPLY and queue) else []
     plan = sales_plan()

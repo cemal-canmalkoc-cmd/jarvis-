@@ -229,3 +229,11 @@ def test_outbox_flushes_once_mailbox_connected(monkeypatch):
     monkeypatch.setattr(matching, "send_email", lambda to, s, b, attachments=None: sent.append(to))
     assert matching.flush_outbox() >= 1 and "flush@firma.example" in sent
     assert not [m for m in store.outbox(store.connect()) if m["to_addr"] == "flush@firma.example"]
+
+
+def test_whatsapp_number_from_email_reply_is_saved():
+    key = _driver("Mail Fahrer", None, "mailfahrer@example.org")
+    convo._save_whatsapp(key, "0176 55512345")
+    row = store.get_candidate(store.connect(), key)
+    c = store.load(row)
+    assert row["phone"] == "0176 55512345" and c.whatsapp_link.startswith("https://wa.me/4917655512345")

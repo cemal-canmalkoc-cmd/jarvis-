@@ -576,6 +576,7 @@ EDITABLE_SETTINGS = {
     "REFERRAL_BONUS_LKW": "Empfehlungsprämie LKW-Fahrer (z. B. 200 €; leer = keine)",
     "REFERRAL_BONUS_PFLEGE": "Empfehlungsprämie Pflegefachkraft (z. B. 1.000 €; leer = keine)",
     "REFERRAL_BONUS_ARZT": "Empfehlungsprämie Ärztin/Arzt (leer = keine)",
+    "ACQUISITION_PER_DAY": "Firmen mit offener Stelle, die Jarvis täglich per E-Mail anschreibt",
     "ASK_DAILY": "Jeden Morgen fragen, bevor Geld ausgegeben wird (1 = ja, 0 = 5-Tage-Freigabe)",
     "AUTO_DAYS": "Freigabe gilt X Tage, danach fragt Jarvis nach „Weiter“ (nur wenn tägliches Fragen aus ist)",
     "AUTO_INBOX": "E-Mail-Postfach selbst lesen und beantworten (1 = ja)",

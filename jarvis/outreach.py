@@ -81,7 +81,8 @@ def build_email(c: ScoredCandidate) -> tuple[str, str]:
 ich bin auf Ihr Stellengesuch als {role} aufmerksam geworden. Ich bin {config.RECRUITER_NAME} von
 {config.AGENCY_NAME} – {offer}
 {f"{rec} ist dabei ein grosser Vorteil." if rec else ""}
-Wenn Sie Interesse haben, schreiben Sie mir einfach per WhatsApp (Lebenslauf gern als Foto mitschicken):
+Wenn Sie Interesse haben, antworten Sie einfach mit Ihrer WhatsApp-Nummer – dann melde ich mich direkt.
+Oder schreiben Sie mir selbst per WhatsApp (Lebenslauf gern als Foto mitschicken):
 {wa_short('lkw' if lkw else ('arzt' if a.category == 'arzt' else 'pflege'), 'mail')}
 
 Oder bewerben Sie sich in 2 Minuten online: {config.PUBLIC_URL}/bewerbung
