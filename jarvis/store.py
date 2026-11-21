@@ -177,12 +177,47 @@ def digits(phone: str | None) -> str:
 
 
 # --------------------------------------------------------------------------- Kandidaten
-def candidate_key(c: ScoredCandidate) -> str:
+def _identity(c: ScoredCandidate) -> str:
+    """Wer ist das? Telefon/E-Mail, sonst Bereich + Ort + Quelle + Qualifikation (+ echter Name).
+    Die KI-Zusammenfassung zählt NICHT mehr dazu – sie ändert sich bei jeder Suche und erzeugte Doppelte."""
     a = c.assessment
-    ident = (a.phone or a.email or
-             f"{a.full_name}|{c.source}|{a.current_location}|{a.nursing_field or a.physician_specialty}|{a.summary[:80]}"
-             ).lower().replace(" ", "")
-    return hashlib.sha256(ident.encode()).hexdigest()[:16]
+    if a.phone or a.email:
+        return (a.phone or a.email).lower().replace(" ", "")
+    import re as _re
+    loc = (a.current_location or "").lower()
+    plz = "".join(_re.findall(r"\d{5}|\d{4}", loc))[:5]
+    place = plz or _re.sub(r"[^a-zäöüß]", "", loc.split(",")[0])
+    name = (a.full_name or "").lower()
+    name = "" if name in ("", "unbekannt", "unknown", "n/a", "-") else name.replace(" ", "")
+    qual = (a.driving_license or a.nursing_field or a.physician_specialty or "").lower().replace(" ", "")
+    return f"{a.category}|{place}|{(c.source or '').lower()}|{qual}|{name}"
+
+
+def candidate_key(c: ScoredCandidate) -> str:
+    return hashlib.sha256(_identity(c).encode()).hexdigest()[:16]
+
+
+def dedupe_candidates(conn: sqlite3.Connection) -> int:
+    """Doppelte Einträge zusammenführen (gleiche Person aus mehreren Suchrunden). Behält den besten,
+    nur Einträge ohne Kontaktverlauf (Status neu) werden entfernt."""
+    groups: dict[str, list] = {}
+    for r in conn.execute("SELECT * FROM candidates").fetchall():
+        try:
+            groups.setdefault(_identity(load(r)), []).append(r)
+        except Exception:  # noqa: BLE001
+            continue
+    removed = 0
+    with _lock:
+        for rows in groups.values():
+            if len(rows) < 2:
+                continue
+            rows.sort(key=lambda r: (r["status"] == "neu", -(r["score"] or 0)))
+            for r in rows[1:]:
+                if r["status"] == "neu":
+                    conn.execute("DELETE FROM candidates WHERE key=?", (r["key"],))
+                    removed += 1
+        conn.commit()
+    return removed
 
 
 def upsert(conn: sqlite3.Connection, c: ScoredCandidate) -> bool:

@@ -425,6 +425,10 @@ def daily_drive() -> dict:
     except Exception as exc:  # noqa: BLE001
         log.error("Stellenbörse fehlgeschlagen: %s", exc)
     try:
+        store.dedupe_candidates(conn)
+    except Exception as exc:  # noqa: BLE001
+        log.error("Doppelte nicht bereinigt: %s", exc)
+    try:
         acq = acquisition_round()
         if acq:
             out["erinnerungen"].append(f"✉️ {len(acq)} Firmen mit offener Stelle angeschrieben: " + "; ".join(acq))

@@ -151,3 +151,23 @@ def test_german_mobile_numbers_get_49():
     assert normalize_phone("0176 12345678") == "4917612345678"
     assert normalize_phone("079 123 45 67") == "41791234567"
     assert normalize_phone("0231 123456", "49") == "49231123456"
+
+
+def test_same_driver_from_two_search_rounds_is_one_candidate():
+    from jarvis import store
+    from jarvis.models import Assessment, ScoredCandidate
+    def mk(summary):
+        a = Assessment(full_name="unbekannt", category="lkw", driving_license="CE",
+                       current_location="59348 Lüdinghausen (Nordrhein-Westfalen)", summary=summary)
+        return ScoredCandidate(assessment=a, source="https://www.kleinanzeigen.de/s-jobs/x/k0c102", score=60,
+                               tier="B", reasons=[], missing=[])
+    assert store.candidate_key(mk("Fahrer sucht Arbeit")) == store.candidate_key(mk("Erfahrener CE-Fahrer, NRW"))
+    conn = store.connect()
+    c1, c2 = mk("a"), mk("b")
+    conn.execute("INSERT OR REPLACE INTO candidates (key,name,category,tier,score,source,data,found_on,status) "
+                 "VALUES ('dup1','x','lkw','B',60,?,?, '2026-11-20','neu')", (c1.source, c1.model_dump_json()))
+    conn.execute("INSERT OR REPLACE INTO candidates (key,name,category,tier,score,source,data,found_on,status) "
+                 "VALUES ('dup2','x','lkw','B',55,?,?, '2026-11-20','neu')", (c2.source, c2.model_dump_json()))
+    conn.commit()
+    assert store.dedupe_candidates(conn) >= 1
+    assert conn.execute("SELECT COUNT(*) FROM candidates WHERE key IN ('dup1','dup2')").fetchone()[0] == 1
