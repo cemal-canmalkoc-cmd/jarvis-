@@ -61,6 +61,41 @@ PHYSICIAN_SPECIALTIES = [
     "Rehabilitation",
 ]
 
+# Bewerbungsformular: deutsche Berufsbezeichnung → ungefähre offizielle Bezeichnung in der Schweiz.
+# Die verbindliche Einstufung entscheidet die Anerkennungsstelle (SRK, MEBEKO bzw. SBFI).
+MEDICAL_ROLES = {
+    "Pflege (mit Diplom/Examen)": [
+        "Gesundheits- und Krankenpfleger/in / Krankenschwester → CH: Dipl. Pflegefachfrau/-mann HF",
+        "Pflegefachfrau/-mann (Generalistik) → CH: Dipl. Pflegefachfrau/-mann HF",
+        "Pflege mit Bachelor (B.Sc.) → CH: Pflegefachfrau/-mann FH",
+        "Gesundheits- und Kinderkrankenpfleger/in → CH: Dipl. Pflegefachperson HF (Pädiatrie)",
+        "Altenpfleger/in (examiniert) → CH: je nach SRK-Entscheid Pflegefachperson HF oder FaGe",
+        "Psychiatrische Pflege → CH: Dipl. Pflegefachperson HF Psychiatrie",
+        "Fachkrankenpflege Intensiv → CH: Dipl. Expert/in Intensivpflege NDS HF",
+        "Fachkrankenpflege Anästhesie → CH: Dipl. Expert/in Anästhesiepflege NDS HF",
+        "Fachkrankenpflege Notfall → CH: Dipl. Expert/in Notfallpflege NDS HF",
+        "OP-Pflege / OTA → CH: Dipl. Fachfrau/-mann Operationstechnik HF",
+    ],
+    "Pflegeassistenz & Betreuung": [
+        "FaGe (Fachfrau/Fachmann Gesundheit EFZ)",
+        "Pflegehelfer/in, Pflegeassistenz → CH: Pflegehelfer/in SRK bzw. Assistent/in Gesundheit und Soziales (AGS)",
+        "Betreuungskraft / 24-Stunden-Betreuung (Live-in)",
+    ],
+    "Ärztin / Arzt": [f"Ärztin/Arzt {s}" for s in ("Allgemeine Innere Medizin", "Psychiatrie", "Gynäkologie",
+                                                  "Radiologie", "Anästhesie", "Geriatrie", "Neurologie",
+                                                  "Rehabilitation", "Chirurgie", "Pädiatrie", "Notfallmedizin",
+                                                  "Allgemeinmedizin / Hausarzt", "andere Fachrichtung")]
+                       + ["Assistenzärztin/-arzt (in Weiterbildung)", "Oberärztin/Oberarzt"],
+    "Weitere medizinische Berufe": [
+        "Medizinische Fachangestellte (MFA) → CH: Medizinische Praxisassistentin MPA",
+        "MTRA → CH: Fachfrau/-mann für medizinisch-technische Radiologie HF",
+        "Notfallsanitäter/in → CH: Dipl. Rettungssanitäter/in HF",
+        "Hebamme → CH: Hebamme FH",
+        "Physiotherapeut/in → CH: Physiotherapeut/in FH",
+        "Ergotherapeut/in → CH: Ergotherapeut/in FH",
+    ],
+}
+
 REQUIREMENTS_TEXT = f"""
 BEDARF SCHWEIZ (Stand aktuell)
 

@@ -347,7 +347,8 @@ async def bewerbung_form(bereich: str = ""):
     body = f"""
 <div class="brand">{agency}</div>
 <h1>Ihre Stelle in der Schweiz</h1>
-<p class="lead">Pflege & Ärzteschaft – wir vermitteln Sie kostenlos an Spitäler, Kliniken und Heime.
+<p class="lead">Pflege, Betreuung, Ärzte & weitere medizinische Berufe – wir vermitteln Sie kostenlos an Spitäler,
+Kliniken, Heime, Spitex und 24h-Betreuung in der Schweiz.
 In 2 Minuten bewerben, wir melden uns schnell.{call_hint}</p>
 {wa_btn}
 <form method="post" action="/bewerbung" enctype="multipart/form-data">
@@ -360,16 +361,17 @@ In 2 Minuten bewerben, wir melden uns schnell.{call_hint}</p>
   <div class="row">
    <div><label for="wohnort">Aktueller Wohnort *</label><input id="wohnort" name="wohnort" type="text" required maxlength="80"></div>
    <div><label for="in_schweiz">Leben Sie in der Schweiz?</label>
-    <select id="in_schweiz" name="in_schweiz"><option value="ja">Ja</option><option value="nein">Nein</option></select></div>
+    <select id="in_schweiz" name="in_schweiz"><option value="nein" selected>Nein</option><option value="ja">Ja</option></select></div>
   </div>
  </fieldset>
  <fieldset><legend>Beruf</legend>
   <label for="bereich">Bereich / Fachrichtung *</label>
   <select id="bereich" name="bereich" required>
-   <optgroup label="Pflege">{_options(NURSING_FIELDS)}</optgroup>
-   <optgroup label="Ärztin / Arzt">{_options(["Ärztin/Arzt " + s for s in PHYSICIAN_SPECIALTIES])}</optgroup>
+{"".join(f'<optgroup label="{html.escape(g)}">{_options(r)}</optgroup>' for g, r in config.MEDICAL_ROLES.items())}
    <option>Anderer Bereich</option>
   </select>
+  <p class="hint" style="font-size:13px;color:var(--muted);margin:4px 0 12px">Die Schweizer Bezeichnung ist eine
+   ungefähre Einordnung – verbindlich entscheidet die Anerkennungsstelle (SRK, MEBEKO bzw. SBFI). Wir helfen dabei.</p>
   <div class="row">
    <div><label for="diplom">Diplom / Berufsurkunde vorhanden?</label>
     <select id="diplom" name="diplom"><option value="ja">Ja</option><option value="nein">Nein</option></select></div>
