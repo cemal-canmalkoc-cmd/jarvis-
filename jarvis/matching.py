@@ -176,6 +176,23 @@ def send_email(to: str, subject: str, body: str, attachments: list[str] | None =
         raise RuntimeError(f"Anmeldung beim Mailserver abgelehnt ({host}).{hint}") from exc
 
 
+def flush_outbox(limit: int = 20) -> int:
+    """Sobald ein Postfach verbunden ist: wartende Mails aus dem Postausgang selbst verschicken."""
+    if not mail_ready():
+        return 0
+    conn = store.connect()
+    sent = 0
+    for m in store.outbox(conn, limit=limit):
+        try:
+            send_email(m["to_addr"], m["subject"], m["body"])
+            store.mark_outbox_sent(conn, m["id"])
+            sent += 1
+        except Exception as exc:  # noqa: BLE001
+            log.error("Postausgang %s nicht gesendet: %s", m["id"], exc)
+            break
+    return sent
+
+
 def present(cand_key: str, company_id: int) -> str:
     """Stellt einen interessierten Kandidaten einer Klinik anonym per E-Mail vor."""
     conn = store.connect()

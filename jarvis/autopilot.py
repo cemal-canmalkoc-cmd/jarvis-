@@ -272,6 +272,9 @@ def tick() -> None:
             done = inbox.poll()
             if done:
                 log.info("Postfach: %s", done)
+            n = matching.flush_outbox()
+            if n:
+                log.info("Postausgang: %s Mails verschickt", n)
         except Exception as exc:  # noqa: BLE001
             log.error("Postfach fehlgeschlagen: %s", exc)
     if not budget.autonomy_active():

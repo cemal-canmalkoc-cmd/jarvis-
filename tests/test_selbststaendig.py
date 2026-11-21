@@ -217,3 +217,15 @@ def test_outbox_when_no_mailbox(monkeypatch):
     assert "cv.pdf" in mails[0]["note"]
     c.post(f"/api/postausgang/{mails[0]['id']}/gesendet", headers=h)
     assert not [m for m in c.get("/api/postausgang", headers=h).json()["mails"] if m["to_addr"] == "dispo@firma.example"]
+
+
+def test_outbox_flushes_once_mailbox_connected(monkeypatch):
+    monkeypatch.setattr(config, "SMTP_USER", "")
+    monkeypatch.setattr(config, "OUTBOX", True)
+    matching.send_email("flush@firma.example", "Flush-Test", "Text")
+    sent = []
+    monkeypatch.setattr(matching, "mail_ready", lambda: True)
+    real = matching.send_email
+    monkeypatch.setattr(matching, "send_email", lambda to, s, b, attachments=None: sent.append(to))
+    assert matching.flush_outbox() >= 1 and "flush@firma.example" in sent
+    assert not [m for m in store.outbox(store.connect()) if m["to_addr"] == "flush@firma.example"]
