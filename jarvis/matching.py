@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import smtplib
 from email.message import EmailMessage
+from pathlib import Path
 
 from . import config, messaging, pricing, store
 from .whatsapp import role_phrase
@@ -134,6 +135,13 @@ def send_email(to: str, subject: str, body: str, attachments: list[str] | None =
     from . import msauth
     host = smtp_host()
     if not mail_ready():
+        if config.OUTBOX:
+            # Kein Postfach verbunden → in deinen Postausgang: 1 Tipp in der App öffnet die fertige Mail
+            # in deiner Mail-App (Outlook/GMX/…), du drückst nur noch Senden.
+            note = (f"Anhänge bitte selbst anhängen: {', '.join(Path(a).name for a in attachments)}"
+                    if attachments else "")
+            store.add_outbox(store.connect(), to, subject, body, note)
+            return
         raise RuntimeError("E-Mail-Versand nicht eingerichtet (E-Mail-Login und Passwort unter ⚙️ Verbindungen)")
     msg = EmailMessage()
     msg["From"] = f"{config.RECRUITER_NAME} – {config.AGENCY_NAME} <{config.SMTP_FROM or config.SMTP_USER}>"
@@ -141,7 +149,6 @@ def send_email(to: str, subject: str, body: str, attachments: list[str] | None =
     msg["Subject"] = subject
     msg.set_content(body)
     import mimetypes
-    from pathlib import Path
     for path in attachments or []:
         p = Path(path)
         if not p.exists():

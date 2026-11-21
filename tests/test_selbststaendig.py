@@ -196,7 +196,24 @@ def test_daily_approval_asks_first_and_catches_up_morning(monkeypatch):
 def test_team_shows_departments_and_blockers(monkeypatch):
     from jarvis import team
     monkeypatch.setattr(config, "SMTP_USER", "")
+    monkeypatch.setattr(config, "OUTBOX", False)
     t = {m["rolle"].split(" ")[0]: m for m in team.status()}
     assert {"Sourcing", "Recruiting", "Vertrieb", "Disposition", "Marketing", "Backoffice"} <= set(t)
     assert not t["Vertrieb"]["ok"] and "E-Mail" in t["Vertrieb"]["problem"]
     assert "Dein Jarvis-Team" in team.summary_text()
+
+
+
+def test_outbox_when_no_mailbox(monkeypatch):
+    monkeypatch.setattr(config, "SMTP_USER", "")
+    monkeypatch.setattr(config, "OUTBOX", True)
+    monkeypatch.setattr(config, "ADMIN_TOKEN", "t0k")
+    matching.send_email("dispo@firma.example", "Bewerbung: CE-Fahrer", "Guten Tag …", attachments=["/x/cv.pdf"])
+    matching.send_email("dispo@firma.example", "Bewerbung: CE-Fahrer", "Guten Tag …")   # kein Duplikat
+    c = TestClient(server.app)
+    h = {"Authorization": "Bearer t0k"}
+    mails = [m for m in c.get("/api/postausgang", headers=h).json()["mails"] if m["to_addr"] == "dispo@firma.example"]
+    assert len(mails) == 1 and mails[0]["mailto"].startswith("mailto:dispo@firma.example?subject=")
+    assert "cv.pdf" in mails[0]["note"]
+    c.post(f"/api/postausgang/{mails[0]['id']}/gesendet", headers=h)
+    assert not [m for m in c.get("/api/postausgang", headers=h).json()["mails"] if m["to_addr"] == "dispo@firma.example"]

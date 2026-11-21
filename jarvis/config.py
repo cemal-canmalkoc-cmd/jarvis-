@@ -215,6 +215,8 @@ REFERRAL_BONUS = os.environ.get("JARVIS_REFERRAL_BONUS", "")            # alt: f
 REFERRAL_BONUS_LKW = os.environ.get("JARVIS_REFERRAL_BONUS_LKW", "200 €")
 REFERRAL_BONUS_PFLEGE = os.environ.get("JARVIS_REFERRAL_BONUS_PFLEGE", "1.000 €")
 REFERRAL_BONUS_ARZT = os.environ.get("JARVIS_REFERRAL_BONUS_ARZT", "2.000 €")
+# Ohne verbundenes Postfach: E-Mails landen im Postausgang der App und gehen per 1 Tipp über deine Mail-App raus
+OUTBOX = os.environ.get("JARVIS_OUTBOX", "1").strip().lower() in ("1", "true", "ja")
 ASK_DAILY = os.environ.get("JARVIS_ASK_DAILY", "1").strip().lower() in ("1", "true", "ja")
 # Postfach lesen und beantworten (gleiche Zugangsdaten wie der E-Mail-Versand)
 AUTO_INBOX = os.environ.get("JARVIS_AUTO_INBOX", "1").strip().lower() in ("1", "true", "ja")

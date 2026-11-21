@@ -87,6 +87,15 @@ CREATE TABLE IF NOT EXISTS documents (
     path TEXT,
     uploaded TEXT
 );
+CREATE TABLE IF NOT EXISTS outbox (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    to_addr TEXT,
+    subject TEXT,
+    body TEXT,
+    note TEXT DEFAULT '',
+    created TEXT,
+    sent TEXT
+);
 CREATE TABLE IF NOT EXISTS jobs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
@@ -673,6 +682,29 @@ def doc_status(conn: sqlite3.Connection, cand_key: str, category: str) -> dict:
 
 
 # --------------------------------------------------------------------------- Vermittlungen & Umsatz
+def add_outbox(conn: sqlite3.Connection, to: str, subject: str, body: str, note: str = "") -> int:
+    with _lock:
+        dup = conn.execute("SELECT id FROM outbox WHERE to_addr=? AND subject=? AND sent IS NULL",
+                           (to, subject)).fetchone()
+        if dup:
+            return dup[0]
+        cur = conn.execute("INSERT INTO outbox (to_addr, subject, body, note, created) VALUES (?,?,?,?,?)",
+                           (to, subject, body, note, datetime.now().isoformat(timespec="minutes")))
+        conn.commit()
+        return cur.lastrowid
+
+
+def outbox(conn: sqlite3.Connection, open_only: bool = True, limit: int = 50) -> list[dict]:
+    q = "SELECT * FROM outbox" + (" WHERE sent IS NULL" if open_only else "") + " ORDER BY id LIMIT ?"
+    return [dict(r) for r in conn.execute(q, (limit,)).fetchall()]
+
+
+def mark_outbox_sent(conn: sqlite3.Connection, oid: int) -> None:
+    with _lock:
+        conn.execute("UPDATE outbox SET sent=? WHERE id=?", (datetime.now().isoformat(timespec="minutes"), oid))
+        conn.commit()
+
+
 def add_job(conn: sqlite3.Connection, title: str, bereich: str, ort: str, beschreibung: str = "",
             gehalt: str = "", company_id: int | None = None) -> int:
     with _lock:

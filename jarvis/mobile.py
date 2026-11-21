@@ -77,6 +77,24 @@ async def app_page(request: Request):
     return FileResponse(STATIC / "app.html", media_type="text/html")
 
 
+@router.get("/api/postausgang")
+async def postausgang(request: Request):
+    authed(request)
+    from urllib.parse import quote as _q
+    items = store.outbox(store.connect())
+    for m in items:
+        body = m["body"] if len(m["body"]) < 1800 else m["body"][:1800] + "\n…"
+        m["mailto"] = f"mailto:{m['to_addr']}?subject={_q(m['subject'])}&body={_q(body)}"
+    return {"mails": items}
+
+
+@router.post("/api/postausgang/{oid}/gesendet")
+async def postausgang_gesendet(request: Request, oid: int):
+    authed(request)
+    store.mark_outbox_sent(store.connect(), oid)
+    return {"meldung": "✅ Als gesendet markiert"}
+
+
 @router.get("/api/team")
 async def team_status(request: Request):
     authed(request)

@@ -19,8 +19,9 @@ def status() -> list[dict]:
     conn = store.connect()
     today = date.today().isoformat()
     mail_ok = matching.mail_ready() and (store.get_state(conn, "inbox_status") or "").startswith("ok:")
-    mail_hint = ("E-Mail nicht verbunden → ⚙️ Outlook „Mit Microsoft anmelden“ oder Gmail mit App-Passwort"
-                 if not mail_ok else "")
+    mail_hint = ("" if mail_ok or config.OUTBOX else
+                 "E-Mail nicht verbunden → ⚙️ Outlook „Mit Microsoft anmelden“ oder Gmail mit App-Passwort")
+    waiting = _count(conn, "SELECT COUNT(*) FROM outbox WHERE sent IS NULL")
     approved = budget.autonomy_active()
     found = store.potentials_today(conn)
     direct = _count(conn, "SELECT COUNT(*) FROM candidates WHERE found_on=? AND tier!='X' AND phone IS NOT NULL "
@@ -51,7 +52,8 @@ def status() -> list[dict]:
          **block(mail_hint and "Bewerber-Mails: " + mail_hint)},
         {"emoji": "🤝", "name": "Leon", "rolle": "Vertrieb (Arbeitgeber gewinnen)",
          "aufgabe": "Findet Firmen mit offenen Stellen, schickt passende Profile, verhandelt Vereinbarung",
-         "heute": f"{firms_today} neue Firmen · {firms_mail} mit E-Mail · {apps_today} Profile verschickt · {customers} interessiert",
+         "heute": f"{firms_today} neue Firmen · {firms_mail} mit E-Mail · {apps_today} Profile vorbereitet/verschickt · "
+                  f"{customers} interessiert" + (f" · 📤 {waiting} Mails warten auf deinen Tipp" if waiting else ""),
          **block(mail_hint, "" if firms_all else "noch keine Firmen gefunden → Jarvis: „Such Speditionen in NRW“")},
         {"emoji": "🗂", "name": "Nora", "rolle": "Disposition", "aufgabe": "Verbindet Firma und Bewerber, Unterlagen, Termine, Nachfassen",
          "heute": f"{in_process} im Prozess (vorgestellt/Gespräch)",

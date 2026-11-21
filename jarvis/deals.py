@@ -300,7 +300,7 @@ def daily_drive() -> dict:
             continue
         text = doc_request_text(row)
         sent = False
-        if a.email and matching.mail_ready():
+        if a.email and (matching.mail_ready() or config.OUTBOX):
             try:
                 matching.send_email(a.email, "Ihre Unterlagen – nächster Schritt", text)
                 out["dokument_mails"] += 1
@@ -369,6 +369,9 @@ def daily_drive() -> dict:
         lines += sent_apps
     elif queue:
         lines.append(f"\n📨 {len(queue)} Bewerbungen auf Stellenanzeigen bereit – App → Firmen → „Alle senden“")
+    waiting = len(store.outbox(conn))
+    if waiting:
+        lines.append(f"\n📤 {waiting} fertige Mails an Firmen/Bewerber im Postausgang – App öffnen, je 1 Tipp → Senden")
     rev = store.revenue_month(conn)
     lines.append(f"💶 Umsatz {rev['monat']}: {rev['umsatz']:,.0f} € / Ziel {config.REVENUE_GOAL:,.0f} €".replace(",", "."))
     if plan:

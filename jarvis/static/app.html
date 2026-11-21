@@ -101,6 +101,10 @@ nav button.on{color:var(--accent)}
     <div class="ring" id="ring"><div><span id="goal-n">–</span><small id="goal-z">von 20</small></div></div>
     <div><b>Vermittelbar heute</b><div class="muted small" id="goal-txt">Lade …</div></div>
   </div>
+  <div class="card" id="outbox-card" style="display:none"><b>📤 Postausgang – Mails an Firmen &amp; Bewerber</b>
+    <div class="muted small">Jarvis hat sie fertig geschrieben. Tippen → deine Mail-App (z. B. Outlook) öffnet sich → Senden.
+      Antworten kommen in dein Postfach.</div>
+    <div id="outbox"></div></div>
   <div class="card" id="team-card"><b>👥 Dein Team</b>
     <div class="muted small">Jarvis arbeitet wie eine Agentur mit Abteilungen. ⛔ = hier hängt es gerade.</div>
     <div id="team"></div></div>
@@ -251,7 +255,7 @@ async function load() {
     : `⏸️ Pausiert seit ${au.bis} – Jarvis antwortet nur ohne KI.`;
   $("#auto-go").textContent = au.taeglich ? `✅ Ja, heute arbeiten (max. ${(au.budget || 1).toFixed(2)} $)` : `▶️ Weiter (${au.tage || 5} Tage)`;
   $("#auto-go").style.display = au.aktiv && (au.taeglich || !au.bald) ? "none" : "";
-  renderCalls(); renderCands(); renderFirms(); renderNews(); loadSales(); renderTodo(); loadTeam();
+  renderCalls(); renderCands(); renderFirms(); renderNews(); loadSales(); renderTodo(); loadTeam(); loadOutbox();
 }
 
 // Ein Tipp: Text kopieren + Anzeige/WhatsApp öffnen + als „kontaktiert“ markieren
@@ -262,6 +266,18 @@ function reachOut(c) {
   api(`/api/kandidat/${c.id}/status`, {method: "POST", body: JSON.stringify({status: "kontaktiert"})})
     .then(() => { c.status = "kontaktiert"; renderTodo(); }).catch(() => {});
   toast(c.whatsapp_link ? "WhatsApp geöffnet – nur noch senden" : "Text kopiert 📋 – in der Anzeige einfügen und senden");
+}
+
+async function loadOutbox() {
+  let v; try { v = await api("/api/postausgang"); } catch (e) { return; }
+  $("#outbox-card").style.display = v.mails.length ? "" : "none";
+  const box = $("#outbox"); box.replaceChildren();
+  for (const m of v.mails.slice(0, 20)) box.append(h("div", {style: "margin-top:10px"},
+    h("div", {class: "small"}, h("b", {}, m.subject)),
+    h("div", {class: "muted small"}, "an " + m.to_addr + (m.note ? " · " + m.note : "")),
+    h("a", {class: "btn", style: "margin-top:6px", href: m.mailto, onclick: () => {
+      setTimeout(() => api(`/api/postausgang/${m.id}/gesendet`, {method: "POST"}).then(loadOutbox), 1500); }},
+      "📧 Öffnen & senden")));
 }
 
 async function loadTeam() {
