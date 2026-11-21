@@ -108,6 +108,59 @@ def post_facebook_page(text: str) -> str:
     return r.json().get("id", "")
 
 
+JOB_POSTS_PER_DAY = 3
+
+
+def job_post_text(j: dict) -> str:
+    emoji = {"lkw": "🚛", "pflege": "🏥", "arzt": "🩺"}.get(j.get("bereich") or "", "📌")
+    lines = [f"{emoji} {j['title']}", f"📍 {j.get('ort') or ''}" + (f" · 💶 {j['gehalt']}" if j.get("gehalt") else "")]
+    desc = (j.get("beschreibung") or "").strip()
+    if desc:
+        lines += ["", desc[:600]]
+    lines += ["", "✅ Für Bewerber kostenlos · Bewerbung in 1 Minute per WhatsApp",
+              f"👉 {config.PUBLIC_URL}/jobs/{j['id']}"]
+    tags = {"lkw": "#lkwfahrer #berufskraftfahrer #fahrerjobs #jobs", "pflege": "#pflege #pflegejobs #schweiz #jobs",
+            "arzt": "#arzt #ärztejobs #schweiz #jobs"}.get(j.get("bereich") or "", "#jobs")
+    return "\n".join(lines + ["", tags])
+
+
+def post_job(j: dict, force: bool = False) -> str | None:
+    """Stelle auf der Facebook-Seite veröffentlichen (einmal pro Stelle, max. JOB_POSTS_PER_DAY pro Tag)."""
+    if not facebook_ready():
+        return None
+    conn = store.connect()
+    if store.get_state(conn, f"fb_job:{j['id']}"):
+        return None
+    key = f"fb_jobs_today:{date.today()}"
+    n = int(store.get_state(conn, key) or 0)
+    if n >= JOB_POSTS_PER_DAY and not force:
+        return None
+    r = requests.post(f"https://graph.facebook.com/{config.META_GRAPH_VERSION}/{config.META_PAGE_ID}/feed",
+                      data={"message": job_post_text(j), "link": f"{config.PUBLIC_URL}/jobs/{j['id']}",
+                            "access_token": config.META_PAGE_TOKEN}, timeout=30)
+    if r.status_code >= 400:
+        raise RuntimeError(f"Facebook-Fehler {r.status_code}: {r.text[:200]}")
+    store.set_state(conn, f"fb_job:{j['id']}", date.today().isoformat())
+    store.set_state(conn, key, str(n + 1))
+    return r.json().get("id", "")
+
+
+def post_open_jobs() -> list[str]:
+    """Noch nicht gepostete aktive Stellen auf die Facebook-Seite bringen (Tageslimit beachten)."""
+    out = []
+    if not facebook_ready():
+        return out
+    for j in store.jobs(store.connect()):
+        try:
+            if post_job(j):
+                out.append(j["title"])
+        except Exception as exc:  # noqa: BLE001
+            log.error("Stelle %s nicht gepostet: %s", j["id"], exc)
+            messaging.notify_owner(f"⚠️ Stelle „{j['title']}“ nicht auf Facebook gepostet: {str(exc)[:150]}")
+            break
+    return out
+
+
 def check_facebook() -> str:
     """Prüft Seiten-ID + Token, ohne etwas zu posten."""
     if not facebook_ready():

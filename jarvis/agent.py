@@ -257,7 +257,12 @@ def t_update() -> dict:
 def t_stelle_anlegen(titel: str, bereich: str = "lkw", ort: str = "", beschreibung: str = "", gehalt: str = "") -> dict:
     jid = store.add_job(store.connect(), titel, bereich if bereich in ("lkw", "pflege", "arzt") else "lkw",
                         ort, beschreibung, gehalt)
-    return {"stelle": jid, "link": f"{config.PUBLIC_URL}/jobs/{jid}",
+    from . import ads
+    try:
+        fb = bool(ads.post_job(store.get_job(store.connect(), jid), True))
+    except Exception as exc:  # noqa: BLE001
+        fb = f"Facebook-Fehler: {exc}"
+    return {"stelle": jid, "facebook": fb, "link": f"{config.PUBLIC_URL}/jobs/{jid}",
             "hinweis": "Link in Facebook-Gruppen/Status teilen; Bewerber landen per WhatsApp beim Inhaber."}
 
 

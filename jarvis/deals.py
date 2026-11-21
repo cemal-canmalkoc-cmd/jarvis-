@@ -345,6 +345,10 @@ def daily_drive() -> dict:
         jb = jobboard.sync()
         if jb["neu"]:
             out["erinnerungen"].append(f"📌 {jb['neu']} neue Stellen in deiner Stellenbörse (aus gefundenen Arbeitgebern)")
+        from . import ads
+        posted = ads.post_open_jobs()
+        if posted:
+            out["erinnerungen"].append("📣 Auf Facebook gepostet: " + "; ".join(posted))
     except Exception as exc:  # noqa: BLE001
         log.error("Stellenbörse fehlgeschlagen: %s", exc)
     queue = application_queue(config.AUTO_APPLY_PER_DAY)

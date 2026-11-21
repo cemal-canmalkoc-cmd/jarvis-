@@ -131,3 +131,26 @@ def test_auto_jobs_from_found_employers_are_anonymous_and_expire():
         store.set_company_status(conn, cid, "kein_bedarf", "test")
     jobboard.sync()
     assert not store.get_job(conn, lkw["id"])["active"]   # kein Bedarf mehr → offline
+
+
+def test_jobs_post_to_facebook_page_once_with_daily_limit(monkeypatch):
+    from jarvis import ads
+    posts = []
+
+    class R:
+        status_code = 200
+        def json(self): return {"id": f"p{len(posts)}"}
+    monkeypatch.setattr(config, "META_PAGE_ID", "123")
+    monkeypatch.setattr(config, "META_PAGE_TOKEN", "tok")
+    monkeypatch.setattr(ads.requests, "post", lambda url, data, timeout: posts.append(data) or R())
+    conn = store.connect()
+    store.set_state(conn, f"fb_jobs_today:{__import__('datetime').date.today()}", "0")
+    ids = [store.add_job(conn, f"FB-Test Fahrer {i}", "lkw", "Hamm") for i in range(5)]
+    for j in store.jobs(conn):
+        if j["id"] not in ids:
+            store.set_state(conn, f"fb_job:{j['id']}", "x")
+    ads.post_open_jobs()
+    assert len(posts) == ads.JOB_POSTS_PER_DAY
+    assert "/jobs/" in posts[0]["message"] and "#lkwfahrer" in posts[0]["message"]
+    ads.post_open_jobs()
+    assert len(posts) == ads.JOB_POSTS_PER_DAY                    # Tageslimit, keine Doppelposts

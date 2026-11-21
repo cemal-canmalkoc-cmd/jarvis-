@@ -105,9 +105,17 @@ async def stelle_neu(request: Request, daten: dict = Body(...)):
     if not title:
         raise HTTPException(400, "Titel fehlt")
     bereich = daten.get("bereich") if daten.get("bereich") in ("lkw", "pflege", "arzt") else "lkw"
-    jid = store.add_job(store.connect(), title, bereich, daten.get("ort", ""), daten.get("beschreibung", ""),
+    conn = store.connect()
+    jid = store.add_job(conn, title, bereich, daten.get("ort", ""), daten.get("beschreibung", ""),
                         daten.get("gehalt", ""))
-    return {"meldung": f"✅ Stelle #{jid} ist online: {config.PUBLIC_URL}/jobs/{jid}", "id": jid}
+    from . import ads
+    fb = ""
+    try:
+        if await asyncio.to_thread(ads.post_job, store.get_job(conn, jid), True):
+            fb = " · auch auf deiner Facebook-Seite gepostet ✅"
+    except Exception as exc:  # noqa: BLE001
+        fb = f" · Facebook-Post fehlgeschlagen: {str(exc)[:100]}"
+    return {"meldung": f"✅ Stelle #{jid} ist online: {config.PUBLIC_URL}/jobs/{jid}{fb}", "id": jid}
 
 
 @router.post("/api/stellen/auto")
