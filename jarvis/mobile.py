@@ -228,8 +228,29 @@ def _cand_summary(row) -> dict:
             "ort": a.current_location or "", "status": row["status"],
             "darf_anrufen": bool(row["consent_call"]), "whatsapp_link": c.whatsapp_link,
             "telefon": a.phone or "",
-            "quelle": row["source"] if (row["source"] or "").startswith("http") else "",
+            "quelle": person_link(c),
             "nachricht": _portal_text(c)}
+
+
+def person_link(c) -> str:
+    """Direkt zur Person: echte Einzelanzeige, sonst eine Kleinanzeigen-Suche nach Beruf + Ort dieser Person
+    (statt der langen Übersichtsliste)."""
+    import re as _re
+    src = c.source or ""
+    if not src.startswith("http"):
+        return ""
+    if "kleinanzeigen.de" not in src or "/s-anzeige/" in src:
+        return src
+    a = c.assessment
+    loc = _re.sub(r"\d{4,5}", " ", a.current_location or "")
+    loc = _re.sub(r"\(.*?\)|deutschland|nordrhein-westfalen|niedersachsen|bayern|baden-württemberg|hessen|"
+                  r"sachsen|thüringen|rheinland-pfalz|brandenburg|schleswig-holstein|mecklenburg-vorpommern|"
+                  r"sachsen-anhalt|saarland|nrw", " ", loc, flags=_re.I)
+    city = next((w for w in _re.split(r"[,\s/]+", loc) if len(w) > 2), "")
+    what = "lkw fahrer sucht" if a.category == "lkw" else ("arzt sucht" if a.category == "arzt" else "pflege sucht")
+    words = [w.lower() for w in (what + " " + city).split() if w]
+    slug = "-".join(_re.sub(r"[^a-z0-9äöüß-]", "", w) for w in words)
+    return f"https://www.kleinanzeigen.de/s-jobs/{slug}/k0c102"
 
 
 def _portal_text(c) -> str:
@@ -349,7 +370,7 @@ async def kandidat(request: Request, key: str):
     from . import outreach
     c = store.load(row)
     out["anzeige_name"] = _display_name(c.assessment)
-    out["quelle"] = row["source"] if (row["source"] or "").startswith("http") else ""
+    out["quelle"] = person_link(c)
     out["nachricht"] = outreach.portal_message(c)
     out["whatsapp_kontakt"] = outreach.wa_link()
     from urllib.parse import quote as _q
