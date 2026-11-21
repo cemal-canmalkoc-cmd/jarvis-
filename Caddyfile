@@ -1,0 +1,4 @@
+# Holt automatisch ein kostenloses HTTPS-Zertifikat (Let's Encrypt) für deine Domain.
+{$JARVIS_DOMAIN} {
+	reverse_proxy jarvis:8000
+}

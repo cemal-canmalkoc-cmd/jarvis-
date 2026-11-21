@@ -1,0 +1,100 @@
+"""Arbeitgeber finden: Spitäler, Kliniken, Heime mit offenen Stellen in euren Bereichen."""
+from __future__ import annotations
+
+import json
+import re
+
+from . import brain, store
+from .config import EFFORT, LKW_REQUIREMENTS_TEXT, MODEL, REQUIREMENTS_TEXT, WEB_SEARCHES_PER_FOCUS
+
+SYSTEM = f"""Du bist Jarvis, Business-Development für eine Personalvermittlung im Schweizer Gesundheitswesen.
+
+{REQUIREMENTS_TEXT}
+
+Aufgabe: Finde Schweizer Arbeitgeber und PARTNER (Spitäler, Kliniken, Psychiatrien, Alters- und Pflegeheime,
+Reha-Kliniken, Praxen, Spitex-Organisationen, Anbieter von 24-Stunden-/Live-in-Betreuung, Personalvermittler und
+Personalverleiher im Gesundheitswesen mit Bewilligung), die AKTUELL Personal in den obigen Bereichen suchen.
+Partner übernehmen Anstellung und Bewilligung – wir liefern Kandidaten aus Deutschland gegen Provision.
+
+Für jeden Arbeitgeber:
+- name, city (Ort), website
+- phone: die öffentlich angegebene Telefonnummer der Personalabteilung/HR oder der Zentrale,
+  so wie sie auf der offiziellen Website steht. Niemals raten. Ohne Nummer: null.
+- email: die in der Stellenanzeige angegebene Bewerbungs-E-Mail (nur wenn sie dort öffentlich steht, sonst null)
+- needs: welche Stellen konkret offen sind
+- source_url: URL der Stellenanzeige oder Karriereseite
+- no_cold_calls: true, wenn die Firma/Anzeige ausdrücklich keine Vermittler / keine Personaldienstleister wünscht
+
+Antworte am Ende ausschliesslich mit einem JSON-Codeblock:
+```json
+[{{"name": "...", "city": "...", "website": "...", "phone": "...", "email": "...", "needs": "...", "source_url": "...", "no_cold_calls": false}}]
+```"""
+
+
+LKW_SYSTEM = f"""Du bist Jarvis, Business-Development für eine Personalvermittlung von LKW-Fahrern in Deutschland.
+
+{LKW_REQUIREMENTS_TEXT}
+
+Aufgabe: Finde deutsche Speditionen, Logistik-, Bau- und Entsorgungsunternehmen, die AKTUELL
+LKW-Fahrer/Berufskraftfahrer (C/CE) suchen (Stellenanzeigen auf Karriereseiten, Indeed, StepStone,
+Arbeitsagentur, kleinanzeigen).
+
+Für jedes Unternehmen:
+- name, city (Ort mit PLZ wenn möglich), website
+- phone: öffentlich angegebene Telefonnummer der Personalabteilung oder Zentrale. Niemals raten.
+- email: die in der Stellenanzeige angegebene Bewerbungs-E-Mail (nur wenn öffentlich angegeben, sonst null)
+- needs: welche Fahrerstellen konkret offen sind (Klasse, Nah-/Fernverkehr, ADR …)
+- source_url: URL der Stellenanzeige
+- no_cold_calls: true, wenn die Anzeige ausdrücklich keine Vermittler/Personaldienstleister wünscht
+
+Antworte am Ende ausschliesslich mit einem JSON-Codeblock:
+```json
+[{{"name": "...", "city": "...", "website": "...", "phone": "...", "email": "...", "needs": "...", "source_url": "...", "no_cold_calls": false}}]
+```"""
+
+
+def find(focus: str, region: str = "Deutschschweiz", max_searches: int | None = None, branche: str = "") -> dict:
+    lkw = branche == "lkw" or "lkw" in focus.lower() or "fahrer" in focus.lower()
+    if lkw and region == "Deutschschweiz":
+        region = "Deutschland"
+    messages: list[dict] = [{
+        "role": "user",
+        "content": f"Finde Arbeitgeber mit offenen Stellen für: {focus}. Region: {region}.",
+    }]
+    tools = [brain.web_search_tool(MODEL, max_searches or WEB_SEARCHES_PER_FOCUS + 2)]
+    response = None
+    for _ in range(5):
+        response = brain.create(
+            model=MODEL, max_tokens=16000,
+            system=LKW_SYSTEM if lkw else SYSTEM, output_config={"effort": EFFORT}, tools=tools, messages=messages,
+        )
+        if response.stop_reason != "pause_turn":
+            break
+        messages.append({"role": "assistant", "content": response.content})
+
+    if response is None or response.stop_reason == "refusal":
+        return {"gefunden": 0, "neu": 0}
+    text = "".join(b.text for b in response.content if b.type == "text")
+    m = re.search(r"```json\s*(.*?)```", text, re.DOTALL)
+    try:
+        items = json.loads(m.group(1) if m else text)
+    except json.JSONDecodeError:
+        return {"gefunden": 0, "neu": 0}
+
+    conn = store.connect()
+    new = 0
+    for it in items:
+        if not isinstance(it, dict) or not it.get("name"):
+            continue
+        if lkw:
+            it["branche"] = "lkw"
+        added = store.add_company(conn, **it)
+        if added:
+            new += 1
+            if it.get("no_cold_calls"):
+                row = conn.execute("SELECT id FROM companies WHERE name=? AND city IS ?",
+                                   (it["name"], it.get("city"))).fetchone()
+                if row:
+                    store.set_company_status(conn, row["id"], "nicht_anrufen",
+                                             "Anzeige: keine Personaldienstleister")
+    return {"gefunden": len(items), "neu": new}
