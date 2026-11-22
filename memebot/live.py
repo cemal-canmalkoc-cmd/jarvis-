@@ -8,7 +8,7 @@ Sicherheit:
   - Der Key wird nie gespeichert, geloggt oder irgendwohin gesendet –
     Transaktionen werden lokal signiert.
 
-Benoetigt:  pip install requests solders base58
+Benoetigt:  pip install requests base58 cryptography   (laeuft auch auf Android/Termux)
 """
 
 import base64
@@ -27,15 +27,23 @@ class LiveHandel:
     def __init__(self, cfg):
         try:
             import base58
-            from solders.keypair import Keypair
+            from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+            from cryptography.hazmat.primitives import serialization
         except ImportError:
-            raise SystemExit("Fuer --live bitte installieren: pip install solders base58")
+            raise SystemExit("Fuer --live bitte installieren: pip install base58 cryptography")
 
         key = os.environ.get("BOT_PRIVATE_KEY")
         if not key:
             raise SystemExit("BOT_PRIVATE_KEY ist nicht gesetzt (Private Key der Bot-Wallet, Base58).")
-        self.kp = Keypair.from_bytes(base58.b58decode(key.strip()))
-        self.pub = str(self.kp.pubkey())
+        roh = base58.b58decode(key.strip())
+        if len(roh) not in (32, 64):
+            raise SystemExit("Private Key hat falsches Format (erwartet Base58 aus Phantom).")
+        self.sk = Ed25519PrivateKey.from_private_bytes(roh[:32])
+        pub = self.sk.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
+        if len(roh) == 64 and roh[32:] != pub:
+            raise SystemExit("Private Key ist beschaedigt (Public Key passt nicht).")
+        self.pub = base58.b58encode(pub).decode()
+        self.pub_roh = pub
         self.rpc = os.environ.get("SOLANA_RPC", "https://api.mainnet-beta.solana.com")
         self.c = cfg
         self.s = requests.Session()
@@ -77,15 +85,34 @@ class LiveHandel:
         }, timeout=10)
         sw.raise_for_status()
 
-        from solders.transaction import VersionedTransaction
-        roh = VersionedTransaction.from_bytes(base64.b64decode(sw.json()["swapTransaction"]))
-        signiert = VersionedTransaction(roh.message, [self.kp])
+        signiert = self._signieren(base64.b64decode(sw.json()["swapTransaction"]))
         sig = self._rpc("sendTransaction", [
-            base64.b64encode(bytes(signiert)).decode(),
+            base64.b64encode(signiert).decode(),
             {"encoding": "base64", "skipPreflight": True, "maxRetries": 3},
         ])
         self._warten(sig)
         return sig, int(quote["outAmount"])
+
+    def _signieren(self, tx):
+        """Solana-Transaktion signieren: [Anzahl Signaturen][Signaturen je 64 Byte][Nachricht]."""
+        anzahl, pos, shift = 0, 0, 0
+        while True:  # compact-u16
+            b = tx[pos]
+            anzahl |= (b & 0x7F) << shift
+            pos += 1
+            if not b & 0x80:
+                break
+            shift += 7
+        nachricht = tx[pos + 64 * anzahl:]
+        # Signer-Liste in der Nachricht pruefen: wir muessen der erste Signer (Gebuehrenzahler) sein
+        kopf = 1 if nachricht[0] & 0x80 else 0  # Versions-Byte bei v0
+        n_konten_pos = kopf + 3
+        n_konten = nachricht[n_konten_pos]  # < 128 Konten -> 1 Byte compact-u16
+        erster = nachricht[n_konten_pos + 1: n_konten_pos + 33]
+        if erster != self.pub_roh or n_konten >= 128:
+            raise RuntimeError("Unerwartete Transaktion von Jupiter – nicht signiert.")
+        signatur = self.sk.sign(nachricht)
+        return tx[:pos] + signatur + tx[pos + 64:]
 
     def _warten(self, sig, timeout=30):
         ende = time.time() + timeout

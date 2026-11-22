@@ -5,7 +5,13 @@
 2. In Phantom eine **neue Wallet nur für den Bot** anlegen, wenig SOL draufschicken, Private Key exportieren.
 3. Doppelklick auf **`START.bat`**, Key einfügen, `JA` eintippen und der Bot handelt.
 
-Mac/Linux: `bash start.sh`. Stoppen: Fenster schließen oder Strg+C.
+Mac/Linux: `bash start.sh`.
+
+**Android-Handy:** App **Termux** aus F-Droid installieren, öffnen und eingeben:
+```
+curl -sL https://raw.githubusercontent.com/cemal-canmalkoc-cmd/jarvis-/claude/friendly-hawking-e051yv/memebot/setup-handy.sh | bash
+```
+Danach startet `bot` den Bot. Stoppen: Fenster schließen oder Strg+C.
 
 Standard: **Simulation mit Spielgeld.** Echter Handel nur mit `--live` (siehe unten).
 Der Bot scannt alle **3 Sekunden** und kauft/verkauft sofort, wenn alle Regeln erfüllt sind.
@@ -47,7 +53,7 @@ python3 memebot.py --profil aggressiv --live     # echtes Geld
 2. Von **dieser** Wallet den Private Key exportieren (nie die Haupt-Wallet!).
 3. Starten:
 ```bash
-pip install requests solders base58
+pip install requests base58 cryptography
 export BOT_PRIVATE_KEY="<Private Key der Bot-Wallet>"
 export SOLANA_RPC="https://..."   # optional: schneller eigener RPC (Helius, QuickNode ...)
 python3 memebot.py --live

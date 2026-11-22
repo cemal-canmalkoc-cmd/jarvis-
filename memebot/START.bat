@@ -12,7 +12,7 @@ if errorlevel 1 (
 )
 
 echo Installiere benoetigte Pakete ...
-python -m pip install --quiet --disable-pip-version-check requests solders base58
+python -m pip install --quiet --disable-pip-version-check requests base58 cryptography
 if errorlevel 1 (
   echo Installation fehlgeschlagen. Internetverbindung pruefen.
   pause
