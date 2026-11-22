@@ -15,6 +15,7 @@ ueberhaupt profitabel ist, bevor du auch nur an echtes Geld denkst.
 Start:
   python3 memebot.py            # live Kursdaten, Spielgeld
   python3 memebot.py --demo     # komplett offline mit zufaelligen Kursen (Logik-Test)
+  python3 memebot.py --live     # ECHTER Handel ueber Jupiter (siehe live.py)
 """
 
 import argparse
@@ -48,8 +49,14 @@ CONFIG = {
     "min_kurs_aenderung_5m_pct": 3.0,  # Momentum
     "min_kauf_verkauf_ratio": 1.3,
     "max_rugcheck_score": 1000,        # niedriger = sicherer
-    "scan_intervall_sek": 30,
+    "scan_intervall_sek": 3,           # alle 3 Sekunden scannen
+    # Nur fuer --live (echtes Geld)
+    "live_einsatz_sol": 0.05,          # pro Trade
+    "live_max_einsatz_sol": 0.5,       # harte Obergrenze, egal was oben steht
+    "live_slippage_bps": 1500,         # 15 % – Meme Coins schwanken stark
+    "live_prioritaetsgebuehr_lamports": 200_000,  # ~0.0002 SOL, damit der Trade schnell durchgeht
 }
+SOL_MINT = "So11111111111111111111111111111111111111112"
 
 DEX_PROFILES = "https://api.dexscreener.com/token-profiles/latest/v1"
 DEX_BOOSTS = "https://api.dexscreener.com/token-boosts/latest/v1"
@@ -68,6 +75,7 @@ class Position:
     einsatz: float
     zeit: float = field(default_factory=time.time)
     hoch: float = 0.0
+    sol: float = 0.0          # nur live: eingesetzte SOL
 
     def __post_init__(self):
         self.hoch = self.hoch or self.einstieg
@@ -133,6 +141,10 @@ class LiveMarkt:
                 }
         return out
 
+    def sol_preis(self):
+        p = self.paare([SOL_MINT]).get(SOL_MINT)
+        return p["preis"] if p else None
+
     def rug_score(self, mint):
         d = self._get(RUGCHECK.format(mint))
         if not d:
@@ -187,9 +199,10 @@ class DemoMarkt:
 
 # ----------------------------------------------------------------- Bot-Logik
 class Bot:
-    def __init__(self, markt, cfg):
+    def __init__(self, markt, cfg, live=None):
         self.m = markt
         self.c = cfg
+        self.live = live
         self.k = Konto(cash=cfg["start_kapital_usd"])
         self.geprueft = {}  # mint -> (ok, grund)
 
@@ -228,16 +241,45 @@ class Bot:
         einsatz = c["einsatz_pro_trade_usd"]
         if self.k.cash < einsatz:
             return
+        sol, sig = 0.0, None
         eff_preis = t["preis"] * (1 + c["gebuehren_slippage_pct"] / 100)
-        pos = Position(t["mint"], t["symbol"], eff_preis, einsatz / eff_preis, einsatz)
+        if self.live:
+            sol = min(c["live_einsatz_sol"], c["live_max_einsatz_sol"])
+            sol_usd = self.m.sol_preis()
+            if not sol_usd:
+                return
+            einsatz = sol * sol_usd
+            if self.live.sol_guthaben() < sol + 0.01:  # Reserve fuer Gebuehren
+                print("  Zu wenig SOL in der Bot-Wallet.")
+                return
+            t0 = time.time()
+            try:
+                sig, _ = self.live.kaufen(t["mint"], sol)
+            except Exception as e:
+                print(f"  KAUF FEHLGESCHLAGEN {t['symbol']}: {e}")
+                return
+            print(f"  (bestaetigt in {time.time() - t0:.1f}s) https://solscan.io/tx/{sig}")
+            eff_preis = t["preis"]  # echte Kosten stecken in der SOL-Differenz
+        pos = Position(t["mint"], t["symbol"], eff_preis, einsatz / eff_preis, einsatz, sol=sol)
         self.k.cash -= einsatz
         self.k.positionen[t["mint"]] = pos
         print(f"  KAUF  {t['symbol']:<10} {einsatz:.2f}$ @ {t['preis']:.8f}")
-        self.log("kauf", mint=t["mint"], symbol=t["symbol"], preis=t["preis"], einsatz=einsatz)
+        self.log("kauf", mint=t["mint"], symbol=t["symbol"], preis=t["preis"], einsatz=round(einsatz, 2),
+                 sol=sol, tx=sig)
 
     def verkaufen(self, pos, preis, grund):
-        eff = preis * (1 - self.c["gebuehren_slippage_pct"] / 100)
-        erloes = pos.menge * eff
+        sig = None
+        if self.live:
+            try:
+                sig, sol_zurueck = self.live.verkaufen_alles(pos.mint)
+            except Exception as e:
+                print(f"  VERKAUF FEHLGESCHLAGEN {pos.symbol}: {e} – neuer Versuch naechste Runde")
+                return
+            sol_usd = self.m.sol_preis() or pos.einsatz / pos.sol
+            erloes = sol_zurueck * sol_usd
+            print(f"  https://solscan.io/tx/{sig}")
+        else:
+            erloes = pos.menge * preis * (1 - self.c["gebuehren_slippage_pct"] / 100)
         pnl = erloes - pos.einsatz
         self.k.cash += erloes
         self.k.tages_pnl += pnl
@@ -245,7 +287,7 @@ class Bot:
         self.k.gewinner += pnl > 0
         del self.k.positionen[pos.mint]
         print(f"  VERK  {pos.symbol:<10} {grund:<12} PnL {pnl:+.2f}$ ({pnl / pos.einsatz * 100:+.1f} %)")
-        self.log("verkauf", mint=pos.mint, symbol=pos.symbol, preis=preis, pnl=round(pnl, 2), grund=grund)
+        self.log("verkauf", mint=pos.mint, symbol=pos.symbol, preis=preis, pnl=round(pnl, 2), grund=grund, tx=sig)
 
     def positionen_pruefen(self, kurse):
         c = self.c
@@ -301,6 +343,7 @@ class Bot:
 def main():
     ap = argparse.ArgumentParser(description="Meme-Coin Paper-Trading-Bot (Simulation)")
     ap.add_argument("--demo", action="store_true", help="offline mit Zufallskursen")
+    ap.add_argument("--live", action="store_true", help="ECHTER Handel mit der Bot-Wallet")
     ap.add_argument("--runden", type=int, default=0, help="Anzahl Runden (0 = endlos)")
     args = ap.parse_args()
 
@@ -308,9 +351,22 @@ def main():
     if args.demo:
         cfg["scan_intervall_sek"] = 0
         cfg["max_haltedauer_min"] = 0.001 * 40  # Demo: Zeitlimit nach ~40 Runden-Sekunden
-    bot = Bot(DemoMarkt() if args.demo else LiveMarkt(), cfg)
+    live = None
+    if args.live:
+        if args.demo:
+            raise SystemExit("--live und --demo gehen nicht zusammen.")
+        from live import LiveHandel
+        live = LiveHandel(cfg)
+        guthaben = live.sol_guthaben()
+        print("!!! ECHTER HANDEL – du kannst dein gesamtes Guthaben in dieser Wallet verlieren !!!")
+        print(f"Bot-Wallet: {live.pub}  Guthaben: {guthaben:.4f} SOL")
+        print(f"Einsatz/Trade: {min(cfg['live_einsatz_sol'], cfg['live_max_einsatz_sol'])} SOL, "
+              f"max. Tagesverlust: {cfg['max_tagesverlust_usd']} $")
+        if input("Zum Starten 'JA' eingeben: ").strip() != "JA":
+            raise SystemExit("Abgebrochen.")
+    bot = Bot(DemoMarkt() if args.demo else LiveMarkt(), cfg, live)
 
-    print("=== PAPER TRADING – Spielgeld, keine echten Trades ===")
+    print("=== ECHTER HANDEL ===" if live else "=== PAPER TRADING – Spielgeld, keine echten Trades ===")
     i = 0
     try:
         while not args.runden or i < args.runden:

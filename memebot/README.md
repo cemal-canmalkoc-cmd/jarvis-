@@ -1,6 +1,7 @@
 # Meme-Coin Paper-Trading-Bot (Solana)
 
-**Nur Simulation mit Spielgeld.** Es werden keine echten Trades ausgeführt und keine Wallet verbunden.
+Standard: **Simulation mit Spielgeld.** Echter Handel nur mit `--live` (siehe unten).
+Der Bot scannt alle **3 Sekunden** und kauft/verkauft sofort, wenn alle Regeln erfüllt sind.
 
 ## Strategie
 1. **Scannen:** neue/trendende Solana-Tokens über die DexScreener-API
@@ -18,6 +19,20 @@ python3 memebot.py           # echte Kursdaten, Spielgeld
 python3 memebot.py --demo    # offline mit Zufallskursen (Logik-Test)
 ```
 Alle Trades werden in `trades.jsonl` protokolliert.
+
+## Echter Handel (`--live`)
+1. In Phantom eine **neue, eigene Wallet** nur für den Bot anlegen und wenig SOL draufschicken (z. B. 0,5 SOL).
+2. Von **dieser** Wallet den Private Key exportieren (nie die Haupt-Wallet!).
+3. Starten:
+```bash
+pip install requests solders base58
+export BOT_PRIVATE_KEY="<Private Key der Bot-Wallet>"
+export SOLANA_RPC="https://..."   # optional: schneller eigener RPC (Helius, QuickNode ...)
+python3 memebot.py --live
+```
+Der Bot zeigt Wallet und Guthaben und startet erst, wenn du `JA` eintippst.
+Swaps laufen über Jupiter, der Key bleibt lokal. Einstellungen: `live_einsatz_sol` (Standard 0,05 SOL),
+harte Obergrenze `live_max_einsatz_sol`, Slippage, Prioritätsgebühr, Tagesverlust-Limit.
 
 ## Wichtig
 - Keine Gewinngarantie. Erst über Wochen simulieren und auswerten.
