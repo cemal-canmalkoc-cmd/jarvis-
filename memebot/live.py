@@ -102,8 +102,10 @@ class LiveHandel:
     def kaufen(self, mint, sol):
         return self._swap(SOL_MINT, mint, sol * LAMPORTS)
 
-    def verkaufen_alles(self, mint):
+    def verkaufen_anteil(self, mint, anteil=1.0):
         menge = self.token_guthaben(mint)
+        if anteil < 1:
+            menge = int(menge * anteil)
         if menge <= 0:
             raise RuntimeError("Kein Token-Guthaben zum Verkaufen")
         sig, lamports = self._swap(mint, SOL_MINT, menge)

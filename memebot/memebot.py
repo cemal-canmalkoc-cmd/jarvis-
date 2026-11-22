@@ -55,6 +55,32 @@ CONFIG = {
     "live_max_einsatz_sol": 0.5,       # harte Obergrenze, egal was oben steht
     "live_slippage_bps": 1500,         # 15 % – Meme Coins schwanken stark
     "live_prioritaetsgebuehr_lamports": 200_000,  # ~0.0002 SOL, damit der Trade schnell durchgeht
+    # Gewinne laufen lassen
+    "einsatz_prozent": 0,              # >0: Einsatz = X % vom aktuellen Guthaben (waechst mit Gewinnen)
+    "teilverkauf_bei_pct": 0,          # >0: bei +X % einen Teil verkaufen ...
+    "teilverkauf_anteil": 0.5,         # ... diesen Anteil (0.5 = Haelfte), Rest laeuft weiter
+}
+# 0 bedeutet bei diesen Werten "unbegrenzt / aus":
+#   max_offene_positionen, max_tagesverlust_usd, take_profit_pct, live_max_einsatz_sol, max_haltedauer_min
+
+PROFILE = {
+    "vorsichtig": {},
+    # Maximales Gewinnpotenzial: unbegrenzt viele Coins, Gewinner laufen lassen.
+    # Verluste koennen genauso gross werden!
+    "aggressiv": {
+        "max_offene_positionen": 0,        # unbegrenzt – kauft jeden Coin mit Potenzial
+        "einsatz_prozent": 5,              # 5 % vom Guthaben pro Coin, waechst mit Gewinnen
+        "live_max_einsatz_sol": 0,         # keine feste SOL-Obergrenze
+        "take_profit_pct": 0,              # kein festes Gewinnziel ...
+        "teilverkauf_bei_pct": 100,        # ... bei 2x die Haelfte verkaufen = Einsatz zurueck
+        "teilverkauf_anteil": 0.5,
+        "trailing_stop_pct": 25,           # Rest laeuft, bis er 25 % vom Hoch faellt
+        "stop_loss_pct": -25,
+        "max_haltedauer_min": 0,           # kein Zeitlimit
+        "max_tagesverlust_usd": 300,       # Notbremse; 0 = aus
+        "min_kurs_aenderung_5m_pct": 2.0,  # Filter etwas lockerer -> mehr Trades
+        "min_kauf_verkauf_ratio": 1.2,
+    },
 }
 SOL_MINT = "So11111111111111111111111111111111111111112"
 
@@ -76,6 +102,7 @@ class Position:
     zeit: float = field(default_factory=time.time)
     hoch: float = 0.0
     sol: float = 0.0          # nur live: eingesetzte SOL
+    teil_verkauft: bool = False
 
     def __post_init__(self):
         self.hoch = self.hoch or self.einstieg
@@ -239,17 +266,24 @@ class Bot:
     def kaufen(self, t):
         c = self.c
         einsatz = c["einsatz_pro_trade_usd"]
-        if self.k.cash < einsatz:
+        if c["einsatz_prozent"] > 0:
+            einsatz = self.k.cash * c["einsatz_prozent"] / 100
+        if not self.live and (einsatz < 1 or self.k.cash < einsatz):
             return
         sol, sig = 0.0, None
         eff_preis = t["preis"] * (1 + c["gebuehren_slippage_pct"] / 100)
         if self.live:
-            sol = min(c["live_einsatz_sol"], c["live_max_einsatz_sol"])
+            guthaben = self.live.sol_guthaben()
+            sol = c["live_einsatz_sol"]
+            if c["einsatz_prozent"] > 0:
+                sol = (guthaben - 0.02) * c["einsatz_prozent"] / 100
+            if c["live_max_einsatz_sol"] > 0:
+                sol = min(sol, c["live_max_einsatz_sol"])
             sol_usd = self.m.sol_preis()
-            if not sol_usd:
+            if not sol_usd or sol < 0.005:
                 return
             einsatz = sol * sol_usd
-            if self.live.sol_guthaben() < sol + 0.01:  # Reserve fuer Gebuehren
+            if guthaben < sol + 0.02:  # Reserve fuer Gebuehren
                 print("  Zu wenig SOL in der Bot-Wallet.")
                 return
             t0 = time.time()
@@ -267,11 +301,11 @@ class Bot:
         self.log("kauf", mint=t["mint"], symbol=t["symbol"], preis=t["preis"], einsatz=round(einsatz, 2),
                  sol=sol, tx=sig)
 
-    def verkaufen(self, pos, preis, grund):
+    def verkaufen(self, pos, preis, grund, anteil=1.0):
         sig = None
         if self.live:
             try:
-                sig, sol_zurueck = self.live.verkaufen_alles(pos.mint)
+                sig, sol_zurueck = self.live.verkaufen_anteil(pos.mint, anteil)
             except Exception as e:
                 print(f"  VERKAUF FEHLGESCHLAGEN {pos.symbol}: {e} – neuer Versuch naechste Runde")
                 return
@@ -279,14 +313,23 @@ class Bot:
             erloes = sol_zurueck * sol_usd
             print(f"  https://solscan.io/tx/{sig}")
         else:
-            erloes = pos.menge * preis * (1 - self.c["gebuehren_slippage_pct"] / 100)
-        pnl = erloes - pos.einsatz
+            erloes = pos.menge * anteil * preis * (1 - self.c["gebuehren_slippage_pct"] / 100)
+        kosten = pos.einsatz * anteil
+        pnl = erloes - kosten
         self.k.cash += erloes
         self.k.tages_pnl += pnl
-        self.k.trades += 1
-        self.k.gewinner += pnl > 0
-        del self.k.positionen[pos.mint]
-        print(f"  VERK  {pos.symbol:<10} {grund:<12} PnL {pnl:+.2f}$ ({pnl / pos.einsatz * 100:+.1f} %)")
+        if anteil >= 1:
+            del self.k.positionen[pos.mint]
+            self.k.trades += 1
+            # Gewinner = ganzer Trade inkl. frueherem Teilverkauf im Plus
+            self.k.gewinner += pos.teil_verkauft or pnl > 0
+        else:
+            pos.menge *= 1 - anteil
+            pos.einsatz -= kosten
+            pos.sol *= 1 - anteil
+            pos.teil_verkauft = True
+        print(f"  VERK  {pos.symbol:<10} {grund:<12} {anteil * 100:.0f} %  PnL {pnl:+.2f}$ "
+              f"({pnl / kosten * 100:+.1f} %)")
         self.log("verkauf", mint=pos.mint, symbol=pos.symbol, preis=preis, pnl=round(pnl, 2), grund=grund, tx=sig)
 
     def positionen_pruefen(self, kurse):
@@ -300,13 +343,15 @@ class Bot:
             pct = (p / pos.einstieg - 1) * 100
             vom_hoch = (1 - p / pos.hoch) * 100
             dauer = (time.time() - pos.zeit) / 60
-            if pct >= c["take_profit_pct"]:
+            if c["take_profit_pct"] > 0 and pct >= c["take_profit_pct"]:
                 self.verkaufen(pos, p, "Take-Profit")
+            elif c["teilverkauf_bei_pct"] > 0 and not pos.teil_verkauft and pct >= c["teilverkauf_bei_pct"]:
+                self.verkaufen(pos, p, "Teilgewinn", c["teilverkauf_anteil"])
             elif pct <= c["stop_loss_pct"]:
                 self.verkaufen(pos, p, "Stop-Loss")
             elif pct > 0 and vom_hoch >= c["trailing_stop_pct"]:
                 self.verkaufen(pos, p, "Trailing")
-            elif dauer >= c["max_haltedauer_min"]:
+            elif c["max_haltedauer_min"] > 0 and dauer >= c["max_haltedauer_min"]:
                 self.verkaufen(pos, p, "Zeitlimit")
 
     def runde(self):
@@ -319,11 +364,13 @@ class Bot:
         kurse.update(self.m.paare(fehlend))
         self.positionen_pruefen(kurse)
 
-        if self.k.tages_pnl <= -self.c["max_tagesverlust_usd"]:
+        limit = self.c["max_tagesverlust_usd"]
+        if limit > 0 and self.k.tages_pnl <= -limit:
             print("  Tagesverlust-Limit erreicht – keine neuen Kaeufe heute.")
             return
         for t in kurse.values():
-            if len(self.k.positionen) >= self.c["max_offene_positionen"]:
+            maxpos = self.c["max_offene_positionen"]
+            if maxpos > 0 and len(self.k.positionen) >= maxpos:
                 break
             if t["mint"] in self.k.positionen:
                 continue
@@ -344,13 +391,18 @@ def main():
     ap = argparse.ArgumentParser(description="Meme-Coin Paper-Trading-Bot (Simulation)")
     ap.add_argument("--demo", action="store_true", help="offline mit Zufallskursen")
     ap.add_argument("--live", action="store_true", help="ECHTER Handel mit der Bot-Wallet")
+    ap.add_argument("--profil", choices=PROFILE, default="vorsichtig",
+                    help="vorsichtig (Standard) oder aggressiv (unbegrenzt viele Coins, Gewinne laufen lassen)")
     ap.add_argument("--runden", type=int, default=0, help="Anzahl Runden (0 = endlos)")
     args = ap.parse_args()
 
     cfg = dict(CONFIG)
+    cfg.update(PROFILE[args.profil])
+    print(f"Profil: {args.profil}")
     if args.demo:
         cfg["scan_intervall_sek"] = 0
-        cfg["max_haltedauer_min"] = 0.001 * 40  # Demo: Zeitlimit nach ~40 Runden-Sekunden
+        if cfg["max_haltedauer_min"] > 0:
+            cfg["max_haltedauer_min"] = 0.001 * 40  # Demo: Zeitlimit nach ~40 Runden-Sekunden
     live = None
     if args.live:
         if args.demo:
@@ -360,8 +412,10 @@ def main():
         guthaben = live.sol_guthaben()
         print("!!! ECHTER HANDEL – du kannst dein gesamtes Guthaben in dieser Wallet verlieren !!!")
         print(f"Bot-Wallet: {live.pub}  Guthaben: {guthaben:.4f} SOL")
-        print(f"Einsatz/Trade: {min(cfg['live_einsatz_sol'], cfg['live_max_einsatz_sol'])} SOL, "
-              f"max. Tagesverlust: {cfg['max_tagesverlust_usd']} $")
+        einsatz = (f"{cfg['einsatz_prozent']} % vom Guthaben" if cfg["einsatz_prozent"] > 0
+                   else f"{cfg['live_einsatz_sol']} SOL")
+        print(f"Einsatz/Trade: {einsatz}, max. Positionen: {cfg['max_offene_positionen'] or 'unbegrenzt'}, "
+              f"max. Tagesverlust: {cfg['max_tagesverlust_usd'] or 'AUS'} $")
         if input("Zum Starten 'JA' eingeben: ").strip() != "JA":
             raise SystemExit("Abgebrochen.")
     bot = Bot(DemoMarkt() if args.demo else LiveMarkt(), cfg, live)

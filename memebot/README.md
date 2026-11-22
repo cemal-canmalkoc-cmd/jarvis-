@@ -20,6 +20,21 @@ python3 memebot.py --demo    # offline mit Zufallskursen (Logik-Test)
 ```
 Alle Trades werden in `trades.jsonl` protokolliert.
 
+## Profile
+| | `vorsichtig` (Standard) | `aggressiv` |
+|---|---|---|
+| Coins gleichzeitig | max. 5 | **unbegrenzt** |
+| Einsatz | fest 25 $ / 0,05 SOL | 5 % vom Guthaben (wächst mit Gewinnen) |
+| Gewinnmitnahme | fest bei +40 % | bei 2x die Hälfte verkaufen, Rest läuft mit 25 % Trailing-Stop |
+| Stop-Loss | −20 % | −25 % |
+| Zeitlimit | 60 min | keins |
+| Tagesverlust-Limit | 100 $ | 300 $ (0 = aus) |
+
+```bash
+python3 memebot.py --profil aggressiv            # Spielgeld
+python3 memebot.py --profil aggressiv --live     # echtes Geld
+```
+
 ## Echter Handel (`--live`)
 1. In Phantom eine **neue, eigene Wallet** nur für den Bot anlegen und wenig SOL draufschicken (z. B. 0,5 SOL).
 2. Von **dieser** Wallet den Private Key exportieren (nie die Haupt-Wallet!).
