@@ -1,4 +1,11 @@
-# Meme-Coin Paper-Trading-Bot (Solana)
+# Meme-Coin-Bot (Solana)
+
+## Schnellstart mit echtem Geld (Windows)
+1. Python von python.org installieren, dabei **„Add Python to PATH“** anhaken.
+2. In Phantom eine **neue Wallet nur für den Bot** anlegen, wenig SOL draufschicken, Private Key exportieren.
+3. Doppelklick auf **`START.bat`**, Key einfügen, `JA` eintippen und der Bot handelt.
+
+Mac/Linux: `bash start.sh`. Stoppen: Fenster schließen oder Strg+C.
 
 Standard: **Simulation mit Spielgeld.** Echter Handel nur mit `--live` (siehe unten).
 Der Bot scannt alle **3 Sekunden** und kauft/verkauft sofort, wenn alle Regeln erfüllt sind.
